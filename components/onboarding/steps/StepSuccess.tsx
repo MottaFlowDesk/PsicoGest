@@ -3,9 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import Confetti from "react-confetti"; // Just kidding, let's keep it simple first
-import { useWindowSize } from "react-use"; // Usually needed for confetti, but omitting for now to save dependencies
 
 export function StepSuccess() {
     const router = useRouter();
