@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 
 const Hero: React.FC = () => {
@@ -10,7 +11,7 @@ const Hero: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-          
+
           {/* Left Content */}
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-sm font-semibold mb-6">
@@ -20,24 +21,27 @@ const Hero: React.FC = () => {
               </span>
               Nova Integração com IA em Português
             </div>
-            
+
             <h1 className="text-4xl lg:text-6xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
-              Simplifique sua clínica. <br className="hidden lg:block"/>
+              Simplifique sua clínica. <br className="hidden lg:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-indigo-600">
                 Foque nos pacientes.
               </span>
             </h1>
-            
+
             <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-              A plataforma all-in-one para psicólogos e terapeutas independentes. 
+              A plataforma all-in-one para psicólogos e terapeutas independentes.
               Reduza sua burocracia em 60% e tenha total conformidade com a LGPD e CFP.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <button className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-xl hover:shadow-brand-500/30 transform hover:-translate-y-1">
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-xl hover:shadow-brand-500/30 transform hover:-translate-y-1"
+              >
                 Começar Grátis Agora
                 <ArrowRight size={20} />
-              </button>
+              </Link>
             </div>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-8 text-sm text-slate-500">
@@ -59,7 +63,7 @@ const Hero: React.FC = () => {
           {/* Right Image/Dashboard Mockup */}
           <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
             <div className="relative rounded-2xl bg-slate-900/5 p-2 ring-1 ring-inset ring-slate-900/10 lg:-m-4 lg:rounded-2xl lg:p-4">
-               <img
+              <img
                 src="https://picsum.photos/id/48/800/600"
                 alt="PsicoGest Dashboard"
                 className="rounded-xl shadow-2xl ring-1 ring-slate-900/10 w-full h-auto object-cover grayscale-[20%]"

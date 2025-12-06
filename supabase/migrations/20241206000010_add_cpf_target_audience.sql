@@ -1,0 +1,3 @@
+ALTER TABLE professionals
+ADD COLUMN IF NOT EXISTS cpf TEXT UNIQUE,
+ADD COLUMN IF NOT EXISTS target_audience TEXT[];

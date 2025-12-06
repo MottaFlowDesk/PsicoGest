@@ -1,4 +1,5 @@
 "use client";
+import Link from 'next/link';
 import React, { useState } from 'react';
 import { Menu, X, BrainCircuit } from 'lucide-react';
 
@@ -30,10 +31,6 @@ const Header: React.FC = () => {
     setIsOpen(false);
   };
 
-  const handleLogin = () => {
-    alert("Redirecionando para a área de login da plataforma...");
-  };
-
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -62,18 +59,18 @@ const Header: React.FC = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <button
-              onClick={handleLogin}
+            <Link
+              href="/login"
               className="text-slate-600 hover:text-brand-600 font-medium text-sm"
             >
               Entrar
-            </button>
-            <button
-              onClick={(e) => handleScroll(e, 'pricing')}
+            </Link>
+            <Link
+              href="/signup"
               className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-brand-500/30 text-sm"
             >
               Começar Grátis
-            </button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -103,18 +100,20 @@ const Header: React.FC = () => {
               </a>
             ))}
             <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
-              <button
-                onClick={handleLogin}
+              <Link
+                href="/login"
                 className="w-full text-center text-slate-600 font-medium py-2"
+                onClick={() => setIsOpen(false)}
               >
                 Entrar
-              </button>
-              <button
-                onClick={(e) => handleScroll(e, 'pricing')}
-                className="w-full bg-brand-600 text-white px-4 py-3 rounded-lg font-semibold shadow-md"
+              </Link>
+              <Link
+                href="/signup"
+                className="w-full text-center bg-brand-600 text-white px-4 py-3 rounded-lg font-semibold shadow-md"
+                onClick={() => setIsOpen(false)}
               >
                 Começar Teste Grátis
-              </button>
+              </Link>
             </div>
           </div>
         </div>
