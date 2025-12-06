@@ -136,15 +136,6 @@ export async function createManualInvoice(data: {
         description: data.description,
         status: "pending",
         fiscal_year: new Date().getFullYear(),
-        sequence_number: null, // Let trigger generate (hack from previous file if it was 9999) or null if trigger handles
-        // Actually, trigger handles null invoice_number, but sequence_number is NOT NULL in schema usually. 
-        // Looking at schema: sequence_number INTEGER NOT NULL.
-        // The trigger provided earlier: 
-        // BEFORE INSERT ... generates sequence_number and invoice_number.
-        // However, Trigger logic: NEW.sequence_number := next_seq;
-        // So we can pass any dummy value for sequence_number if strict, or rely on trigger modifying it BEFORE null check.
-        // The trigger is BEFORE INSERT. It sets values. IF DB constraint checks afterwards, it's fine.
-        // But safely:
         sequence_number: 999999, // Dummy, trigger should overwrite
         invoice_number: null // Trigger target
     });
