@@ -14,11 +14,26 @@ interface OnboardingState {
 export const useOnboardingStore = create<OnboardingState>((set) => ({
     currentStep: 1,
     data: {
-        personal: {},
-        address: {},
+        personal: {
+            fullName: "",
+            cpf: "",
+            crp: "",
+            phone: "",
+            whatsapp: "",
+        },
+        address: {
+            zip: "",
+            street: "",
+            number: "",
+            complement: "",
+            neighborhood: "",
+            city: "",
+            state: "",
+        },
         clinical: {
             targetAudience: [],
-            specialties: []
+            specialties: [],
+            bio: ""
         }
     },
     setStep: (step) => set({ currentStep: step }),
