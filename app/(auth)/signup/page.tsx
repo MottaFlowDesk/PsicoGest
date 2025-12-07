@@ -36,7 +36,7 @@ export default function SignupPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
-    const supabase = createClient();
+    // supabase client initialized in onSubmit to avoid build errors if env vars missing
 
     const form = useForm<SignupFormValues>({
         resolver: zodResolver(signupSchema),
@@ -51,6 +51,9 @@ export default function SignupPage() {
     async function onSubmit(data: SignupFormValues) {
         setIsLoading(true);
         setErrorMessage("");
+
+        // Initialize here to prevent build crash if env vars missing
+        const supabase = createClient();
 
         try {
             // 1. Create Auth User
