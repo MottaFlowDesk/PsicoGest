@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,7 +27,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const registered = searchParams.get("registered");
@@ -56,7 +56,6 @@ export default function LoginPage() {
             if (error) {
                 console.error("Login error:", error);
 
-                // Supabase returns "Invalid login credentials" for both wrong password and user not found (security standard)
                 if (error.message.includes("Invalid login credentials")) {
                     setErrorMessage("Email ou senha inválidos.");
                 } else {
@@ -144,5 +143,13 @@ export default function LoginPage() {
                 </Link>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="text-center p-8">Carregando...</div>}>
+            <LoginForm />
+        </Suspense>
     );
 }
