@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -67,47 +67,62 @@ export function WeeklyScheduler({ professionalId }: WeeklySchedulerProps) {
     const handleSave = async () => {
         setSaving(true);
 
-        // 1. Delete all existing for this professional (Simplest strategy for MVP: replace all)
-        // Or upsert. Let's try upsert logic or delete-then-insert.
-        // Delete-insert might break IDs but is cleaner for full sync.
-        // Let's do: disable = delete, enable = upsert/insert.
-
         try {
             const activeDays = schedule.filter(s => s.enabled);
+            const disabledDays = schedule.filter(s => !s.enabled && s.id);
 
             // Delete disabled days
-            const disabledDays = schedule.filter(s => !s.enabled && s.id);
             if (disabledDays.length > 0) {
-                await supabase.from("professional_availability")
+                const { error: deleteError } = await supabase
+                    .from("professional_availability")
                     .delete()
-                    .in("id", disabledDays.map(d => d.id));
+                    .in("id", disabledDays.map(d => d.id!));
+
+                if (deleteError) {
+                    console.error("Delete error:", deleteError);
+                    throw new Error(`Erro ao remover dias: ${deleteError.message}`);
+                }
             }
 
             // Upsert enabled days
             for (const day of activeDays) {
                 if (day.id) {
-                    await supabase.from("professional_availability")
+                    // Update existing
+                    const { error: updateError } = await supabase
+                        .from("professional_availability")
                         .update({
                             start_time: day.start_time,
                             end_time: day.end_time
                         })
                         .eq("id", day.id);
+
+                    if (updateError) {
+                        console.error("Update error:", updateError);
+                        throw new Error(`Erro ao atualizar: ${updateError.message}`);
+                    }
                 } else {
-                    await supabase.from("professional_availability")
+                    // Insert new
+                    const { error: insertError } = await supabase
+                        .from("professional_availability")
                         .insert({
                             professional_id: professionalId,
                             day_of_week: day.day_of_week,
                             start_time: day.start_time,
                             end_time: day.end_time
                         });
+
+                    if (insertError) {
+                        console.error("Insert error:", insertError);
+                        throw new Error(`Erro ao adicionar: ${insertError.message}`);
+                    }
                 }
             }
 
-            alert("Disponibilidade salva com sucesso!");
-            fetchAvailability(); // Refresh IDs
-        } catch (error) {
-            console.error("Error saving:", error);
-            alert("Erro ao salvar.");
+            toast.success("Disponibilidade salva com sucesso!");
+            await fetchAvailability(); // Refresh IDs
+        } catch (error: any) {
+            console.error("Error saving availability:", error);
+            toast.error(error.message || "Erro ao salvar disponibilidade");
         } finally {
             setSaving(false);
         }
@@ -117,7 +132,14 @@ export function WeeklyScheduler({ professionalId }: WeeklySchedulerProps) {
         setSchedule(prev => prev.map(d => d.day_of_week === dayValue ? { ...d, ...updates } : d));
     };
 
-    if (loading) return <div>Carregando horários...</div>;
+    if (loading) {
+        return (
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-12 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-brand-600 mx-auto mb-4" />
+                <p className="text-slate-500">Carregando horários...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
@@ -164,7 +186,7 @@ export function WeeklyScheduler({ professionalId }: WeeklySchedulerProps) {
             </div>
 
             <div className="mt-6 flex justify-end">
-                <Button onClick={handleSave} disabled={saving}>
+                <Button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700">
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Save className="mr-2 h-4 w-4" />
                     Salvar Horários
