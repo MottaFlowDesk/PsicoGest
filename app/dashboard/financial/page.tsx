@@ -4,7 +4,7 @@ import { FinancialSummaryCards } from "@/components/financial/financial-summary-
 import { InvoiceList } from "@/components/financial/invoice-list";
 import { getFinancialSummary, getInvoices } from "./actions";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { NewInvoiceDialog } from "@/components/financial/new-invoice-dialog";
 import Link from "next/link"; // Assuming we'll have a create page eventually
 
 export default async function FinancialPage() {
@@ -30,10 +30,7 @@ export default async function FinancialPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">Financeiro</h1>
                     <p className="text-slate-500">Gestão de receitas e faturas.</p>
                 </div>
-                <Button disabled>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Nova Fatura
-                </Button>
+                <NewInvoiceDialog />
             </div>
 
             <Suspense fallback={<div>Carregando resumo...</div>}>

@@ -32,6 +32,7 @@ interface PatientOption {
 }
 
 import { useRouter } from "next/navigation";
+import { createAppointment } from "@/app/dashboard/appointments/actions";
 
 export function NewAppointmentDialog({ onAppointmentCreated }: { onAppointmentCreated?: () => void }) {
     const [open, setOpen] = useState(false);
@@ -68,44 +69,24 @@ export function NewAppointmentDialog({ onAppointmentCreated }: { onAppointmentCr
 
         setIsLoading(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Not authenticated");
+            // Adjust date string for input
+            const dateStr = format(date, "yyyy-MM-dd");
 
-            // Get professional ID
-            const { data: professional } = await supabase
-                .from("professionals")
-                .select("id")
-                .eq("user_id", user.id)
-                .single();
-
-            if (!professional) throw new Error("Professional not found");
-
-            // Construct timestamp
-            // Date + Time string to Date object
-            const [hours, minutes] = time.split(':').map(Number);
-            const scheduledAt = new Date(date);
-            scheduledAt.setHours(hours, minutes, 0, 0);
-
-            const { error } = await supabase.from("appointments").insert({
-                professional_id: professional.id,
-                patient_id: patientId,
-                scheduled_at: scheduledAt.toISOString(),
-                duration_minutes: parseInt(duration),
-                type: type,
-                telehealth_provider: type === 'telehealth' ? 'native' : null,
-                status: 'scheduled',
-                timezone: 'America/Sao_Paulo'
+            await createAppointment({
+                patientId,
+                date: dateStr,
+                time,
+                duration: parseInt(duration),
+                type: type as "in_person" | "telehealth"
             });
-
-            if (error) throw error;
 
             setOpen(false);
             onAppointmentCreated?.();
-            router.refresh(); // Refresh server data
+            router.refresh();
             resetForm();
 
         } catch (error: any) {
-            console.error("Error creating appointment:", JSON.stringify(error, null, 2));
+            console.error("Error creating appointment:", error);
             alert(`Erro ao criar agendamento: ${error.message || "Erro desconhecido"}`);
         } finally {
             setIsLoading(false);

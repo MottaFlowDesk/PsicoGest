@@ -24,16 +24,17 @@ export default function SettingsPage() {
                     </Card>
                 </Link>
 
-                {/* Placeholders for future settings */}
-                <Card className="opacity-50 cursor-not-allowed h-full">
-                    <CardHeader>
-                        <User className="w-8 h-8 text-slate-400 mb-2" />
-                        <CardTitle>Perfil Profissional</CardTitle>
-                        <CardDescription>
-                            Em breve: Edite seus dados, especialidades e foto.
-                        </CardDescription>
-                    </CardHeader>
-                </Card>
+                <Link href="/dashboard/settings/profile">
+                    <Card className="hover:border-brand-500 hover:shadow-md transition-all cursor-pointer h-full">
+                        <CardHeader>
+                            <User className="w-8 h-8 text-brand-600 mb-2" />
+                            <CardTitle>Perfil Profissional</CardTitle>
+                            <CardDescription>
+                                Edite seus dados, especialidades, bio e foto de perfil.
+                            </CardDescription>
+                        </CardHeader>
+                    </Card>
+                </Link>
 
                 <Card className="opacity-50 cursor-not-allowed h-full">
                     <CardHeader>
