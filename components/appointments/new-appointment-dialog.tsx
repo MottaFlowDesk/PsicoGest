@@ -34,12 +34,10 @@ interface PatientOption {
 import { useRouter } from "next/navigation";
 import { createAppointment } from "@/app/dashboard/appointments/actions";
 
-import { ButtonProps } from "@/components/ui/button";
-
 interface NewAppointmentDialogProps {
     onAppointmentCreated?: () => void;
     className?: string;
-    variant?: ButtonProps["variant"];
+    variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 }
 
 export function NewAppointmentDialog({ onAppointmentCreated, className, variant }: NewAppointmentDialogProps) {
