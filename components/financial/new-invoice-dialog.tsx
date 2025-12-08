@@ -30,7 +30,12 @@ interface PatientOption {
     full_name: string;
 }
 
-export function NewInvoiceDialog() {
+interface NewInvoiceDialogProps {
+    className?: string;
+    variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+}
+
+export function NewInvoiceDialog({ className, variant }: NewInvoiceDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [patients, setPatients] = useState<PatientOption[]>([]);
@@ -93,7 +98,7 @@ export function NewInvoiceDialog() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button className={className} variant={variant}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Nova Fatura
                 </Button>

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
 
 export default async function DashboardLayout({
     children,
@@ -34,11 +35,13 @@ export default async function DashboardLayout({
                 userName={profile.full_name}
                 userAvatar={profile.avatar_url}
             />
-            <main className="flex-1 overflow-y-auto">
-                <div className="p-8">
+
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                <Header />
+                <main className="flex-1 overflow-y-auto bg-slate-50 p-4 lg:p-8">
                     {children}
-                </div>
-            </main>
+                </main>
+            </div>
         </div>
     );
 }

@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Clock, AlertCircle } from "lucide-react";
 import { DashboardSummary } from "@/app/dashboard/financial/actions";
 
@@ -13,52 +12,49 @@ export function FinancialSummaryCards({ summary }: FinancialSummaryCardsProps) {
             currency: "BRL",
         }).format(val);
 
+    const cards = [
+        {
+            name: "Receita (Este Mês)",
+            value: formatMoney(summary.revenue),
+            description: "Valor efetivamente recebido",
+            icon: DollarSign,
+            color: "text-green-600",
+            bg: "bg-green-100",
+        },
+        {
+            name: "A Receber (Pendente)",
+            value: formatMoney(summary.pending),
+            description: "Faturas em aberto",
+            icon: Clock,
+            color: "text-blue-600",
+            bg: "bg-blue-100",
+        },
+        {
+            name: "Em Atraso",
+            value: formatMoney(summary.overdue),
+            description: `${summary.overdueCount} faturas vencidas`,
+            icon: AlertCircle,
+            color: "text-red-600",
+            bg: "bg-red-100",
+        },
+    ];
+
     return (
-        <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-600">
-                        Receita (Este Mês)
-                    </CardTitle>
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-slate-900">{formatMoney(summary.revenue)}</div>
-                    <p className="text-xs text-slate-500 mt-1">
-                        Valor efetivamente recebido
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-600">
-                        A Receber (Pendente)
-                    </CardTitle>
-                    <Clock className="h-4 w-4 text-blue-600" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-slate-900">{formatMoney(summary.pending)}</div>
-                    <p className="text-xs text-slate-500 mt-1">
-                        Faturas em aberto
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-600">
-                        Em Atraso
-                    </CardTitle>
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-red-600">{formatMoney(summary.overdue)}</div>
-                    <p className="text-xs text-red-200 mt-1 font-medium bg-red-50 inline-block px-1 rounded">
-                        {summary.overdueCount} faturas vencidas
-                    </p>
-                </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {cards.map((item) => (
+                <div key={item.name} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-slate-500 mb-1">{item.name}</p>
+                        <h3 className="text-2xl font-bold text-slate-900">{item.value}</h3>
+                        <p className={`text-xs font-medium mt-1 ${item.color === 'text-red-600' ? 'text-red-500 bg-red-50 px-1.5 py-0.5 rounded inline-block' : 'text-slate-400'}`}>
+                            {item.description}
+                        </p>
+                    </div>
+                    <div className={`p-4 rounded-xl ${item.bg}`}>
+                        <item.icon className={`w-6 h-6 ${item.color}`} />
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }

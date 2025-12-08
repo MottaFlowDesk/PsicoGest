@@ -41,7 +41,7 @@ export function MonthGrid({ appointments, currentDate }: { appointments: Appoint
     };
 
     return (
-        <div className="flex flex-col h-full min-h-[600px]">
+        <div className="flex flex-col h-full">
             {/* Headers */}
             <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50 sticky top-0 z-10">
                 {WEEKDAYS.map(day => (
@@ -61,7 +61,7 @@ export function MonthGrid({ appointments, currentDate }: { appointments: Appoint
                         <div
                             key={day.toISOString()}
                             className={cn(
-                                "min-h-[100px] p-2 border-b border-r border-slate-100 last:border-r-0 relative group transition-colors hover:bg-slate-50/30",
+                                "p-2 border-b border-r border-slate-100 last:border-r-0 relative group transition-colors hover:bg-slate-50/30 overflow-hidden",
                                 !isSameMonth(day, currentDate) && "bg-slate-50/50",
                                 isToday(day) && "bg-blue-50/20"
                             )}

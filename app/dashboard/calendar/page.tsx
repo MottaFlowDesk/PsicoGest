@@ -36,23 +36,16 @@ export default async function CalendarPage({
         .lte("scheduled_at", endDate.toISOString()) as any;
 
     return (
-        <div className="h-full flex flex-col p-6 space-y-4">
-            <div className="flex items-center justify-between">
+        <div className="flex flex-col space-y-4 h-full">
+            <div className="flex items-center justify-between flex-shrink-0">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-900">Agenda</h2>
                     <p className="text-slate-500">Gerencie seus atendimentos mensais.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button asChild>
-                        <Link href="/dashboard/appointments">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Novo Agendamento
-                        </Link>
-                    </Button>
-                </div>
+                {/* Global header already has New Appointment button */}
             </div>
 
-            <div className="flex-1 overflow-hidden h-full">
+            <div className="flex-1 min-h-0">
                 <Suspense fallback={<div className="p-8 text-center text-slate-500">Carregando calendário...</div>}>
                     <CalendarViewManager
                         appointments={appointments || []}

@@ -60,43 +60,53 @@ export function CalendarViewManager({ appointments }: CalendarViewManagerProps) 
     return (
         <div className="flex flex-col h-full bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-lg font-semibold capitalize text-slate-900 w-48">
+            <div className="flex flex-col sm:flex-row items-center justify-between p-4 gap-4 border-b border-slate-100 bg-white">
+                <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+                    <h2 className="text-lg font-bold capitalize text-slate-900 w-48 truncate">
                         {viewParam === 'month'
                             ? format(currentDate, "MMMM yyyy", { locale: ptBR })
                             : `Semana ${format(currentDate, "w")} · ${format(currentDate, "MMMM", { locale: ptBR })}`
                         }
                     </h2>
-                    <div className="flex items-center border rounded-md bg-slate-50">
-                        <Button variant="ghost" size="icon" onClick={() => handleNavigate("prev")} className="h-8 w-8 text-slate-600">
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={handleToday} className="h-8 px-3 text-xs font-medium border-x border-slate-200 rounded-none text-slate-600">
+                    <div className="flex items-center bg-white rounded-lg border border-slate-200 shadow-sm shrink-0">
+                        <button onClick={() => handleNavigate("prev")} className="p-1.5 hover:bg-slate-50 text-slate-600 rounded-l-lg border-r border-slate-200 transition-colors">
+                            <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <button onClick={handleToday} className="px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                             Hoje
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleNavigate("next")} className="h-8 w-8 text-slate-600">
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
+                        </button>
+                        <button onClick={() => handleNavigate("next")} className="p-1.5 hover:bg-slate-50 text-slate-600 rounded-r-lg border-l border-slate-200 transition-colors">
+                            <ChevronRight className="h-5 w-5" />
+                        </button>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <ToggleGroup type="single" value={viewParam} onValueChange={handleViewChange} className="border rounded-md p-0.5 bg-slate-50">
-                        <ToggleGroupItem value="month" className="h-7 px-3 text-xs data-[state=on]:bg-white data-[state=on]:shadow-sm">
-                            <CalendarIcon className="mr-2 h-3 w-3" />
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <div className="flex bg-slate-100 rounded-lg p-1">
+                        <button
+                            onClick={() => handleViewChange("month")}
+                            className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${viewParam === 'month'
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-900'
+                                }`}
+                        >
                             Mês
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="week" className="h-7 px-3 text-xs data-[state=on]:bg-white data-[state=on]:shadow-sm">
-                            <List className="mr-2 h-3 w-3" />
+                        </button>
+                        <button
+                            onClick={() => handleViewChange("week")}
+                            className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${viewParam === 'week'
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-900'
+                                }`}
+                        >
                             Semana
-                        </ToggleGroupItem>
-                    </ToggleGroup>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 min-h-0 overflow-hidden">
                 {viewParam === "month" ? (
                     <MonthGrid appointments={appointments} currentDate={currentDate} />
                 ) : (

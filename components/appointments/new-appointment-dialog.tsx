@@ -34,7 +34,15 @@ interface PatientOption {
 import { useRouter } from "next/navigation";
 import { createAppointment } from "@/app/dashboard/appointments/actions";
 
-export function NewAppointmentDialog({ onAppointmentCreated }: { onAppointmentCreated?: () => void }) {
+import { ButtonProps } from "@/components/ui/button";
+
+interface NewAppointmentDialogProps {
+    onAppointmentCreated?: () => void;
+    className?: string;
+    variant?: ButtonProps["variant"];
+}
+
+export function NewAppointmentDialog({ onAppointmentCreated, className, variant }: NewAppointmentDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [patients, setPatients] = useState<PatientOption[]>([]);
@@ -104,7 +112,7 @@ export function NewAppointmentDialog({ onAppointmentCreated }: { onAppointmentCr
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button className={className} variant={variant}>
                     <Plus className="mr-2 h-4 w-4" />
                     Novo Agendamento
                 </Button>
