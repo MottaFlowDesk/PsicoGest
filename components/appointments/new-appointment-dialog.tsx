@@ -38,16 +38,24 @@ interface NewAppointmentDialogProps {
     onAppointmentCreated?: () => void;
     className?: string;
     variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+    defaultPatientId?: string;
+    triggerLabel?: string;
 }
 
-export function NewAppointmentDialog({ onAppointmentCreated, className, variant }: NewAppointmentDialogProps) {
+export function NewAppointmentDialog({
+    onAppointmentCreated,
+    className,
+    variant,
+    defaultPatientId,
+    triggerLabel = "Novo Agendamento"
+}: NewAppointmentDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [patients, setPatients] = useState<PatientOption[]>([]);
     const router = useRouter();
 
     // Form state
-    const [patientId, setPatientId] = useState("");
+    const [patientId, setPatientId] = useState(defaultPatientId || "");
     const [date, setDate] = useState<Date>();
     const [time, setTime] = useState("09:00");
     const [duration, setDuration] = useState("50");
@@ -112,7 +120,7 @@ export function NewAppointmentDialog({ onAppointmentCreated, className, variant 
             <DialogTrigger asChild>
                 <Button className={className} variant={variant}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Novo Agendamento
+                    {triggerLabel}
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

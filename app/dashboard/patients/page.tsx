@@ -7,14 +7,14 @@ import {
     Plus,
     Search,
     Filter,
-    MoreHorizontal,
     FileText,
     MessageSquare,
-    Calendar as CalendarIcon,
     Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
+import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
+import { PatientActionsMenu } from "@/components/patients/patient-actions-menu";
 
 export default function PatientsPage() {
     const [patients, setPatients] = useState<any[]>([]);
@@ -155,12 +155,17 @@ export default function PatientsPage() {
                                                 >
                                                     <MessageSquare size={18} />
                                                 </button>
-                                                <button className="text-slate-400 hover:text-brand-600 transition-colors" title="Agendar Sessão">
-                                                    <CalendarIcon size={18} />
-                                                </button>
-                                                <button className="text-slate-400 hover:text-slate-600 transition-colors">
-                                                    <MoreHorizontal size={18} />
-                                                </button>
+                                                <NewAppointmentDialog
+                                                    defaultPatientId={patient.id}
+                                                    triggerLabel=""
+                                                    className="p-1.5 h-auto bg-transparent hover:bg-transparent text-slate-400 hover:text-brand-600 transition-colors shadow-none"
+                                                    variant="ghost"
+                                                />
+                                                <PatientActionsMenu
+                                                    patientId={patient.id}
+                                                    patientName={patient.full_name}
+                                                    onUpdate={fetchPatients}
+                                                />
                                             </div>
                                         </td>
                                     </tr>
