@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Calendar, User } from "lucide-react";
+import { Clock, Calendar, User, CalendarClock } from "lucide-react";
 import Link from "next/link";
 
 export default function SettingsPage() {
@@ -36,15 +36,17 @@ export default function SettingsPage() {
                     </Card>
                 </Link>
 
-                <Card className="opacity-50 cursor-not-allowed h-full">
-                    <CardHeader>
-                        <Calendar className="w-8 h-8 text-slate-400 mb-2" />
-                        <CardTitle>Preferências de Agenda</CardTitle>
-                        <CardDescription>
-                            Em breve: Duração padrão de consulta, tipos de serviço.
-                        </CardDescription>
-                    </CardHeader>
-                </Card>
+                <Link href="/dashboard/settings/calendar-preferences">
+                    <Card className="hover:border-brand-500 hover:shadow-md transition-all cursor-pointer h-full">
+                        <CardHeader>
+                            <CalendarClock className="w-8 h-8 text-brand-600 mb-2" />
+                            <CardTitle>Preferências de Agenda</CardTitle>
+                            <CardDescription>
+                                Configure duração padrão das sessões, intervalos e horários.
+                            </CardDescription>
+                        </CardHeader>
+                    </Card>
+                </Link>
             </div>
         </div>
     );
