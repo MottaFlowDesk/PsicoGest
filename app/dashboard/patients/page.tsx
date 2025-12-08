@@ -1,4 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
     Plus,
@@ -7,39 +10,64 @@ import {
     MoreHorizontal,
     FileText,
     MessageSquare,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    Loader2
 } from "lucide-react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Input } from "@/components/ui/input";
 
-export default async function PatientsPage() {
-    const supabase = await createClient();
+export default function PatientsPage() {
+    const [patients, setPatients] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+    const supabase = createClient();
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    useEffect(() => {
+        fetchPatients();
+    }, []);
 
-    if (!user) {
-        redirect("/login");
+    async function fetchPatients() {
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) return;
+
+        const { data: professional } = await supabase
+            .from("professionals")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+
+        if (!professional) return;
+
+        const { data } = await supabase
+            .from("patients")
+            .select("*")
+            .eq("professional_id", professional.id)
+            .eq("archived", false)
+            .order("created_at", { ascending: false });
+
+        setPatients(data || []);
+        setLoading(false);
     }
 
-    const { data: professional } = await supabase
-        .from("professionals")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
+    // Filter patients based on search query
+    const filteredPatients = patients.filter(patient => {
+        if (!searchQuery) return true;
 
-    if (!professional) {
-        redirect("/onboarding");
-    }
+        const query = searchQuery.toLowerCase();
+        const name = patient.full_name?.toLowerCase() || "";
+        const email = patient.email?.toLowerCase() || "";
+        const phone = patient.phone?.toLowerCase() || "";
 
-    const { data: patients } = await supabase
-        .from("patients")
-        .select("*")
-        .eq("professional_id", professional.id)
-        .eq("archived", false)
-        .order("created_at", { ascending: false });
+        return name.includes(query) || email.includes(query) || phone.includes(query);
+    });
+
+    const openWhatsApp = (phone: string) => {
+        if (!phone) return;
+        const cleanPhone = phone.replace(/\D/g, '');
+        window.open(`https://wa.me/55${cleanPhone}`, '_blank');
+    };
 
     return (
         <div className="space-y-6">
@@ -66,6 +94,8 @@ export default async function PatientsPage() {
                         type="text"
                         placeholder="Buscar por nome, email ou telefone..."
                         className="pl-10 border-slate-200 bg-slate-50 focus-visible:bg-white transition-colors"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -77,7 +107,12 @@ export default async function PatientsPage() {
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                {patients && patients.length > 0 ? (
+                {loading ? (
+                    <div className="p-12 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-brand-600 mx-auto mb-4" />
+                        <p className="text-slate-500">Carregando pacientes...</p>
+                    </div>
+                ) : filteredPatients && filteredPatients.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-slate-200">
                             <thead className="bg-slate-50">
@@ -89,7 +124,7 @@ export default async function PatientsPage() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-slate-200">
-                                {patients.map((patient) => (
+                                {filteredPatients.map((patient) => (
                                     <tr key={patient.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
@@ -110,16 +145,20 @@ export default async function PatientsPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex items-center justify-end gap-3">
-                                                <Link href={`/dashboard/patients/${patient.id}`} className="text-slate-400 hover:text-brand-600" title="Ver Prontuário">
+                                                <Link href={`/dashboard/patients/${patient.id}`} className="text-slate-400 hover:text-brand-600 transition-colors" title="Ver Prontuário">
                                                     <FileText size={18} />
                                                 </Link>
-                                                <button className="text-slate-400 hover:text-green-600" title="Whatsapp">
+                                                <button
+                                                    onClick={() => openWhatsApp(patient.phone)}
+                                                    className="text-slate-400 hover:text-green-600 transition-colors"
+                                                    title="WhatsApp"
+                                                >
                                                     <MessageSquare size={18} />
                                                 </button>
-                                                <button className="text-slate-400 hover:text-brand-600" title="Agendar Sessão">
+                                                <button className="text-slate-400 hover:text-brand-600 transition-colors" title="Agendar Sessão">
                                                     <CalendarIcon size={18} />
                                                 </button>
-                                                <button className="text-slate-400 hover:text-slate-600">
+                                                <button className="text-slate-400 hover:text-slate-600 transition-colors">
                                                     <MoreHorizontal size={18} />
                                                 </button>
                                             </div>
@@ -134,13 +173,20 @@ export default async function PatientsPage() {
                         <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Plus className="h-6 w-6 text-slate-400" />
                         </div>
-                        <h3 className="text-lg font-medium text-slate-900">Nenhum paciente encontrado</h3>
+                        <h3 className="text-lg font-medium text-slate-900">
+                            {searchQuery ? "Nenhum paciente encontrado" : "Nenhum paciente cadastrado"}
+                        </h3>
                         <p className="text-slate-500 mt-1 max-w-sm mx-auto">
-                            Comece cadastrando seu primeiro paciente para gerenciar atendimentos e prontuários.
+                            {searchQuery
+                                ? "Tente buscar com outros termos."
+                                : "Comece cadastrando seu primeiro paciente para gerenciar atendimentos e prontuários."
+                            }
                         </p>
-                        <Link href="/dashboard/patients/new" className="mt-6 inline-block">
-                            <Button variant="outline">Cadastrar Paciente</Button>
-                        </Link>
+                        {!searchQuery && (
+                            <Link href="/dashboard/patients/new" className="mt-6 inline-block">
+                                <Button variant="outline">Cadastrar Paciente</Button>
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>

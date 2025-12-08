@@ -1,5 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -9,39 +11,56 @@ import {
     MapPin,
     Search,
     Filter,
-    MoreHorizontal,
     MoreVertical,
     FileText,
-    MessageSquare,
     CheckCircle,
-    XCircle,
-    User
+    Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Link from "next/link";
 
-export default async function AppointmentsPage() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+export default function AppointmentsPage() {
+    const [appointments, setAppointments] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+    const supabase = createClient();
 
-    if (!user) redirect("/login");
+    useEffect(() => {
+        fetchAppointments();
+    }, []);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    async function fetchAppointments() {
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
 
-    const { data: appointments, error } = await supabase
-        .from("appointments")
-        .select(`
-            *,
-            patients (
-                full_name,
-                phone,
-                email
-            )
-        `)
-        .order('scheduled_at', { ascending: true })
-        .limit(50); // Increased limit as tables can handle more rows well
+        if (!user) return;
+
+        const { data } = await supabase
+            .from("appointments")
+            .select(`
+                *,
+                patients (
+                    full_name,
+                    phone,
+                    email
+                )
+            `)
+            .order('scheduled_at', { ascending: true })
+            .limit(50);
+
+        setAppointments(data || []);
+        setLoading(false);
+    }
+
+    // Filter appointments based on search query
+    const filteredAppointments = appointments.filter(apt => {
+        if (!searchQuery) return true;
+
+        const query = searchQuery.toLowerCase();
+        const patientName = apt.patients?.full_name?.toLowerCase() || "";
+
+        return patientName.includes(query);
+    });
 
     return (
         <div className="space-y-6">
@@ -63,6 +82,8 @@ export default async function AppointmentsPage() {
                         type="text"
                         placeholder="Buscar por paciente..."
                         className="pl-10 border-slate-200 bg-slate-50 focus-visible:bg-white transition-colors"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -74,14 +95,24 @@ export default async function AppointmentsPage() {
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                {!appointments || appointments.length === 0 ? (
+                {loading ? (
+                    <div className="p-12 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-brand-600 mx-auto mb-4" />
+                        <p className="text-slate-500">Carregando agendamentos...</p>
+                    </div>
+                ) : !filteredAppointments || filteredAppointments.length === 0 ? (
                     <div className="p-12 text-center">
                         <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <CalendarIcon className="h-6 w-6 text-slate-400" />
                         </div>
-                        <h3 className="text-lg font-medium text-slate-900">Agenda vazia</h3>
+                        <h3 className="text-lg font-medium text-slate-900">
+                            {searchQuery ? "Nenhum agendamento encontrado" : "Agenda vazia"}
+                        </h3>
                         <p className="text-slate-500 mt-1 max-w-sm mx-auto">
-                            Nenhum agendamento encontrado.
+                            {searchQuery
+                                ? "Tente buscar com outros termos."
+                                : "Nenhum agendamento encontrado."
+                            }
                         </p>
                     </div>
                 ) : (
@@ -97,7 +128,7 @@ export default async function AppointmentsPage() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-slate-200">
-                                {appointments.map((apt: any) => {
+                                {filteredAppointments.map((apt: any) => {
                                     const date = new Date(apt.scheduled_at);
                                     return (
                                         <tr key={apt.id} className="hover:bg-slate-50 transition-colors">
