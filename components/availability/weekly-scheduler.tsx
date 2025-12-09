@@ -86,13 +86,17 @@ export function WeeklyScheduler({ professionalId }: WeeklySchedulerProps) {
 
             // Upsert enabled days
             for (const day of activeDays) {
+                // Ensure time format is HH:MM:SS for PostgreSQL
+                const startTime = day.start_time.length === 5 ? `${day.start_time}:00` : day.start_time;
+                const endTime = day.end_time.length === 5 ? `${day.end_time}:00` : day.end_time;
+
                 if (day.id) {
                     // Update existing
                     const { error: updateError } = await supabase
                         .from("professional_availability")
                         .update({
-                            start_time: day.start_time,
-                            end_time: day.end_time
+                            start_time: startTime,
+                            end_time: endTime
                         })
                         .eq("id", day.id);
 
@@ -107,8 +111,8 @@ export function WeeklyScheduler({ professionalId }: WeeklySchedulerProps) {
                         .insert({
                             professional_id: professionalId,
                             day_of_week: day.day_of_week,
-                            start_time: day.start_time,
-                            end_time: day.end_time
+                            start_time: startTime,
+                            end_time: endTime
                         });
 
                     if (insertError) {
@@ -119,7 +123,7 @@ export function WeeklyScheduler({ professionalId }: WeeklySchedulerProps) {
             }
 
             toast.success("Disponibilidade salva com sucesso!");
-            await fetchAvailability(); // Refresh IDs
+            await fetchAvailability(); // Refresh to get new IDs
         } catch (error: any) {
             console.error("Error saving availability:", error);
             toast.error(error.message || "Erro ao salvar disponibilidade");
