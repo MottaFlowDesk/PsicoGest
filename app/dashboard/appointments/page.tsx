@@ -64,13 +64,7 @@ export default function AppointmentsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-900">Atendimentos</h2>
-                    <p className="text-sm text-slate-500 mt-1">Gerencie seus atendimentos agendados e histórico.</p>
-                </div>
-                {/* Global header has the new appointment button */}
-            </div>
+
 
             {/* Filters & Search - Matching Patients Page Design */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
@@ -169,8 +163,8 @@ export default function AppointmentsPage() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${apt.status === 'confirmed' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                        apt.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                            'bg-blue-50 text-blue-700 border-blue-100'
+                                                    apt.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                        'bg-blue-50 text-blue-700 border-blue-100'
                                                     }`}>
                                                     {apt.status === 'scheduled' ? 'Agendado' :
                                                         apt.status === 'confirmed' ? 'Confirmado' :

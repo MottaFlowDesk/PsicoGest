@@ -5,7 +5,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Appointment } from "./calendar-view-manager";
 
-export function WeekGrid({ appointments, currentDate }: { appointments: Appointment[], currentDate: Date }) {
+export function WeekGrid({ appointments, currentDate, availability }: { appointments: Appointment[], currentDate: Date, availability: any[] }) {
     const startDate = startOfWeek(currentDate, { weekStartsOn: 0 });
     const endDate = endOfWeek(currentDate, { weekStartsOn: 0 });
     const days = eachDayOfInterval({ start: startDate, end: endDate });
@@ -25,6 +25,46 @@ export function WeekGrid({ appointments, currentDate }: { appointments: Appointm
             top: `${top}%`,
             height: `${height}%`,
         };
+    };
+
+    const getAvailabilityBlocks = (day: Date) => {
+        const dayOfWeek = day.getDay();
+        const dayConfig = availability?.find((a: any) => a.day_of_week === dayOfWeek);
+
+        if (!dayConfig) {
+            // No availability config = fully unavailable (or fully available depending on logic, usually unavailable)
+            return [{ start: 0, end: 100 }]; // 100% height gray
+        }
+
+        const blocks = [];
+        const dayStartMinutes = 8 * 60; // 08:00 in minutes
+        const dayEndMinutes = 21 * 60; // 21:00 end of view grid
+
+        // Parse DB times (HH:MM:SS)
+        const [startH, startM] = dayConfig.start_time.split(':').map(Number);
+        const [endH, endM] = dayConfig.end_time.split(':').map(Number);
+
+        const configStartMinutes = startH * 60 + startM;
+        const configEndMinutes = endH * 60 + endM;
+
+        const totalViewMinutes = 13 * 60;
+
+        // Block before start
+        if (configStartMinutes > dayStartMinutes) {
+            const height = ((configStartMinutes - dayStartMinutes) / totalViewMinutes) * 100;
+            blocks.push({ top: 0, height, key: 'morning-block' });
+        }
+
+        // Block after end
+        // Block after end
+        if (configEndMinutes < dayEndMinutes) {
+            const minutesFromTop = configEndMinutes - dayStartMinutes;
+            const top = (minutesFromTop / totalViewMinutes) * 100;
+            const height = 100 - top;
+            blocks.push({ top, height, key: 'evening-block' });
+        }
+
+        return blocks;
     };
 
     return (
@@ -72,12 +112,30 @@ export function WeekGrid({ appointments, currentDate }: { appointments: Appointm
 
                     {days.map(day => {
                         const dayApps = appointments.filter(app => isSameDay(parseISO(app.scheduled_at), day));
+                        const availabilityBlocks = getAvailabilityBlocks(day);
+                        const isFullyUnavailable = availabilityBlocks.length === 1 && 'start' in availabilityBlocks[0] && availabilityBlocks[0].start === 0;
 
                         return (
                             <div key={day.toString()} className={cn(
                                 "relative h-full",
-                                isToday(day) && "bg-blue-50/5"
+                                isToday(day) ? "bg-blue-50/5" : "bg-white"
                             )}>
+                                {/* Availability Blocks (Gray areas) */}
+                                {/* Availability Blocks (Gray areas) */}
+                                {isFullyUnavailable ? (
+                                    <div className="absolute inset-0 bg-slate-100 z-0 flex items-center justify-center border border-slate-200">
+                                        <span className="text-xs text-slate-400 font-medium -rotate-90 select-none">Indisponível</span>
+                                    </div>
+                                ) : (
+                                    availabilityBlocks.map((block: any) => (
+                                        <div
+                                            key={block.key}
+                                            className="absolute left-0 right-0 bg-slate-100 z-0 border-y border-slate-200"
+                                            style={{ top: `${block.top}%`, height: `${block.height}%` }}
+                                        />
+                                    ))
+                                )}
+
                                 {dayApps.map(app => (
                                     <div
                                         key={app.id}

@@ -25,11 +25,7 @@ export default async function FinancialPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Financeiro</h1>
-                    <p className="text-slate-500 text-sm mt-1">Controle de faturamento, recebimentos e notas fiscais.</p>
-                </div>
+            <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
                 <div className="flex gap-3">
                     <button className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
                         <Download size={18} />

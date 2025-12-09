@@ -71,11 +71,7 @@ export default function PatientsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Pacientes</h1>
-                    <p className="text-slate-500 text-sm mt-1">Gerencie seus pacientes, prontuários e históricos.</p>
-                </div>
+            <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
                 <Link href="/dashboard/patients/new">
                     <Button className="bg-brand-600 hover:bg-brand-700 shadow-sm">
                         <Plus className="mr-2 h-4 w-4" />

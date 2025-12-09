@@ -23,13 +23,14 @@ export type Appointment = {
 
 interface CalendarViewManagerProps {
     appointments: Appointment[];
+    availability: any[];
 }
 
-export function CalendarViewManager({ appointments }: CalendarViewManagerProps) {
+export function CalendarViewManager({ appointments, availability }: CalendarViewManagerProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const dateParam = searchParams.get("date");
-    const viewParam = searchParams.get("view") as "month" | "week" || "month";
+    const viewParam = searchParams.get("view") as "month" | "week" | "day" || "month";
 
     const currentDate = dateParam ? parseISO(dateParam) : new Date();
 
@@ -37,8 +38,12 @@ export function CalendarViewManager({ appointments }: CalendarViewManagerProps) 
         let newDate = new Date(currentDate);
         if (viewParam === "month") {
             newDate = direction === "prev" ? subMonths(currentDate, 1) : addMonths(currentDate, 1);
-        } else {
+        } else if (viewParam === "week") {
             newDate = direction === "prev" ? subWeeks(currentDate, 1) : addWeeks(currentDate, 1);
+        } else {
+            // Day view
+            newDate = direction === "prev" ? subWeeks(currentDate, 0.14) : addWeeks(currentDate, 0.14); // +/- 1 day approximation logic or just use addDays
+            newDate.setDate(currentDate.getDate() + (direction === "prev" ? -1 : 1));
         }
         updateUrl(newDate, viewParam);
     };
@@ -49,10 +54,10 @@ export function CalendarViewManager({ appointments }: CalendarViewManagerProps) 
 
     const handleViewChange = (view: string) => {
         if (!view) return;
-        updateUrl(currentDate, view as "month" | "week");
+        updateUrl(currentDate, view as "month" | "week" | "day");
     };
 
-    const updateUrl = (date: Date, view: "month" | "week") => {
+    const updateUrl = (date: Date, view: "month" | "week" | "day") => {
         const isoDate = format(date, "yyyy-MM-dd");
         router.push(`/dashboard/calendar?date=${isoDate}&view=${view}`);
     };
@@ -62,12 +67,6 @@ export function CalendarViewManager({ appointments }: CalendarViewManagerProps) 
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-center justify-between p-4 gap-4 border-b border-slate-100 bg-white">
                 <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
-                    <h2 className="text-lg font-bold capitalize text-slate-900 w-48 truncate">
-                        {viewParam === 'month'
-                            ? format(currentDate, "MMMM yyyy", { locale: ptBR })
-                            : `Semana ${format(currentDate, "w")} · ${format(currentDate, "MMMM", { locale: ptBR })}`
-                        }
-                    </h2>
                     <div className="flex items-center bg-white rounded-lg border border-slate-200 shadow-sm shrink-0">
                         <button onClick={() => handleNavigate("prev")} className="p-1.5 hover:bg-slate-50 text-slate-600 rounded-l-lg border-r border-slate-200 transition-colors">
                             <ChevronLeft className="h-5 w-5" />
@@ -101,6 +100,15 @@ export function CalendarViewManager({ appointments }: CalendarViewManagerProps) 
                         >
                             Semana
                         </button>
+                        <button
+                            onClick={() => handleViewChange("day")}
+                            className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${viewParam === 'day'
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-900'
+                                }`}
+                        >
+                            Dia
+                        </button>
                     </div>
                 </div>
             </div>
@@ -110,7 +118,12 @@ export function CalendarViewManager({ appointments }: CalendarViewManagerProps) 
                 {viewParam === "month" ? (
                     <MonthGrid appointments={appointments} currentDate={currentDate} />
                 ) : (
-                    <WeekGrid appointments={appointments} currentDate={currentDate} />
+                    <WeekGrid
+                        appointments={appointments}
+                        currentDate={currentDate}
+                        availability={availability}
+                        view={viewParam}
+                    />
                 )}
             </div>
         </div>
