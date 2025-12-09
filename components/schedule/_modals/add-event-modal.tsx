@@ -114,9 +114,9 @@ export default function AddEventModal({
       case "red":
         return "destructive";
       case "green":
-        return "success";
+        return "secondary";
       case "yellow":
-        return "warning";
+        return "secondary";
       default:
         return "default";
     }

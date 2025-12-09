@@ -10,7 +10,7 @@ import { TrashIcon, CalendarIcon, ClockIcon } from "lucide-react";
 import { useScheduler } from "@/providers/schedular-provider";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import CustomModal from "@/components/ui/custom-modal";
+import CustomModal, { CustomModalContent, CustomModalHeader, CustomModalTitle } from "../../../../ui/custom-modal";
 
 // Function to format date
 const formatDate = (date: Date) => {
@@ -82,12 +82,17 @@ export default function EventStyled({
   function handleEditEvent(event: Event) {
     // Open the modal with the content
     setOpen(
-      <CustomModal title="Edit Event">
-        <AddEventModal
-          CustomAddEventModal={
-            CustomEventModal?.CustomAddEventModal?.CustomForm
-          }
-        />
+      <CustomModal>
+        <CustomModalContent>
+          <CustomModalHeader>
+            <CustomModalTitle>Edit Event</CustomModalTitle>
+          </CustomModalHeader>
+          <AddEventModal
+            CustomAddEventModal={
+              CustomEventModal?.CustomAddEventModal?.CustomForm
+            }
+          />
+        </CustomModalContent>
       </CustomModal>,
       async () => {
         return {
@@ -168,18 +173,18 @@ export default function EventStyled({
             <div className="font-semibold text-xs truncate mb-1">
               {event?.title || "Untitled Event"}
             </div>
-            
+
             {/* Show time in minimized mode */}
             {event?.minmized && (
               <div className="text-[10px] opacity-80">
                 {formatTime(event?.startDate)}
               </div>
             )}
-            
+
             {!event?.minmized && event?.description && (
               <div className="my-2 text-sm">{event?.description}</div>
             )}
-            
+
             {!event?.minmized && (
               <div className="text-xs space-y-1 mt-2">
                 <div className="flex items-center">

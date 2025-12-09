@@ -12,7 +12,7 @@ import EventStyled from "../event-component/event-styled";
 import { CustomEventModal, Event } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import CustomModal from "@/components/ui/custom-modal";
+import CustomModal, { CustomModalContent, CustomModalHeader, CustomModalTitle } from "../../../../ui/custom-modal";
 
 // Helper function to generate hours based on availability
 function generateHoursFromAvailability(availability: any[], currentDate: Date): string[] {
@@ -78,7 +78,7 @@ const pageTransitionVariants = {
     opacity: 0,
     transition: {
       opacity: { duration: 0.2, ease: "easeInOut" },
-    },
+    } as const,
   }),
 };
 
@@ -267,12 +267,17 @@ export default function DailyView({
     // Open the modal with the content
 
     setOpen(
-      <CustomModal title="Add Event">
-        <AddEventModal
-          CustomAddEventModal={
-            CustomEventModal?.CustomAddEventModal?.CustomForm
-          }
-        />
+      <CustomModal>
+        <CustomModalContent>
+          <CustomModalHeader>
+            <CustomModalTitle>Add Event</CustomModalTitle>
+          </CustomModalHeader>
+          <AddEventModal
+            CustomAddEventModal={
+              CustomEventModal?.CustomAddEventModal?.CustomForm
+            }
+          />
+        </CustomModalContent>
       </CustomModal>,
       async () => {
         return {

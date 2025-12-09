@@ -14,7 +14,7 @@ import AddEventModal from "@/components/schedule/_modals/add-event-modal";
 import ShowMoreEventsModal from "@/components/schedule/_modals/show-more-events-modal";
 import EventStyled from "../event-component/event-styled";
 import { Event, CustomEventModal } from "@/types";
-import CustomModal from "@/components/ui/custom-modal";
+import CustomModal, { CustomModalContent, CustomModalHeader, CustomModalTitle } from "../../../../ui/custom-modal";
 
 const pageTransitionVariants = {
   enter: (direction: number) => ({
@@ -27,7 +27,7 @@ const pageTransitionVariants = {
     opacity: 0,
     transition: {
       opacity: { duration: 0.2, ease: "easeInOut" },
-    },
+    } as const,
   }),
 };
 
@@ -97,12 +97,17 @@ export default function MonthView({
     );
 
     setOpen(
-      <CustomModal title="Add Event">
-        <AddEventModal
-          CustomAddEventModal={
-            CustomEventModal?.CustomAddEventModal?.CustomForm
-          }
-        />
+      <CustomModal>
+        <CustomModalContent>
+          <CustomModalHeader>
+            <CustomModalTitle>Add Event</CustomModalTitle>
+          </CustomModalHeader>
+          <AddEventModal
+            CustomAddEventModal={
+              CustomEventModal?.CustomAddEventModal?.CustomForm
+            }
+          />
+        </CustomModalContent>
       </CustomModal>,
       async () => {
         return {
@@ -118,8 +123,13 @@ export default function MonthView({
 
   function handleShowMoreEvents(dayEvents: Event[]) {
     setOpen(
-      <CustomModal title={dayEvents && dayEvents[0]?.startDate.toDateString()}>
-        <ShowMoreEventsModal />
+      <CustomModal>
+        <CustomModalContent>
+          <CustomModalHeader>
+            <CustomModalTitle>{dayEvents && dayEvents[0]?.startDate.toDateString()}</CustomModalTitle>
+          </CustomModalHeader>
+          <ShowMoreEventsModal />
+        </CustomModalContent>
       </CustomModal>,
       async () => {
         return {

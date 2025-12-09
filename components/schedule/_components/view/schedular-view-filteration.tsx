@@ -14,14 +14,14 @@ import WeeklyView from "./week/week-view";
 import { useModal } from "@/providers/modal-context";
 import { ClassNames, CustomComponents, Views } from "@/types/index";
 import { cn } from "@/lib/utils";
-import CustomModal from "@/components/ui/custom-modal";
+import CustomModal, { CustomModalContent, CustomModalHeader, CustomModalTitle } from "../../../ui/custom-modal";
 
 // Animation settings for Framer Motion
 const animationConfig = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -20 },
-  transition: { duration: 0.3, type: "spring", stiffness: 250 },
+  transition: { duration: 0.3, type: "spring", stiffness: 250 } as const,
 };
 
 export default function SchedulerViewFilteration({
@@ -102,12 +102,17 @@ export default function SchedulerViewFilteration({
     };
 
     setOpen(
-      <CustomModal title="Add Event">
-        <AddEventModal
-          CustomAddEventModal={
-            CustomComponents?.CustomEventModal?.CustomAddEventModal?.CustomForm
-          }
-        />{" "}
+      <CustomModal>
+        <CustomModalContent>
+          <CustomModalHeader>
+            <CustomModalTitle>Add Event</CustomModalTitle>
+          </CustomModalHeader>
+          <AddEventModal
+            CustomAddEventModal={
+              CustomComponents?.CustomEventModal?.CustomAddEventModal?.CustomForm
+            }
+          />
+        </CustomModalContent>
       </CustomModal>
     );
   }
