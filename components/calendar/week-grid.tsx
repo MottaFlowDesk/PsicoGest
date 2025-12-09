@@ -5,9 +5,11 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Appointment } from "./calendar-view-manager";
 
-export function WeekGrid({ appointments, currentDate, availability }: { appointments: Appointment[], currentDate: Date, availability: any[] }) {
-    const startDate = startOfWeek(currentDate, { weekStartsOn: 0 });
-    const endDate = endOfWeek(currentDate, { weekStartsOn: 0 });
+export function WeekGrid({ appointments, currentDate, availability, view = 'week' }: { appointments: Appointment[], currentDate: Date, availability: any[], view?: 'week' | 'day' }) {
+    const startDate = view === 'week' ? startOfWeek(currentDate, { weekStartsOn: 0 }) : startOfDay(currentDate);
+    const endDate = view === 'week' ? endOfWeek(currentDate, { weekStartsOn: 0 }) : startOfDay(currentDate);
+
+    // If day view, just one day. If week view, 7 days.
     const days = eachDayOfInterval({ start: startDate, end: endDate });
     const hours = Array.from({ length: 13 }, (_, i) => i + 8); // 08:00 to 20:00
 
@@ -56,7 +58,6 @@ export function WeekGrid({ appointments, currentDate, availability }: { appointm
         }
 
         // Block after end
-        // Block after end
         if (configEndMinutes < dayEndMinutes) {
             const minutesFromTop = configEndMinutes - dayStartMinutes;
             const top = (minutesFromTop / totalViewMinutes) * 100;
@@ -67,12 +68,20 @@ export function WeekGrid({ appointments, currentDate, availability }: { appointm
         return blocks;
     };
 
+    // Calculate grid height: Day view gets expanded height (120px per hour), Week view fits screen or min 600px
+    const hourHeight = view === 'day' ? 120 : null; // 120px per hour for day view
+    const totalHours = 13; // 8 to 20 = 13 slots
+    const totalGridHeight = hourHeight ? totalHours * hourHeight : '100%';
+
     return (
         <div className="flex flex-col h-full bg-white relative overflow-hidden">
             {/* Header */}
-            <div className="grid grid-cols-[50px_1fr] border-b border-slate-100 sticky top-0 bg-white z-20">
+            <div className="grid grid-cols-[50px_1fr] border-b border-slate-100 sticky top-0 bg-white z-20 shadow-sm">
                 <div className="border-r border-slate-100 p-2 text-[10px] text-slate-400 text-center pt-4">Time</div>
-                <div className="grid grid-cols-7 divide-x divide-slate-100">
+                <div className={cn(
+                    "grid divide-slate-100",
+                    view === 'week' ? "grid-cols-7 divide-x" : "grid-cols-1"
+                )}>
                     {days.map(day => (
                         <div key={day.toString()} className={cn(
                             "p-2 text-center",
@@ -90,79 +99,103 @@ export function WeekGrid({ appointments, currentDate, availability }: { appointm
                 </div>
             </div>
 
-            {/* Timetable */}
-            <div className="grid grid-cols-[50px_1fr] flex-1 min-h-0 relative">
-                {/* Time labels */}
-                <div className="border-r border-slate-100 bg-slate-50/10 flex flex-col justify-between py-2">
-                    {hours.map(hour => (
-                        <div key={hour} className="text-[10px] text-slate-300 text-right pr-2">
-                            {hour}:00
-                        </div>
-                    ))}
-                </div>
+            {/* Scrollable Timetable Area */}
+            <div className="flex-1 min-h-0 overflow-y-auto relative custom-scrollbar">
+                <div className="grid grid-cols-[50px_1fr] relative" style={{ height: typeof totalGridHeight === 'number' ? `${totalGridHeight}px` : totalGridHeight }}>
 
-                {/* Days Columns */}
-                <div className="grid grid-cols-7 divide-x divide-slate-100 relative h-full">
-                    {/* Horizontal Guidelines */}
-                    <div className="absolute inset-0 z-0 pointer-events-none flex flex-col justify-between py-2">
-                        {hours.map(hour => (
-                            <div key={hour} className="border-b border-slate-50 w-full h-px last:border-0" />
+                    {/* Time labels column */}
+                    <div className="border-r border-slate-100 bg-slate-50/10 relative">
+                        {hours.map((hour, index) => (
+                            <div
+                                key={hour}
+                                className="absolute w-full text-[10px] text-slate-400 text-right pr-2 -mt-1.5"
+                                style={{ top: `${(index / (hours.length - 1)) * 100}%` }}
+                            >
+                                {hour}:00
+                            </div>
                         ))}
                     </div>
 
-                    {days.map(day => {
-                        const dayApps = appointments.filter(app => isSameDay(parseISO(app.scheduled_at), day));
-                        const availabilityBlocks = getAvailabilityBlocks(day);
-                        const isFullyUnavailable = availabilityBlocks.length === 1 && 'start' in availabilityBlocks[0] && availabilityBlocks[0].start === 0;
+                    {/* Days Columns */}
+                    <div className={cn(
+                        "grid divide-slate-100 relative h-full",
+                        view === 'week' ? "grid-cols-7 divide-x" : "grid-cols-1"
+                    )}>
+                        {/* Horizontal Guidelines */}
+                        <div className="absolute inset-0 z-0 pointer-events-none">
+                            {hours.map((hour, index) => (
+                                <div
+                                    key={hour}
+                                    className="absolute w-full border-b border-slate-50 last:border-0"
+                                    style={{ top: `${(index / (hours.length - 1)) * 100}%` }}
+                                />
+                            ))}
+                        </div>
 
-                        return (
-                            <div key={day.toString()} className={cn(
-                                "relative h-full",
-                                isToday(day) ? "bg-blue-50/5" : "bg-white"
-                            )}>
-                                {/* Availability Blocks (Gray areas) */}
-                                {/* Availability Blocks (Gray areas) */}
-                                {isFullyUnavailable ? (
-                                    <div className="absolute inset-0 bg-slate-100 z-0 flex items-center justify-center border border-slate-200">
-                                        <span className="text-xs text-slate-400 font-medium -rotate-90 select-none">Indisponível</span>
-                                    </div>
-                                ) : (
-                                    availabilityBlocks.map((block: any) => (
+                        {days.map(day => {
+                            const dayApps = appointments.filter(app => isSameDay(parseISO(app.scheduled_at), day));
+                            const availabilityBlocks = getAvailabilityBlocks(day);
+                            const isFullyUnavailable = availabilityBlocks.length === 1 && 'start' in availabilityBlocks[0] && availabilityBlocks[0].start === 0;
+
+                            return (
+                                <div key={day.toString()} className={cn(
+                                    "relative h-full",
+                                    isToday(day) ? "bg-blue-50/5" : "bg-white"
+                                )}>
+                                    {/* Availability Blocks (Gray areas) */}
+                                    {isFullyUnavailable ? (
+                                        <div className="absolute inset-0 bg-slate-100 z-0 flex items-center justify-center border border-slate-200">
+                                            <span className={cn(
+                                                "text-slate-400 font-medium select-none transform",
+                                                view === 'week' ? "text-xs -rotate-90" : "text-sm rotate-0"
+                                            )}>Indisponível</span>
+                                        </div>
+                                    ) : (
+                                        availabilityBlocks.map((block: any) => (
+                                            <div
+                                                key={block.key}
+                                                className="absolute left-0 right-0 bg-slate-100 z-0 border-y border-slate-200"
+                                                style={{ top: `${block.top}%`, height: `${block.height}%` }}
+                                            />
+                                        ))
+                                    )}
+
+                                    {dayApps.map(app => (
                                         <div
-                                            key={block.key}
-                                            className="absolute left-0 right-0 bg-slate-100 z-0 border-y border-slate-200"
-                                            style={{ top: `${block.top}%`, height: `${block.height}%` }}
-                                        />
-                                    ))
-                                )}
+                                            key={app.id}
+                                            style={getAppointmentStyle(app)}
+                                            className={cn(
+                                                "absolute rounded px-3 py-2 text-xs border overflow-hidden shadow-sm z-10 hover:z-20 hover:scale-[1.01] transition-all cursor-pointer flex flex-col justify-center",
+                                                view === 'week' ? "left-0.5 right-0.5 px-1.5 py-0.5" : "left-4 right-4",
+                                                app.status === 'confirmed' ? "bg-green-100 border-green-200 text-green-800" :
+                                                    app.status === 'cancelled' ? "bg-red-50 border-red-100 text-red-400 line-through opacity-60" :
+                                                        "bg-blue-50 border-blue-200 text-blue-700"
+                                            )}
+                                        >
+                                            <div className={cn("font-semibold truncate leading-tight", view === 'day' && "text-sm")}>{app.patients?.full_name}</div>
+                                            {view === 'day' && (
+                                                <div className="text-xs opacity-80 mt-1 flex gap-2">
+                                                    <span>{format(parseISO(app.scheduled_at), "HH:mm")}</span>
+                                                    <span>•</span>
+                                                    <span>{app.type === 'telehealth' ? 'Online' : 'Presencial'}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
 
-                                {dayApps.map(app => (
-                                    <div
-                                        key={app.id}
-                                        style={getAppointmentStyle(app)}
-                                        className={cn(
-                                            "absolute left-0.5 right-0.5 rounded px-1.5 py-0.5 text-[10px] border overflow-hidden shadow-sm z-10 hover:z-20 hover:scale-[1.02] transition-all cursor-pointer",
-                                            app.status === 'confirmed' ? "bg-green-100 border-green-200 text-green-800" :
-                                                app.status === 'cancelled' ? "bg-red-50 border-red-100 text-red-400 line-through opacity-60" :
-                                                    "bg-blue-50 border-blue-200 text-blue-700"
-                                        )}
-                                    >
-                                        <div className="font-semibold truncate leading-tight">{app.patients?.full_name?.split(' ')[0]}</div>
-                                    </div>
-                                ))}
-
-                                {/* Current time indicator if today */}
-                                {isToday(day) && (
-                                    <div
-                                        className="absolute w-full border-t border-red-400 z-30 pointer-events-none opacity-50"
-                                        style={{ top: `${(differenceInMinutes(new Date(), setHours(startOfDay(new Date()), 8)) / (13 * 60)) * 100}%` }}
-                                    >
-                                        <div className="w-1.5 h-1.5 bg-red-400 rounded-full -ml-[3px] -mt-[3px]" />
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                                    {/* Current time indicator if today */}
+                                    {isToday(day) && (
+                                        <div
+                                            className="absolute w-full border-t border-red-400 z-30 pointer-events-none opacity-50"
+                                            style={{ top: `${(differenceInMinutes(new Date(), setHours(startOfDay(new Date()), 8)) / (13 * 60)) * 100}%` }}
+                                        >
+                                            <div className="w-1.5 h-1.5 bg-red-400 rounded-full -ml-[3px] -mt-[3px]" />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>

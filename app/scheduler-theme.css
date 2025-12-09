@@ -1,0 +1,87 @@
+/* Mina Scheduler PsicoGest Theme Overrides */
+
+/* Primary color overrides - use blue-600 instead of default */
+.bg-primary, .text-primary, .border-primary {
+  --tw-bg-opacity: 1;
+  background-color: rgb(37 99 235 / var(--tw-bg-opacity)) !important;
+}
+
+.text-primary {
+  color: rgb(37 99 235) !important;
+}
+
+.border-primary {
+  border-color: rgb(37 99 235) !important;
+}
+
+/* Default backgrounds - use white/slate instead of generic defaults */
+.bg-default-50 {
+  background-color: rgb(248 250 252) !important; /* slate-50 */
+}
+
+.bg-default-100 {
+  background-color: rgb(241 245 249) !important; /* slate-100 */
+}
+
+.bg-default-200 {
+  background-color: rgb(226 232 240) !important; /* slate-200 */
+}
+
+/* Border colors - use slate */
+.border-default-200 {
+  border-color: rgb(226 232 240) !important; /* slate-200 */
+}
+
+/* Hover states - use blue-50 */
+.hover\:bg-default-100:hover,
+.hover\:bg-default-200\/50:hover {
+  background-color: rgb(239 246 255 / 0.5) !important; /* blue-50/50 */
+}
+
+/* Accent color - use blue-50 */
+.bg-accent {
+  background-color: rgb(239 246 255) !important; /* blue-50 */
+  color: rgb(37 99 235) !important; /* blue-600 text */
+}
+
+/* Muted foreground - use slate-500 */
+.text-muted-foreground {
+  color: rgb(100 116 139) !important; /* slate-500 */
+}
+
+/* Secondary color - use blue-600 */
+.text-secondary-500 {
+  color: rgb(37 99 235) !important; /* blue-600 */
+}
+
+/* Primary color with opacity */
+.bg-primary\/10 {
+  background-color: rgb(37 99 235 / 0.1) !important;
+}
+
+.bg-primary\/20 {
+  background-color: rgb(37 99 235 / 0.2) !important;
+}
+
+.bg-primary\/40 {
+  background-color: rgb(37 99 235 / 0.4) !important;
+}
+
+/* Timeline and hover indicators */
+.hover\:text-primary:hover {
+  color: rgb(37 99 235) !important;
+}
+
+/* Card and border improvements */
+.border-default-200 {
+  border-color: rgb(226 232 240) !important;
+}
+
+/* Ensure buttons use the correct blue */
+button[class*="bg-primary"] {
+  background-color: rgb(37 99 235) !important;
+}
+
+button[class*="bg-primary"]:hover {
+  background-color: rgb(29 78 216) !important; /* blue-700 */
+}

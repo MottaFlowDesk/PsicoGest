@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google"; // Changed Geist to Inter
 import "./globals.css";
+import "./scheduler-theme.css";
 
 const inter = Inter({
   variable: "--font-inter",
