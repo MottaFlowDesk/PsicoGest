@@ -9,10 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { ArrowLeft, ArrowRight, Loader2, Search } from "lucide-react";
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export function StepAddress() {
     const { data, updateData, nextStep, prevStep } = useOnboardingStore();
     const [isLoadingCep, setIsLoadingCep] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const supabase = createClient();
 
     const form = useForm<AddressValues>({
         resolver: zodResolver(addressSchema),
@@ -27,9 +30,36 @@ export function StepAddress() {
         },
     });
 
-    const onSubmit = (values: AddressValues) => {
-        updateData("address", values);
-        nextStep();
+    const onSubmit = async (values: AddressValues) => {
+        setIsSubmitting(true);
+        try {
+            updateData("address", values);
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("No user");
+
+            const { error } = await supabase
+                .from('professionals')
+                .update({
+                    address_zip: values.cep,
+                    address_street: values.street,
+                    address_number: values.number,
+                    address_complement: values.complement,
+                    address_neighborhood: values.neighborhood,
+                    address_city: values.city,
+                    address_state: values.state,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('user_id', user.id);
+
+            if (error) throw error;
+
+            nextStep();
+        } catch (error) {
+            console.error("Error saving address:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
@@ -177,13 +207,14 @@ export function StepAddress() {
 
 
                     <div className="flex gap-3 mt-6">
-                        <Button type="button" variant="outline" onClick={prevStep} className="flex-1">
+                        <Button type="button" variant="outline" onClick={prevStep} className="flex-1" disabled={isSubmitting}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Voltar
                         </Button>
-                        <Button type="submit" className="flex-1 bg-brand-600 hover:bg-brand-700">
+                        <Button type="submit" className="flex-1 bg-brand-600 hover:bg-brand-700" disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             Continuar
-                            <ArrowRight className="ml-2 h-4 w-4" />
+                            {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
                         </Button>
                     </div>
                 </form>

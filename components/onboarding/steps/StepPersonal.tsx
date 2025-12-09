@@ -7,10 +7,14 @@ import { useOnboardingStore } from "@/hooks/use-onboarding-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
 
 export function StepPersonal() {
     const { data, updateData, nextStep } = useOnboardingStore();
+    const [isLoading, setIsLoading] = useState(false);
+    const supabase = createClient();
 
     const form = useForm<PersonalInfoValues>({
         resolver: zodResolver(personalInfoSchema),
@@ -23,9 +27,36 @@ export function StepPersonal() {
         },
     });
 
-    const onSubmit = (values: PersonalInfoValues) => {
-        updateData("personal", values);
-        nextStep();
+    const onSubmit = async (values: PersonalInfoValues) => {
+        setIsLoading(true);
+        try {
+            updateData("personal", values);
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("No user found");
+
+            // Upsert personal info. Note: we use upsert to create if not exists
+            const { error } = await supabase
+                .from('professionals')
+                .upsert({
+                    user_id: user.id,
+                    email: user.email,
+                    full_name: values.fullName,
+                    cpf: values.cpf,
+                    registration_number: values.crp,
+                    phone: values.phone,
+                    updated_at: new Date().toISOString(),
+                }, { onConflict: 'user_id' });
+
+            if (error) throw error;
+
+            nextStep();
+        } catch (error) {
+            console.error("Error saving personal info:", error);
+            // Ideally show toast here
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -107,9 +138,10 @@ export function StepPersonal() {
                         )}
                     />
 
-                    <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700 mt-4">
+                    <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700 mt-4" disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Continuar
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
                     </Button>
                 </form>
             </Form>

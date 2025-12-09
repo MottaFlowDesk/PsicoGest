@@ -3,13 +3,16 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useOnboardingStore } from "@/hooks/use-onboarding-store";
 
 export function StepSuccess() {
     const router = useRouter();
+    const { reset } = useOnboardingStore();
 
     const handleGoToDashboard = () => {
+        reset(); // Clear store (step 1)
         router.push("/dashboard");
-        router.refresh();
+        router.refresh(); // Ensure layout re-runs and sees the updated profile
     };
 
     return (
