@@ -213,6 +213,7 @@ export default function CalendarPage() {
                                 <motion.div key={currentDate.toISOString()} {...animationConfig}>
                                     <WeeklyView
                                         availability={availability}
+                                        currentDate={currentDate}
                                         CustomEventComponent={AppointmentEvent}
                                         classNames={{
                                             prev: "hidden",

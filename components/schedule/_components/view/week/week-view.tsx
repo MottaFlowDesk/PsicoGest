@@ -137,6 +137,7 @@ export default function WeeklyView({
   CustomEventModal,
   classNames,
   availability,
+  currentDate: propDate,
 }: {
   prevButton?: React.ReactNode;
   nextButton?: React.ReactNode;
@@ -144,12 +145,16 @@ export default function WeeklyView({
   CustomEventModal?: CustomEventModal;
   classNames?: { prev?: string; next?: string; addEvent?: string };
   availability?: any[];
+  currentDate?: Date;
 }) {
-  const { getters, handlers } = useScheduler();
+  const { getters, handlers, weekStartsOn } = useScheduler(); // Get weekStartsOn
   const hoursColumnRef = useRef<HTMLDivElement>(null);
   const [detailedHour, setDetailedHour] = useState<string | null>(null);
   const [timelinePosition, setTimelinePosition] = useState<number>(0);
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+
+  // Use prop date or default to today. No local state for date navigation anymore (controlled by parent)
+  const currentDate = propDate || new Date();
+
   const [colWidth, setColWidth] = useState<number[]>(Array(7).fill(1)); // Equal width columns by default
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [direction, setDirection] = useState<number>(0);
@@ -160,10 +165,29 @@ export default function WeeklyView({
     generateWeeklyHours(availability || []),
     [availability]);
 
-  const daysOfWeek = getters?.getDaysInWeek(
-    getters?.getWeekNumber(currentDate),
-    currentDate.getFullYear()
-  );
+  // FIXED: Calculate days of week directly from currentDate
+  const daysOfWeek = React.useMemo(() => {
+    const start = new Date(currentDate);
+    const day = start.getDay(); // 0 (Sun) to 6 (Sat)
+
+    // Calculate start of week (Monday)
+    // If week starts on Monday:
+    // Sun(0) -> diff -6
+    // Mon(1) -> diff 0
+    // Tue(2) -> diff -1
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+
+    const weekStart = new Date(currentDate);
+    weekStart.setDate(diff);
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [currentDate]);
 
   // Reset column widths when the date changes
   useEffect(() => {
@@ -222,19 +246,17 @@ export default function WeeklyView({
     );
   }
 
+  /* Navigation is now controlled by parent
   const handleNextWeek = useCallback(() => {
     setDirection(1);
-    const nextWeek = new Date(currentDate);
-    nextWeek.setDate(currentDate.getDate() + 7);
-    setCurrentDate(nextWeek);
-  }, [currentDate]);
+    // onNext()
+  }, []);
 
   const handlePrevWeek = useCallback(() => {
     setDirection(-1);
-    const prevWeek = new Date(currentDate);
-    prevWeek.setDate(currentDate.getDate() - 7);
-    setCurrentDate(prevWeek);
-  }, [currentDate]);
+    // onPrev()
+  }, []);
+  */
 
   function handleAddEventWeek(dayIndex: number, detailedHour: string) {
     if (!detailedHour) {
