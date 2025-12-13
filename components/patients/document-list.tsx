@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { FileIcon, FileText, Image as ImageIcon, Trash2, Download, Eye, Loader2, AlertCircle } from "lucide-react";
+import { FileIcon, FileText, Image as ImageIcon, Trash2, Download, Eye, Loader2, X, ExternalLink, Stethoscope, Camera, FileCheck, FileQuestion } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
     Table,
     TableBody,
@@ -23,8 +24,15 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface DocumentListProps {
     patientId: string;
@@ -44,6 +52,8 @@ export function DocumentList({ patientId }: DocumentListProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
     const supabase = createClient();
 
     const fetchDocuments = async () => {
@@ -72,17 +82,47 @@ export function DocumentList({ patientId }: DocumentListProps) {
         };
     }, [patientId]);
 
+    const isImage = (type: string) => {
+        return type.includes("image") || ['jpg', 'jpeg', 'png', 'gif', 'webp'].some(ext => type.includes(ext));
+    };
+
+    const handlePreview = async (doc: Document) => {
+        const { data, error } = await supabase.storage
+            .from("patient-documents")
+            .createSignedUrl(doc.storage_path, 300); // 5 minutes expiry
+
+        if (error || !data) {
+            toast.error("Erro ao carregar preview");
+            return;
+        }
+
+        if (isImage(doc.file_type)) {
+            setPreviewDoc(doc);
+            setPreviewUrl(data.signedUrl);
+        } else {
+            // For non-images, open in new tab
+            window.open(data.signedUrl, "_blank");
+        }
+    };
+
     const handleDownload = async (doc: Document) => {
         const { data, error } = await supabase.storage
             .from("patient-documents")
             .createSignedUrl(doc.storage_path, 60); // 1 minute expiry
 
         if (error || !data) {
-            alert("Erro ao gerar link de download");
+            toast.error("Erro ao gerar link de download");
             return;
         }
 
-        window.open(data.signedUrl, "_blank");
+        // Create a temporary link to trigger download
+        const link = document.createElement("a");
+        link.href = data.signedUrl;
+        link.download = doc.file_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Download iniciado");
     };
 
     const handleDelete = async (doc: Document) => {
@@ -105,11 +145,25 @@ export function DocumentList({ patientId }: DocumentListProps) {
 
             // Update local state
             setDocuments(prev => prev.filter(d => d.id !== doc.id));
+            toast.success("Documento excluído");
         } catch (error) {
             console.error("Delete error:", error);
-            alert("Erro ao excluir arquivo.");
+            toast.error("Erro ao excluir arquivo");
         } finally {
             setDeletingId(null);
+        }
+    };
+
+    const getDocumentTypeInfo = (type: string) => {
+        switch (type) {
+            case "exam":
+                return { label: "Exame", icon: Stethoscope, color: "bg-blue-100 text-blue-700" };
+            case "photo":
+                return { label: "Foto", icon: Camera, color: "bg-purple-100 text-purple-700" };
+            case "consent":
+                return { label: "Consentimento", icon: FileCheck, color: "bg-green-100 text-green-700" };
+            default:
+                return { label: "Outro", icon: FileQuestion, color: "bg-slate-100 text-slate-700" };
         }
     };
 
@@ -141,68 +195,141 @@ export function DocumentList({ patientId }: DocumentListProps) {
     }
 
     return (
-        <div className="border rounded-md">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[50px]"></TableHead>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead className="text-right">Tamanho</TableHead>
-                        <TableHead className="w-[100px]"></TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {documents.map((doc) => (
-                        <TableRow key={doc.id}>
-                            <TableCell>{getFileIcon(doc.file_type)}</TableCell>
-                            <TableCell className="font-medium truncate max-w-[200px]" title={doc.file_name}>
-                                {doc.file_name}
-                            </TableCell>
-                            <TableCell className="text-xs text-slate-500">
-                                {format(new Date(doc.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                            </TableCell>
-                            <TableCell className="text-right text-xs text-slate-500">
-                                {formatSize(doc.file_size)}
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex items-center justify-end gap-1">
-                                    <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)} title="Baixar/Visualizar">
-                                        <Eye className="h-4 w-4 text-slate-600" />
-                                    </Button>
-
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" title="Excluir">
-                                                <Trash2 className="h-4 w-4 text-red-500/70 hover:text-red-600" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Excluir documento?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Esta ação não pode ser desfeita. O arquivo será removido permanentemente.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                    onClick={() => handleDelete(doc)}
-                                                    className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-                                                >
-                                                    {deletingId === doc.id ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : "Excluir"}
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
-                            </TableCell>
+        <>
+            <div className="border rounded-lg overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-slate-50">
+                            <TableHead className="w-[50px]"></TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Categoria</TableHead>
+                            <TableHead>Data</TableHead>
+                            <TableHead className="text-right">Tamanho</TableHead>
+                            <TableHead className="w-[140px]"></TableHead>
                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </div>
+                    </TableHeader>
+                    <TableBody>
+                        {documents.map((doc) => {
+                            const typeInfo = getDocumentTypeInfo(doc.document_type);
+                            const TypeIcon = typeInfo.icon;
+                            
+                            return (
+                                <TableRow key={doc.id} className="hover:bg-slate-50">
+                                    <TableCell>
+                                        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                                            {getFileIcon(doc.file_type)}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="font-medium text-slate-900 truncate max-w-[200px]" title={doc.file_name}>
+                                            {doc.file_name}
+                                        </div>
+                                        {isImage(doc.file_type) && (
+                                            <span className="text-xs text-brand-600 cursor-pointer hover:underline" onClick={() => handlePreview(doc)}>
+                                                Clique para visualizar
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="secondary" className={`${typeInfo.color} font-normal`}>
+                                            <TypeIcon className="w-3 h-3 mr-1" />
+                                            {typeInfo.label}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-sm text-slate-500">
+                                        {format(new Date(doc.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                        <div className="text-xs text-slate-400">
+                                            {format(new Date(doc.created_at), "HH:mm", { locale: ptBR })}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right text-sm text-slate-500">
+                                        {formatSize(doc.file_size)}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => handlePreview(doc)} 
+                                                title="Visualizar"
+                                                className="hover:bg-blue-50"
+                                            >
+                                                <Eye className="h-4 w-4 text-blue-600" />
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => handleDownload(doc)} 
+                                                title="Baixar"
+                                                className="hover:bg-green-50"
+                                            >
+                                                <Download className="h-4 w-4 text-green-600" />
+                                            </Button>
+
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" title="Excluir" className="hover:bg-red-50">
+                                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Excluir documento?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            <strong>{doc.file_name}</strong> será removido permanentemente. Esta ação não pode ser desfeita.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            onClick={() => handleDelete(doc)}
+                                                            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                                                        >
+                                                            {deletingId === doc.id ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : "Excluir"}
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* Image Preview Modal */}
+            <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) { setPreviewUrl(null); setPreviewDoc(null); } }}>
+                <DialogContent className="max-w-4xl p-0 overflow-hidden">
+                    <DialogHeader className="p-4 border-b">
+                        <DialogTitle className="flex items-center justify-between">
+                            <span className="truncate">{previewDoc?.file_name}</span>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => previewDoc && handleDownload(previewDoc)}>
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Baixar
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => previewUrl && window.open(previewUrl, "_blank")}>
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    Abrir
+                                </Button>
+                            </div>
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="relative bg-slate-900 min-h-[400px] max-h-[70vh] flex items-center justify-center">
+                        {previewUrl && (
+                            <img 
+                                src={previewUrl} 
+                                alt={previewDoc?.file_name || "Preview"} 
+                                className="max-w-full max-h-[70vh] object-contain"
+                            />
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

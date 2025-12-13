@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { addMinutes } from "date-fns";
 import { revalidatePath } from "next/cache";
+import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, checkAvailability } from "@/lib/google/calendar";
 
 export type AppointmentStatus = "scheduled" | "confirmed" | "completed" | "cancelled" | "no_show";
 
@@ -18,14 +19,21 @@ export async function createAppointment(data: {
 
     if (!user) throw new Error("Unauthorized");
 
-    // Get professional ID
+    // Get professional with Google credentials
     const { data: professional } = await supabase
         .from("professionals")
-        .select("id")
+        .select("id, google_calendar_connected, google_refresh_token")
         .eq("user_id", user.id)
         .single();
 
     if (!professional) throw new Error("Professional not found");
+
+    // Get patient info for calendar event
+    const { data: patient } = await supabase
+        .from("patients")
+        .select("full_name, email")
+        .eq("id", data.patientId)
+        .single();
 
     // Construct timestamps
     const [hours, minutes] = data.time.split(':').map(Number);
@@ -57,19 +65,68 @@ export async function createAppointment(data: {
         throw new Error("Horário indisponível! Já existe um agendamento neste período.");
     }
 
-    // Insert
-    const { error } = await supabase.from("appointments").insert({
-        professional_id: professional.id,
-        patient_id: data.patientId,
-        scheduled_at: scheduledAt.toISOString(),
-        duration_minutes: data.duration,
-        type: data.type,
-        telehealth_provider: data.type === 'telehealth' ? 'native' : null,
-        status: 'scheduled',
-        timezone: 'America/Sao_Paulo'
-    });
+    // Check Google Calendar availability if connected
+    if (professional.google_calendar_connected && professional.google_refresh_token) {
+        try {
+            const isAvailable = await checkAvailability(
+                professional.google_refresh_token,
+                scheduledAt,
+                scheduledEnd
+            );
+            if (!isAvailable) {
+                throw new Error("Horário conflita com um evento no seu Google Calendar.");
+            }
+        } catch (googleError: any) {
+            // Log but don't block if Google check fails
+            console.error("Google Calendar check failed:", googleError);
+        }
+    }
+
+    // Insert appointment
+    const { data: appointment, error } = await supabase
+        .from("appointments")
+        .insert({
+            professional_id: professional.id,
+            patient_id: data.patientId,
+            scheduled_at: scheduledAt.toISOString(),
+            duration_minutes: data.duration,
+            type: data.type,
+            telehealth_provider: data.type === 'telehealth' ? 'native' : null,
+            status: 'scheduled',
+            timezone: 'America/Sao_Paulo'
+        })
+        .select("id")
+        .single();
 
     if (error) throw error;
+
+    // Create Google Calendar event if connected
+    if (professional.google_calendar_connected && professional.google_refresh_token && patient) {
+        try {
+            const result = await createCalendarEvent(
+                professional.google_refresh_token,
+                {
+                    summary: `Sessão com ${patient.full_name}`,
+                    description: `Agendamento PsicoGest - ${data.type === 'telehealth' ? 'Online' : 'Presencial'}`,
+                    startTime: scheduledAt,
+                    endTime: scheduledEnd,
+                    attendeeEmail: patient.email || undefined,
+                    createMeet: false, // Meet is created on confirmation
+                }
+            );
+
+            // Save Google Calendar event ID
+            if (result.eventId) {
+                await supabase
+                    .from("appointments")
+                    .update({ google_calendar_event_id: result.eventId })
+                    .eq("id", appointment.id);
+            }
+        } catch (googleError) {
+            // Log but don't fail the appointment creation
+            console.error("Failed to create Google Calendar event:", googleError);
+        }
+    }
     
     revalidatePath("/dashboard/appointments");
     revalidatePath("/dashboard/calendar");
@@ -93,16 +150,16 @@ export async function updateAppointment(data: {
 
     const { data: professional } = await supabase
         .from("professionals")
-        .select("id")
+        .select("id, google_calendar_connected, google_refresh_token")
         .eq("user_id", user.id)
         .single();
 
     if (!professional) throw new Error("Professional not found");
 
-    // Verify ownership
+    // Verify ownership and get Google event ID
     const { data: existing } = await supabase
         .from("appointments")
-        .select("professional_id, status, scheduled_at, duration_minutes")
+        .select("professional_id, status, scheduled_at, duration_minutes, google_calendar_event_id")
         .eq("id", data.appointmentId)
         .single();
 
@@ -115,13 +172,15 @@ export async function updateAppointment(data: {
     }
 
     const updateData: any = {};
+    let newScheduledAt: Date | null = null;
+    let newScheduledEnd: Date | null = null;
 
     if (data.date && data.time) {
         const [hours, minutes] = data.time.split(':').map(Number);
-        const scheduledAt = new Date(data.date);
-        scheduledAt.setHours(hours, minutes, 0, 0);
+        newScheduledAt = new Date(data.date);
+        newScheduledAt.setHours(hours, minutes, 0, 0);
         const duration = data.duration || existing.duration_minutes;
-        const scheduledEnd = addMinutes(scheduledAt, duration);
+        newScheduledEnd = addMinutes(newScheduledAt, duration);
 
         // Check conflicts (excluding this appointment)
         const dayStart = new Date(data.date);
@@ -141,14 +200,14 @@ export async function updateAppointment(data: {
         const hasConflict = daysAppointments?.some(apt => {
             const aptStart = new Date(apt.scheduled_at);
             const aptEnd = addMinutes(aptStart, apt.duration_minutes);
-            return (scheduledAt < aptEnd && scheduledEnd > aptStart);
+            return (newScheduledAt! < aptEnd && newScheduledEnd! > aptStart);
         });
 
         if (hasConflict) {
             throw new Error("Horário indisponível! Já existe um agendamento neste período.");
         }
 
-        updateData.scheduled_at = scheduledAt.toISOString();
+        updateData.scheduled_at = newScheduledAt.toISOString();
     }
 
     if (data.duration) updateData.duration_minutes = data.duration;
@@ -164,6 +223,28 @@ export async function updateAppointment(data: {
         .eq("id", data.appointmentId);
 
     if (error) throw error;
+
+    // Update Google Calendar event if connected and event exists
+    if (
+        professional.google_calendar_connected && 
+        professional.google_refresh_token && 
+        existing.google_calendar_event_id &&
+        newScheduledAt &&
+        newScheduledEnd
+    ) {
+        try {
+            await updateCalendarEvent(
+                professional.google_refresh_token,
+                existing.google_calendar_event_id,
+                {
+                    startTime: newScheduledAt,
+                    endTime: newScheduledEnd,
+                }
+            );
+        } catch (googleError) {
+            console.error("Failed to update Google Calendar event:", googleError);
+        }
+    }
 
     revalidatePath("/dashboard/appointments");
     revalidatePath("/dashboard/calendar");
@@ -184,16 +265,16 @@ export async function updateAppointmentStatus(
 
     const { data: professional } = await supabase
         .from("professionals")
-        .select("id")
+        .select("id, google_calendar_connected, google_refresh_token")
         .eq("user_id", user.id)
         .single();
 
     if (!professional) throw new Error("Professional not found");
 
-    // Verify ownership
+    // Verify ownership and get Google event ID
     const { data: existing } = await supabase
         .from("appointments")
-        .select("professional_id, status")
+        .select("professional_id, status, google_calendar_event_id")
         .eq("id", appointmentId)
         .single();
 
@@ -207,6 +288,22 @@ export async function updateAppointmentStatus(
         updateData.cancelled_at = new Date().toISOString();
         updateData.cancelled_by = "professional";
         updateData.cancellation_reason = reason || null;
+
+        // Delete Google Calendar event if exists
+        if (
+            professional.google_calendar_connected && 
+            professional.google_refresh_token && 
+            existing.google_calendar_event_id
+        ) {
+            try {
+                await deleteCalendarEvent(
+                    professional.google_refresh_token,
+                    existing.google_calendar_event_id
+                );
+            } catch (googleError) {
+                console.error("Failed to delete Google Calendar event:", googleError);
+            }
+        }
     }
 
     if (status === "completed") {

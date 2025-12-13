@@ -108,7 +108,15 @@ function LoginForm() {
                         name="password"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Senha</FormLabel>
+                                <div className="flex items-center justify-between">
+                                    <FormLabel>Senha</FormLabel>
+                                    <Link 
+                                        href="/forgot-password" 
+                                        className="text-xs text-brand-600 hover:text-brand-700"
+                                    >
+                                        Esqueceu a senha?
+                                    </Link>
+                                </div>
                                 <FormControl>
                                     <Input type="password" placeholder="******" {...field} />
                                 </FormControl>

@@ -22,11 +22,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Plus, AlertCircle, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { format, addWeeks, addMonths } from "date-fns";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createAppointment } from "@/app/dashboard/appointments/actions";
 import { getAvailableSlots, TimeSlot } from "@/lib/availability-utils";
+import { RecurrenceOptions, RecurrenceSettings, defaultRecurrenceSettings } from "./recurrence-options";
 
 interface PatientOption {
     id: string;
@@ -62,6 +63,7 @@ export function NewAppointmentDialog({
     const [time, setTime] = useState("");
     const [duration, setDuration] = useState("50");
     const [type, setType] = useState("in_person");
+    const [recurrence, setRecurrence] = useState<RecurrenceSettings>(defaultRecurrenceSettings);
 
     const supabase = createClient();
 
@@ -133,17 +135,67 @@ export function NewAppointmentDialog({
 
         setIsLoading(true);
         try {
-            const dateStr = format(date, "yyyy-MM-dd");
+            // Calculate all dates for recurrence
+            const datesToCreate: Date[] = [date];
+            
+            if (recurrence.enabled) {
+                let currentDate = date;
+                const maxOccurrences = recurrence.endType === "occurrences" 
+                    ? recurrence.occurrences 
+                    : 52; // Max 1 year of weekly appointments
 
-            await createAppointment({
-                patientId,
-                date: dateStr,
-                time,
-                duration: parseInt(duration),
-                type: type as "in_person" | "telehealth"
-            });
+                for (let i = 1; i < maxOccurrences; i++) {
+                    switch (recurrence.frequency) {
+                        case "weekly":
+                            currentDate = addWeeks(currentDate, 1);
+                            break;
+                        case "biweekly":
+                            currentDate = addWeeks(currentDate, 2);
+                            break;
+                        case "monthly":
+                            currentDate = addMonths(currentDate, 1);
+                            break;
+                    }
 
-            toast.success("Agendamento criado com sucesso!");
+                    // Stop if we've passed the end date
+                    if (recurrence.endType === "date" && recurrence.endDate && currentDate > recurrence.endDate) {
+                        break;
+                    }
+
+                    datesToCreate.push(new Date(currentDate));
+                }
+            }
+
+            // Create all appointments
+            let created = 0;
+            let failed = 0;
+
+            for (const appointmentDate of datesToCreate) {
+                try {
+                    const dateStr = format(appointmentDate, "yyyy-MM-dd");
+                    await createAppointment({
+                        patientId,
+                        date: dateStr,
+                        time,
+                        duration: parseInt(duration),
+                        type: type as "in_person" | "telehealth"
+                    });
+                    created++;
+                } catch (err) {
+                    failed++;
+                    console.error(`Failed to create appointment for ${format(appointmentDate, "dd/MM/yyyy")}:`, err);
+                }
+            }
+
+            if (created > 0) {
+                const message = recurrence.enabled 
+                    ? `${created} agendamento(s) criado(s) com sucesso!${failed > 0 ? ` (${failed} falharam por conflito de horário)` : ''}`
+                    : "Agendamento criado com sucesso!";
+                toast.success(message);
+            } else {
+                toast.error("Não foi possível criar os agendamentos");
+            }
+
             setOpen(false);
             onAppointmentCreated?.();
             router.refresh();
@@ -164,6 +216,7 @@ export function NewAppointmentDialog({
         setDuration("50");
         setType("in_person");
         setAvailableSlots([]);
+        setRecurrence(defaultRecurrenceSettings);
     };
 
     return (
@@ -323,6 +376,15 @@ export function NewAppointmentDialog({
                         </div>
                     </div>
 
+                    {/* Recurrence */}
+                    <div className="border-t border-slate-200 pt-4 mt-2">
+                        <RecurrenceOptions
+                            startDate={date || null}
+                            settings={recurrence}
+                            onChange={setRecurrence}
+                        />
+                    </div>
+
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -332,7 +394,10 @@ export function NewAppointmentDialog({
                         className="bg-brand-600 hover:bg-brand-700"
                     >
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Agendar
+                        {recurrence.enabled 
+                            ? `Criar ${recurrence.endType === 'occurrences' ? recurrence.occurrences : 'vários'} Agendamentos`
+                            : 'Agendar'
+                        }
                     </Button>
                 </DialogFooter>
             </DialogContent>
