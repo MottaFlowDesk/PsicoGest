@@ -1,5 +1,5 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, User, CalendarClock, ChevronRight } from "lucide-react";
+import { Clock, User, CalendarClock, ChevronRight, Plug } from "lucide-react";
 import Link from "next/link";
 
 export default function SettingsPage() {
@@ -10,6 +10,13 @@ export default function SettingsPage() {
             href: "/dashboard/settings/profile",
             icon: User,
             color: "bg-blue-50 text-blue-600",
+        },
+        {
+            title: "Integrações",
+            description: "Conecte Google Calendar, WhatsApp e configure lembretes.",
+            href: "/dashboard/settings/integrations",
+            icon: Plug,
+            color: "bg-orange-50 text-orange-600",
         },
         {
             title: "Disponibilidade",
