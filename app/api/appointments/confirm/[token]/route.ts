@@ -10,6 +10,28 @@ interface RouteContext {
     params: Promise<{ token: string }>;
 }
 
+// Type for the appointment with relations
+interface AppointmentWithRelations {
+    id: string;
+    scheduled_at: string;
+    duration_minutes: number;
+    type: string;
+    status: string;
+    meeting_link: string | null;
+    patients: {
+        full_name: string;
+        email: string | null;
+        phone: string | null;
+    } | null;
+    professionals: {
+        id: string;
+        full_name: string;
+        google_refresh_token: string | null;
+        google_calendar_connected: boolean | null;
+        whatsapp_connected_at: string | null;
+    } | null;
+}
+
 // GET - Fetch appointment data
 export async function GET(request: NextRequest, context: RouteContext) {
     try {
@@ -17,7 +39,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         const supabase = await createClient();
 
         // Find appointment by confirmation token
-        const { data: appointment, error } = await supabase
+        const { data, error } = await supabase
             .from("appointments")
             .select(`
                 id,
@@ -41,12 +63,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
             .eq("confirmation_token", token)
             .single();
 
-        if (error || !appointment) {
+        if (error || !data) {
             return NextResponse.json(
                 { error: "Agendamento não encontrado ou link expirado" },
                 { status: 404 }
             );
         }
+
+        const appointment = data as unknown as AppointmentWithRelations;
 
         // Check if appointment is in the past
         if (new Date(appointment.scheduled_at) < new Date()) {
@@ -79,7 +103,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         const supabase = await createClient();
 
         // Find appointment by confirmation token
-        const { data: appointment, error: fetchError } = await supabase
+        const { data: appointmentData, error: fetchError } = await supabase
             .from("appointments")
             .select(`
                 id,
@@ -104,12 +128,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
             .eq("confirmation_token", token)
             .single();
 
-        if (fetchError || !appointment) {
+        if (fetchError || !appointmentData) {
             return NextResponse.json(
                 { error: "Agendamento não encontrado" },
                 { status: 404 }
             );
         }
+
+        const appointment = appointmentData as unknown as AppointmentWithRelations;
 
         // Check if already confirmed
         if (appointment.status === "confirmed") {
@@ -220,7 +246,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                                 professionalName: appointment.professionals.full_name,
                                 date: formattedDate,
                                 time: formattedTime,
-                                meetLink,
+                                meetLink: meetingLink,
                             }),
                         }
                     );

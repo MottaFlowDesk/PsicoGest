@@ -52,11 +52,13 @@ export async function createCalendarEvent(
         sendUpdates: event.attendeeEmail ? "all" : "none",
     });
 
+    const meetLinkEntry = response.data.conferenceData?.entryPoints?.find(
+        (ep) => ep.entryPointType === "video"
+    );
+    
     return {
         eventId: response.data.id || "",
-        meetLink: response.data.conferenceData?.entryPoints?.find(
-            (ep) => ep.entryPointType === "video"
-        )?.uri,
+        meetLink: meetLinkEntry?.uri || undefined,
     };
 }
 

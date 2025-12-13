@@ -1,5 +1,5 @@
 import { stripe, isStripeConfigured } from "@/lib/stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
@@ -7,7 +7,8 @@ import Stripe from "stripe";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const supabaseAdmin = supabaseUrl && supabaseServiceKey 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabaseAdmin: SupabaseClient<any> | null = supabaseUrl && supabaseServiceKey 
     ? createClient(supabaseUrl, supabaseServiceKey)
     : null;
 
@@ -82,7 +83,8 @@ export async function POST(request: NextRequest) {
     }
 }
 
-type SupabaseAdminClient = ReturnType<typeof createClient>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseAdminClient = SupabaseClient<any>;
 
 async function handleCheckoutCompleted(db: SupabaseAdminClient, session: Stripe.Checkout.Session) {
     const invoiceId = session.metadata?.invoice_id;

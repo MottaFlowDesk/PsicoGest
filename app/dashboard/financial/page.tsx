@@ -28,7 +28,7 @@ interface Invoice {
     id: string;
     invoice_number: string;
     amount_cents: number;
-    status: string;
+    status: "pending" | "paid" | "overdue" | "cancelled";
     due_date: string;
     issue_date: string;
     paid_at: string | null;

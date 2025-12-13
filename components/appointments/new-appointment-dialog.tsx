@@ -27,11 +27,16 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createAppointment } from "@/app/dashboard/appointments/actions";
 import { getAvailableSlots, TimeSlot } from "@/lib/availability-utils";
-import { RecurrenceOptions, RecurrenceSettings, defaultRecurrenceSettings } from "./recurrence-options";
 
 interface PatientOption {
     id: string;
     full_name: string;
+}
+
+interface RecurrenceConfig {
+    enabled: boolean;
+    frequency: "weekly" | "biweekly" | "monthly";
+    occurrences: number;
 }
 
 interface NewAppointmentDialogProps {
@@ -42,13 +47,15 @@ interface NewAppointmentDialogProps {
     triggerLabel?: string;
 }
 
-export function NewAppointmentDialog({
-    onAppointmentCreated,
-    className,
-    variant,
-    defaultPatientId,
-    triggerLabel = "Novo Agendamento"
-}: NewAppointmentDialogProps) {
+export function NewAppointmentDialog(props: NewAppointmentDialogProps) {
+    const {
+        onAppointmentCreated,
+        className,
+        variant,
+        defaultPatientId,
+        triggerLabel = "Novo Agendamento"
+    } = props;
+
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [patients, setPatients] = useState<PatientOption[]>([]);
@@ -57,13 +64,16 @@ export function NewAppointmentDialog({
     const [professionalId, setProfessionalId] = useState<string | null>(null);
     const router = useRouter();
 
-    // Form state
     const [patientId, setPatientId] = useState(defaultPatientId || "");
-    const [date, setDate] = useState<Date>();
+    const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState("");
     const [duration, setDuration] = useState("50");
     const [type, setType] = useState("in_person");
-    const [recurrence, setRecurrence] = useState<RecurrenceSettings>(defaultRecurrenceSettings);
+    const [recurrence, setRecurrence] = useState<RecurrenceConfig>({
+        enabled: false,
+        frequency: "weekly",
+        occurrences: 8,
+    });
 
     const supabase = createClient();
 
@@ -83,20 +93,20 @@ export function NewAppointmentDialog({
         }
     }, [date, duration, professionalId]);
 
-    const fetchProfessionalId = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+    async function fetchProfessionalId() {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) return;
 
         const { data } = await supabase
             .from("professionals")
             .select("id")
-            .eq("user_id", user.id)
+            .eq("user_id", userData.user.id)
             .single();
 
         if (data) setProfessionalId(data.id);
-    };
+    }
 
-    const fetchPatients = async () => {
+    async function fetchPatients() {
         const { data } = await supabase
             .from("patients")
             .select("id, full_name")
@@ -104,9 +114,9 @@ export function NewAppointmentDialog({
             .order("full_name");
 
         if (data) setPatients(data);
-    };
+    }
 
-    const fetchAvailableSlots = async () => {
+    async function fetchAvailableSlots() {
         if (!date || !professionalId) return;
 
         setLoadingSlots(true);
@@ -118,7 +128,6 @@ export function NewAppointmentDialog({
             );
             setAvailableSlots(slots);
             
-            // Reset time if previously selected time is not available
             if (time && !slots.find(s => s.start === time)) {
                 setTime("");
             }
@@ -128,45 +137,29 @@ export function NewAppointmentDialog({
         } finally {
             setLoadingSlots(false);
         }
-    };
+    }
 
-    const handleSubmit = async () => {
+    async function handleSubmit() {
         if (!patientId || !date || !time) return;
 
         setIsLoading(true);
         try {
-            // Calculate all dates for recurrence
             const datesToCreate: Date[] = [date];
             
             if (recurrence.enabled) {
                 let currentDate = date;
-                const maxOccurrences = recurrence.endType === "occurrences" 
-                    ? recurrence.occurrences 
-                    : 52; // Max 1 year of weekly appointments
-
-                for (let i = 1; i < maxOccurrences; i++) {
-                    switch (recurrence.frequency) {
-                        case "weekly":
-                            currentDate = addWeeks(currentDate, 1);
-                            break;
-                        case "biweekly":
-                            currentDate = addWeeks(currentDate, 2);
-                            break;
-                        case "monthly":
-                            currentDate = addMonths(currentDate, 1);
-                            break;
+                for (let i = 1; i < recurrence.occurrences; i++) {
+                    if (recurrence.frequency === "weekly") {
+                        currentDate = addWeeks(currentDate, 1);
+                    } else if (recurrence.frequency === "biweekly") {
+                        currentDate = addWeeks(currentDate, 2);
+                    } else {
+                        currentDate = addMonths(currentDate, 1);
                     }
-
-                    // Stop if we've passed the end date
-                    if (recurrence.endType === "date" && recurrence.endDate && currentDate > recurrence.endDate) {
-                        break;
-                    }
-
                     datesToCreate.push(new Date(currentDate));
                 }
             }
 
-            // Create all appointments
             let created = 0;
             let failed = 0;
 
@@ -183,13 +176,13 @@ export function NewAppointmentDialog({
                     created++;
                 } catch (err) {
                     failed++;
-                    console.error(`Failed to create appointment for ${format(appointmentDate, "dd/MM/yyyy")}:`, err);
+                    console.error("Failed to create appointment:", err);
                 }
             }
 
             if (created > 0) {
                 const message = recurrence.enabled 
-                    ? `${created} agendamento(s) criado(s) com sucesso!${failed > 0 ? ` (${failed} falharam por conflito de horário)` : ''}`
+                    ? `${created} agendamento(s) criado(s)!${failed > 0 ? ` (${failed} falharam)` : ''}`
                     : "Agendamento criado com sucesso!";
                 toast.success(message);
             } else {
@@ -197,33 +190,36 @@ export function NewAppointmentDialog({
             }
 
             setOpen(false);
-            onAppointmentCreated?.();
+            if (onAppointmentCreated) onAppointmentCreated();
             router.refresh();
             resetForm();
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error creating appointment:", error);
-            toast.error(error.message || "Erro ao criar agendamento");
+            const errorMessage = error instanceof Error ? error.message : "Erro ao criar agendamento";
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
-    };
+    }
 
-    const resetForm = () => {
+    function resetForm() {
         setPatientId(defaultPatientId || "");
         setDate(undefined);
         setTime("");
         setDuration("50");
         setType("in_person");
         setAvailableSlots([]);
-        setRecurrence(defaultRecurrenceSettings);
-    };
+        setRecurrence({ enabled: false, frequency: "weekly", occurrences: 8 });
+    }
+
+    function handleOpenChange(isOpen: boolean) {
+        setOpen(isOpen);
+        if (!isOpen) resetForm();
+    }
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => {
-            setOpen(isOpen);
-            if (!isOpen) resetForm();
-        }}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 <Button className={className} variant={variant}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -238,8 +234,6 @@ export function NewAppointmentDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-
-                    {/* Patient Select */}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="patient" className="text-right">
                             Paciente
@@ -258,7 +252,6 @@ export function NewAppointmentDialog({
                         </div>
                     </div>
 
-                    {/* Duration */}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label className="text-right">Duração</Label>
                         <div className="col-span-3">
@@ -277,7 +270,6 @@ export function NewAppointmentDialog({
                         </div>
                     </div>
 
-                    {/* Date */}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="date" className="text-right">
                             Data
@@ -293,7 +285,6 @@ export function NewAppointmentDialog({
                         </div>
                     </div>
 
-                    {/* Available Time Slots */}
                     <div className="grid grid-cols-4 items-start gap-4">
                         <Label className="text-right pt-2">Horário</Label>
                         <div className="col-span-3">
@@ -320,11 +311,10 @@ export function NewAppointmentDialog({
                                                 type="button"
                                                 variant={time === slot.start ? "default" : "outline"}
                                                 size="sm"
-                                                className={`${
-                                                    time === slot.start 
-                                                        ? "bg-brand-600 hover:bg-brand-700" 
-                                                        : "hover:bg-brand-50 hover:border-brand-300"
-                                                }`}
+                                                className={time === slot.start 
+                                                    ? "bg-brand-600 hover:bg-brand-700" 
+                                                    : "hover:bg-brand-50 hover:border-brand-300"
+                                                }
                                                 onClick={() => setTime(slot.start)}
                                             >
                                                 <Clock className="h-3 w-3 mr-1" />
@@ -340,7 +330,6 @@ export function NewAppointmentDialog({
                         </div>
                     </div>
 
-                    {/* Manual time input as fallback */}
                     {date && availableSlots.length === 0 && (
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right text-xs text-slate-500">
@@ -358,7 +347,6 @@ export function NewAppointmentDialog({
                         </div>
                     )}
 
-                    {/* Type */}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="type" className="text-right">
                             Tipo
@@ -376,13 +364,51 @@ export function NewAppointmentDialog({
                         </div>
                     </div>
 
-                    {/* Recurrence */}
                     <div className="border-t border-slate-200 pt-4 mt-2">
-                        <RecurrenceOptions
-                            startDate={date || null}
-                            settings={recurrence}
-                            onChange={setRecurrence}
-                        />
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <div>
+                                <Label className="font-medium">Repetir agendamento</Label>
+                                <p className="text-xs text-slate-500">Cria múltiplos agendamentos</p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={recurrence.enabled}
+                                onChange={(e) => setRecurrence({ ...recurrence, enabled: e.target.checked })}
+                                className="h-4 w-4"
+                            />
+                        </div>
+                        
+                        {recurrence.enabled && (
+                            <div className="mt-3 space-y-3 pl-4 border-l-2 border-brand-200">
+                                <div className="flex items-center gap-2">
+                                    <Select 
+                                        value={recurrence.frequency} 
+                                        onValueChange={(v: "weekly" | "biweekly" | "monthly") => 
+                                            setRecurrence({ ...recurrence, frequency: v })
+                                        }
+                                    >
+                                        <SelectTrigger className="w-32">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="weekly">Semanal</SelectItem>
+                                            <SelectItem value="biweekly">Quinzenal</SelectItem>
+                                            <SelectItem value="monthly">Mensal</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <span className="text-sm text-slate-500">por</span>
+                                    <Input
+                                        type="number"
+                                        min={2}
+                                        max={52}
+                                        value={recurrence.occurrences}
+                                        onChange={(e) => setRecurrence({ ...recurrence, occurrences: parseInt(e.target.value) || 2 })}
+                                        className="w-16 h-9 text-center"
+                                    />
+                                    <span className="text-sm text-slate-500">sessões</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                 </div>
@@ -394,10 +420,7 @@ export function NewAppointmentDialog({
                         className="bg-brand-600 hover:bg-brand-700"
                     >
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {recurrence.enabled 
-                            ? `Criar ${recurrence.endType === 'occurrences' ? recurrence.occurrences : 'vários'} Agendamentos`
-                            : 'Agendar'
-                        }
+                        {recurrence.enabled ? `Criar ${recurrence.occurrences} Agendamentos` : 'Agendar'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
