@@ -55,7 +55,8 @@ export async function updateProfile(data: ProfileData) {
     }
 
     revalidatePath("/dashboard/settings/profile");
-    revalidatePath("/dashboard/profile"); // If we have a public profile preview later
+    revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard"); // Atualiza o layout que mostra o nome do usuário
     return { success: true };
 }
 

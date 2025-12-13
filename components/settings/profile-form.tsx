@@ -17,10 +17,18 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import { updateProfile } from "@/app/dashboard/settings/profile/actions";
 import { createClient } from "@/lib/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const profileSchema = z.object({
@@ -42,13 +50,26 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 interface ProfileFormProps {
-    initialData: any; // Using any for simplicity as it comes from DB loose shape
+    initialData: any;
 }
+
+const approaches = [
+    "Psicanálise",
+    "Terapia Cognitivo-Comportamental (TCC)",
+    "Gestalt-terapia",
+    "Humanista",
+    "Existencial",
+    "Fenomenológica",
+    "Junguiana",
+    "Comportamental",
+    "Sistêmica",
+    "Integrativa",
+    "Outra",
+];
 
 export function ProfileForm({ initialData }: ProfileFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
-    const { toast } = useToast();
     const router = useRouter();
 
     const form = useForm<ProfileFormValues>({
@@ -74,39 +95,63 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Arquivo muito grande", {
+                description: "O tamanho máximo é 5MB.",
+            });
+            return;
+        }
+
         setIsUploading(true);
         try {
             const supabase = createClient();
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${fileName}`;
+            const fileExt = file.name.split(".").pop();
+            const fileName = `${initialData?.id || "avatar"}-${Date.now()}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file);
+                .from("avatars")
+                .upload(fileName, file, { upsert: true });
 
             if (uploadError) {
                 throw uploadError;
             }
 
             const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
+                .from("avatars")
+                .getPublicUrl(fileName);
 
             form.setValue("avatarUrl", publicUrl);
-            toast({
-                title: "Foto enviada",
-                description: "Não esqueça de salvar as alterações.",
+            toast.success("Foto enviada!", {
+                description: "Clique em 'Salvar' para confirmar a alteração.",
             });
         } catch (error) {
             console.error(error);
-            toast({
-                title: "Erro no upload",
+            toast.error("Erro no upload", {
                 description: "Não foi possível enviar a imagem.",
-                variant: "destructive",
             });
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    // Auto-fill address from CEP
+    const handleCepBlur = async (cep: string) => {
+        const cleanCep = cep.replace(/\D/g, "");
+        if (cleanCep.length !== 8) return;
+
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+            const data = await response.json();
+
+            if (!data.erro) {
+                form.setValue("addressStreet", data.logradouro || "");
+                form.setValue("addressNeighborhood", data.bairro || "");
+                form.setValue("addressCity", data.localidade || "");
+                form.setValue("addressState", data.uf || "");
+            }
+        } catch (error) {
+            console.error("Error fetching CEP:", error);
         }
     };
 
@@ -114,16 +159,13 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         setIsLoading(true);
         try {
             await updateProfile(data);
-            toast({
-                title: "Perfil atualizado",
+            toast.success("Perfil atualizado!", {
                 description: "Suas informações foram salvas com sucesso.",
             });
             router.refresh();
         } catch (error) {
-            toast({
-                title: "Erro",
+            toast.error("Erro ao salvar", {
                 description: "Ocorreu um erro ao atualizar o perfil.",
-                variant: "destructive",
             });
         } finally {
             setIsLoading(false);
@@ -134,15 +176,18 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 {/* Avatar Section */}
-                <div className="flex items-center gap-6">
-                    <Avatar className="h-24 w-24">
-                        <AvatarImage src={form.watch("avatarUrl")} />
-                        <AvatarFallback className="text-lg bg-slate-100">
-                            {initialData?.full_name?.[0] || <User />}
+                <div className="flex items-center gap-6 p-6 bg-slate-50 rounded-xl border border-slate-200">
+                    <Avatar className="h-24 w-24 ring-4 ring-white shadow-lg">
+                        <AvatarImage src={form.watch("avatarUrl")} className="object-cover" />
+                        <AvatarFallback className="text-2xl bg-brand-100 text-brand-700 font-bold">
+                            {initialData?.full_name?.[0]?.toUpperCase() || <User className="h-10 w-10" />}
                         </AvatarFallback>
                     </Avatar>
                     <div className="space-y-2">
-                        <h3 className="text-sm font-medium">Foto de Perfil</h3>
+                        <h3 className="font-semibold text-slate-900">Foto de Perfil</h3>
+                        <p className="text-sm text-slate-500">
+                            Esta foto será exibida para seus pacientes.
+                        </p>
                         <div className="flex items-center gap-2">
                             <Input
                                 type="file"
@@ -157,103 +202,41 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                                 variant="outline"
                                 size="sm"
                                 disabled={isUploading || isLoading}
-                                onClick={() => document.getElementById('avatar-upload')?.click()}
+                                onClick={() => document.getElementById("avatar-upload")?.click()}
                             >
                                 {isUploading ? (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 ) : (
                                     <Upload className="mr-2 h-4 w-4" />
                                 )}
-                                Alterar foto
+                                {isUploading ? "Enviando..." : "Alterar foto"}
                             </Button>
                         </div>
-                        <p className="text-xs text-slate-500">
-                            Recomendado: JPG ou PNG. Max 5MB.
-                        </p>
                     </div>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                    {/* Public Info */}
-                    <div className="space-y-6">
-                        <div>
-                            <h3 className="text-lg font-medium">Informações Públicas</h3>
-                            <p className="text-sm text-slate-500">Isso será visível para seus pacientes.</p>
-                        </div>
+                {/* Personal Info Section */}
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-lg font-semibold text-slate-900">Informações Pessoais</h3>
+                        <p className="text-sm text-slate-500">Dados básicos do seu perfil profissional.</p>
+                    </div>
+                    <Separator />
 
+                    <div className="grid gap-6 md:grid-cols-2">
                         <FormField
                             control={form.control}
                             name="fullName"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Nome Completo</FormLabel>
+                                    <FormLabel>Nome Completo *</FormLabel>
                                     <FormControl>
-                                        <Input {...field} />
+                                        <Input placeholder="Seu nome" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-
-                        <FormField
-                            control={form.control}
-                            name="specialty"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Especialidade</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Ex: Psicólogo Clínico, Psicanalista" {...field} />
-                                    </FormControl>
-                                    <FormDescription>
-                                        Aparece abaixo do seu nome.
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="registrationNumber"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Registro Profissional</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Ex: CRP 06/12345" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="bio"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Sobre você (Bio)</FormLabel>
-                                    <FormControl>
-                                        <Textarea
-                                            placeholder="Breve descrição sobre sua abordagem e experiência..."
-                                            className="h-32 resize-none"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormDescription>
-                                        Max 500 caracteres.
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-
-                    {/* Contact & Address */}
-                    <div className="space-y-6">
-                        <div>
-                            <h3 className="text-lg font-medium">Contato e Endereço</h3>
-                            <p className="text-sm text-slate-500">Usado para faturas e contato.</p>
-                        </div>
 
                         <FormField
                             control={form.control}
@@ -269,111 +252,192 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                             )}
                         />
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="addressZip"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>CEP</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="00000-000" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="addressState"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Estado</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="SP" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
                         <FormField
                             control={form.control}
-                            name="addressStreet"
+                            name="registrationNumber"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Logradouro</FormLabel>
+                                    <FormLabel>Registro Profissional (CRP)</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Rua..." {...field} />
+                                        <Input placeholder="Ex: 06/12345" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="addressNumber"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Número</FormLabel>
+                        <FormField
+                            control={form.control}
+                            name="specialty"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Abordagem Terapêutica</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                                         <FormControl>
-                                            <Input {...field} />
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecione sua abordagem" />
+                                            </SelectTrigger>
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="addressComplement"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Complemento</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Apto, Sala..." {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                                        <SelectContent>
+                                            {approaches.map((approach) => (
+                                                <SelectItem key={approach} value={approach}>
+                                                    {approach}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="addressNeighborhood"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Bairro</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="addressCity"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Cidade</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                        <FormField
+                            control={form.control}
+                            name="bio"
+                            render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                    <FormLabel>Sobre Você (Bio)</FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            placeholder="Breve descrição sobre sua abordagem, experiência e especialidades..."
+                                            className="min-h-[120px] resize-none"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormDescription>
+                                        Esta descrição será visível para seus pacientes. Máx 500 caracteres.
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     </div>
                 </div>
 
-                <div className="flex justify-end pt-6 border-t">
-                    <Button type="submit" disabled={isLoading || isUploading} className="min-w-[150px]">
+                {/* Address Section */}
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-lg font-semibold text-slate-900">Endereço do Consultório</h3>
+                        <p className="text-sm text-slate-500">Usado para faturas e informações de contato.</p>
+                    </div>
+                    <Separator />
+
+                    <div className="grid gap-6 md:grid-cols-3">
+                        <FormField
+                            control={form.control}
+                            name="addressZip"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>CEP</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="00000-000"
+                                            {...field}
+                                            onBlur={(e) => {
+                                                field.onBlur();
+                                                handleCepBlur(e.target.value);
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormDescription>Digite o CEP para preencher automaticamente.</FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="addressStreet"
+                            render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                    <FormLabel>Logradouro</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Rua, Avenida..." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="addressNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Número</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="123" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="addressComplement"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Complemento</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Apto, Sala..." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="addressNeighborhood"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Bairro</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Centro" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="addressCity"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Cidade</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="São Paulo" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="addressState"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Estado</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="SP" maxLength={2} {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-end pt-6 border-t border-slate-200">
+                    <Button
+                        type="submit"
+                        disabled={isLoading || isUploading}
+                        className="min-w-[180px] bg-brand-600 hover:bg-brand-700"
+                    >
                         {isLoading ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

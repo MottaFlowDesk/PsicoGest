@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MedicalRecord } from "@/app/dashboard/patients/[id]/records/actions";
 import { RecordEditor } from "./record-editor";
+import { useRouter } from "next/navigation";
 
 interface RecordListProps {
     patientId: string;
@@ -17,6 +18,7 @@ interface RecordListProps {
 export function RecordList({ patientId, records }: RecordListProps) {
     const [editorOpen, setEditorOpen] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
+    const router = useRouter();
 
     const handleCreateNew = () => {
         setSelectedRecord(null);
@@ -109,9 +111,8 @@ export function RecordList({ patientId, records }: RecordListProps) {
                 open={editorOpen}
                 onOpenChange={setEditorOpen}
                 onSuccess={() => {
-                    // Trigger refresh logic if needed, but Server Actions + revalidatePath should handle list update if this is server component driven.
-                    // But we might need router.refresh() if using client cache.
-                    // We can pass a refresh prop or router.refresh() 
+                    setSelectedRecord(null);
+                    router.refresh();
                 }}
             />
         </div>

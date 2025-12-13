@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
+import { revalidatePath } from "next/cache";
 
 export interface DashboardSummary {
     revenue: number; // Total received (paid)
@@ -18,9 +19,11 @@ export type Invoice = {
     due_date: string;
     issue_date: string;
     paid_at: string | null;
+    description?: string | null;
     patient: {
         full_name: string;
     };
+    patient_id?: string;
 };
 
 export async function getFinancialSummary(): Promise<DashboardSummary> {
@@ -141,5 +144,160 @@ export async function createManualInvoice(data: {
     });
 
     if (error) throw error;
+    
+    revalidatePath("/dashboard/financial");
+    revalidatePath("/dashboard");
+    
+    return { success: true };
+}
+
+export async function markInvoiceAsPaid(invoiceId: string, paymentMethod?: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) throw new Error("Professional not found");
+
+    // Verify ownership
+    const { data: invoice } = await supabase
+        .from("invoices")
+        .select("professional_id, status")
+        .eq("id", invoiceId)
+        .single();
+
+    if (!invoice || invoice.professional_id !== professional.id) {
+        throw new Error("Invoice not found or access denied");
+    }
+
+    if (invoice.status === "paid") {
+        throw new Error("Invoice is already paid");
+    }
+
+    if (invoice.status === "cancelled") {
+        throw new Error("Cannot mark a cancelled invoice as paid");
+    }
+
+    const { error } = await supabase
+        .from("invoices")
+        .update({
+            status: "paid",
+            paid_at: new Date().toISOString(),
+            payment_method: paymentMethod || "other",
+        })
+        .eq("id", invoiceId);
+
+    if (error) throw error;
+
+    revalidatePath("/dashboard/financial");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+}
+
+export async function cancelInvoice(invoiceId: string, reason?: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) throw new Error("Professional not found");
+
+    // Verify ownership
+    const { data: invoice } = await supabase
+        .from("invoices")
+        .select("professional_id, status")
+        .eq("id", invoiceId)
+        .single();
+
+    if (!invoice || invoice.professional_id !== professional.id) {
+        throw new Error("Invoice not found or access denied");
+    }
+
+    if (invoice.status === "paid") {
+        throw new Error("Cannot cancel a paid invoice");
+    }
+
+    if (invoice.status === "cancelled") {
+        throw new Error("Invoice is already cancelled");
+    }
+
+    const { error } = await supabase
+        .from("invoices")
+        .update({
+            status: "cancelled",
+            notes: reason ? `Cancelado: ${reason}` : "Cancelado",
+        })
+        .eq("id", invoiceId);
+
+    if (error) throw error;
+
+    revalidatePath("/dashboard/financial");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+}
+
+export async function updateInvoice(data: {
+    invoiceId: string;
+    amount?: number;
+    dueDate?: string;
+    description?: string;
+}) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) throw new Error("Professional not found");
+
+    // Verify ownership
+    const { data: invoice } = await supabase
+        .from("invoices")
+        .select("professional_id, status")
+        .eq("id", data.invoiceId)
+        .single();
+
+    if (!invoice || invoice.professional_id !== professional.id) {
+        throw new Error("Invoice not found or access denied");
+    }
+
+    if (invoice.status !== "pending") {
+        throw new Error("Can only edit pending invoices");
+    }
+
+    const updateData: any = {};
+    if (data.amount !== undefined) updateData.amount_cents = Math.round(data.amount * 100);
+    if (data.dueDate) updateData.due_date = data.dueDate;
+    if (data.description !== undefined) updateData.description = data.description;
+
+    const { error } = await supabase
+        .from("invoices")
+        .update(updateData)
+        .eq("id", data.invoiceId);
+
+    if (error) throw error;
+
+    revalidatePath("/dashboard/financial");
+    revalidatePath("/dashboard");
+
     return { success: true };
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
     Calendar as CalendarIcon,
@@ -11,23 +11,47 @@ import {
     MapPin,
     Search,
     Filter,
-    MoreVertical,
-    FileText,
     CheckCircle,
-    Loader2
+    Loader2,
+    X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { AppointmentActionsMenu } from "@/components/appointments/appointment-actions-menu";
+import { EditAppointmentDialog } from "@/components/appointments/edit-appointment-dialog";
+import { confirmAppointment } from "./actions";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
+type StatusFilter = "all" | "scheduled" | "confirmed" | "completed" | "cancelled" | "no_show";
+type TypeFilter = "all" | "in_person" | "telehealth";
+type PeriodFilter = "all" | "today" | "week" | "month";
 
 export default function AppointmentsPage() {
     const [appointments, setAppointments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+    const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+    const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
+    const [editingAppointment, setEditingAppointment] = useState<any | null>(null);
+    const [confirmingId, setConfirmingId] = useState<string | null>(null);
     const supabase = createClient();
+    const router = useRouter();
 
     useEffect(() => {
         fetchAppointments();
-    }, []);
+    }, [statusFilter, typeFilter, periodFilter]);
 
     async function fetchAppointments() {
         setLoading(true);
@@ -35,22 +59,65 @@ export default function AppointmentsPage() {
 
         if (!user) return;
 
-        const { data } = await supabase
+        let query = supabase
             .from("appointments")
             .select(`
                 *,
                 patients (
+                    id,
                     full_name,
                     phone,
                     email
                 )
             `)
             .order('scheduled_at', { ascending: true })
-            .limit(50);
+            .limit(100);
+
+        // Apply status filter
+        if (statusFilter !== "all") {
+            query = query.eq("status", statusFilter);
+        }
+
+        // Apply type filter
+        if (typeFilter !== "all") {
+            query = query.eq("type", typeFilter);
+        }
+
+        // Apply period filter
+        const now = new Date();
+        if (periodFilter === "today") {
+            query = query
+                .gte("scheduled_at", startOfDay(now).toISOString())
+                .lte("scheduled_at", endOfDay(now).toISOString());
+        } else if (periodFilter === "week") {
+            query = query
+                .gte("scheduled_at", startOfWeek(now, { weekStartsOn: 0 }).toISOString())
+                .lte("scheduled_at", endOfWeek(now, { weekStartsOn: 0 }).toISOString());
+        } else if (periodFilter === "month") {
+            query = query
+                .gte("scheduled_at", startOfMonth(now).toISOString())
+                .lte("scheduled_at", endOfMonth(now).toISOString());
+        }
+
+        const { data } = await query;
 
         setAppointments(data || []);
         setLoading(false);
     }
+
+    const handleQuickConfirm = async (appointmentId: string) => {
+        setConfirmingId(appointmentId);
+        try {
+            await confirmAppointment(appointmentId);
+            toast.success("Agendamento confirmado!");
+            router.refresh();
+            fetchAppointments();
+        } catch (error) {
+            toast.error("Erro ao confirmar agendamento");
+        } finally {
+            setConfirmingId(null);
+        }
+    };
 
     // Filter appointments based on search query
     const filteredAppointments = appointments.filter(apt => {
@@ -62,11 +129,70 @@ export default function AppointmentsPage() {
         return patientName.includes(query);
     });
 
+    const clearFilters = () => {
+        setStatusFilter("all");
+        setTypeFilter("all");
+        setPeriodFilter("all");
+        setSearchQuery("");
+    };
+
+    const activeFiltersCount = [
+        statusFilter !== "all",
+        typeFilter !== "all",
+        periodFilter !== "all",
+    ].filter(Boolean).length;
+
+    const hasActiveFilters = activeFiltersCount > 0 || searchQuery !== "";
+
+    const getStatusBadge = (status: string) => {
+        const styles: Record<string, string> = {
+            scheduled: "bg-blue-50 text-blue-700 border-blue-100",
+            confirmed: "bg-green-50 text-green-700 border-green-100",
+            completed: "bg-slate-50 text-slate-700 border-slate-200",
+            cancelled: "bg-red-50 text-red-700 border-red-100",
+            no_show: "bg-orange-50 text-orange-700 border-orange-100",
+        };
+
+        const labels: Record<string, string> = {
+            scheduled: "Agendado",
+            confirmed: "Confirmado",
+            completed: "Concluído",
+            cancelled: "Cancelado",
+            no_show: "Não Compareceu",
+        };
+
+        return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] || styles.scheduled}`}>
+                {labels[status] || status}
+            </span>
+        );
+    };
+
+    const getFilterLabel = (type: string, value: string): string => {
+        const labels: Record<string, Record<string, string>> = {
+            status: {
+                scheduled: "Agendado",
+                confirmed: "Confirmado",
+                completed: "Concluído",
+                cancelled: "Cancelado",
+                no_show: "Não Compareceu",
+            },
+            type: {
+                in_person: "Presencial",
+                telehealth: "Online",
+            },
+            period: {
+                today: "Hoje",
+                week: "Esta Semana",
+                month: "Este Mês",
+            },
+        };
+        return labels[type]?.[value] || value;
+    };
+
     return (
         <div className="space-y-6">
-
-
-            {/* Filters & Search - Matching Patients Page Design */}
+            {/* Filters & Search */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
                 <div className="relative w-full sm:max-w-md">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -80,13 +206,116 @@ export default function AppointmentsPage() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2">
-                        <Filter size={18} />
-                        Filtros
-                    </Button>
+                <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                    {/* Status Filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-slate-600 border-slate-200 hover:bg-slate-50">
+                                Status
+                                {statusFilter !== "all" && <Badge variant="secondary" className="ml-1 h-5 px-1.5">1</Badge>}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuRadioGroup value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                                <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuRadioItem value="scheduled">Agendado</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="confirmed">Confirmado</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="completed">Concluído</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="cancelled">Cancelado</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="no_show">Não Compareceu</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Type Filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-slate-600 border-slate-200 hover:bg-slate-50">
+                                Tipo
+                                {typeFilter !== "all" && <Badge variant="secondary" className="ml-1 h-5 px-1.5">1</Badge>}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuRadioGroup value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
+                                <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuRadioItem value="in_person">Presencial</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="telehealth">Online</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Period Filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-slate-600 border-slate-200 hover:bg-slate-50">
+                                Período
+                                {periodFilter !== "all" && <Badge variant="secondary" className="ml-1 h-5 px-1.5">1</Badge>}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuRadioGroup value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+                                <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuRadioItem value="today">Hoje</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="week">Esta Semana</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="month">Este Mês</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {hasActiveFilters && (
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={clearFilters}
+                            className="text-slate-500 hover:text-slate-700"
+                        >
+                            <X size={16} className="mr-1" />
+                            Limpar
+                        </Button>
+                    )}
                 </div>
             </div>
+
+            {/* Active Filters Display */}
+            {hasActiveFilters && (
+                <div className="flex flex-wrap gap-2">
+                    {statusFilter !== "all" && (
+                        <Badge variant="secondary" className="gap-1">
+                            Status: {getFilterLabel("status", statusFilter)}
+                            <button onClick={() => setStatusFilter("all")} className="ml-1 hover:text-red-500">
+                                <X size={12} />
+                            </button>
+                        </Badge>
+                    )}
+                    {typeFilter !== "all" && (
+                        <Badge variant="secondary" className="gap-1">
+                            Tipo: {getFilterLabel("type", typeFilter)}
+                            <button onClick={() => setTypeFilter("all")} className="ml-1 hover:text-red-500">
+                                <X size={12} />
+                            </button>
+                        </Badge>
+                    )}
+                    {periodFilter !== "all" && (
+                        <Badge variant="secondary" className="gap-1">
+                            Período: {getFilterLabel("period", periodFilter)}
+                            <button onClick={() => setPeriodFilter("all")} className="ml-1 hover:text-red-500">
+                                <X size={12} />
+                            </button>
+                        </Badge>
+                    )}
+                    {searchQuery && (
+                        <Badge variant="secondary" className="gap-1">
+                            Busca: {searchQuery}
+                            <button onClick={() => setSearchQuery("")} className="ml-1 hover:text-red-500">
+                                <X size={12} />
+                            </button>
+                        </Badge>
+                    )}
+                </div>
+            )}
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 {loading ? (
@@ -100,11 +329,11 @@ export default function AppointmentsPage() {
                             <CalendarIcon className="h-6 w-6 text-slate-400" />
                         </div>
                         <h3 className="text-lg font-medium text-slate-900">
-                            {searchQuery ? "Nenhum agendamento encontrado" : "Agenda vazia"}
+                            {hasActiveFilters ? "Nenhum agendamento encontrado" : "Agenda vazia"}
                         </h3>
                         <p className="text-slate-500 mt-1 max-w-sm mx-auto">
-                            {searchQuery
-                                ? "Tente buscar com outros termos."
+                            {hasActiveFilters
+                                ? "Tente ajustar os filtros ou busca."
                                 : "Nenhum agendamento encontrado."
                             }
                         </p>
@@ -124,6 +353,9 @@ export default function AppointmentsPage() {
                             <tbody className="bg-white divide-y divide-slate-200">
                                 {filteredAppointments.map((apt: any) => {
                                     const date = new Date(apt.scheduled_at);
+                                    const isPast = date < new Date();
+                                    const canConfirm = apt.status === "scheduled" && !isPast;
+
                                     return (
                                         <tr key={apt.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -162,28 +394,32 @@ export default function AppointmentsPage() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${apt.status === 'confirmed' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                    apt.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                        'bg-blue-50 text-blue-700 border-blue-100'
-                                                    }`}>
-                                                    {apt.status === 'scheduled' ? 'Agendado' :
-                                                        apt.status === 'confirmed' ? 'Confirmado' :
-                                                            apt.status === 'cancelled' ? 'Cancelado' : apt.status}
-                                                </span>
+                                                {getStatusBadge(apt.status)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {apt.status !== 'cancelled' && (
-                                                        <button className="p-1.5 text-slate-400 hover:text-green-600 rounded hover:bg-green-50 transition-colors" title="Confirmar Presença">
-                                                            <CheckCircle size={18} />
-                                                        </button>
+                                                    {canConfirm && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-slate-400 hover:text-green-600 hover:bg-green-50"
+                                                            onClick={() => handleQuickConfirm(apt.id)}
+                                                            disabled={confirmingId === apt.id}
+                                                            title="Confirmar Presença"
+                                                        >
+                                                            {confirmingId === apt.id ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <CheckCircle className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
                                                     )}
-                                                    <button className="p-1.5 text-slate-400 hover:text-brand-600 rounded hover:bg-brand-50 transition-colors" title="Ver Detalhes">
-                                                        <FileText size={18} />
-                                                    </button>
-                                                    <button className="p-1.5 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-100 transition-colors">
-                                                        <MoreVertical size={18} />
-                                                    </button>
+                                                    <AppointmentActionsMenu
+                                                        appointmentId={apt.id}
+                                                        currentStatus={apt.status}
+                                                        patientName={apt.patients?.full_name || "Paciente"}
+                                                        onEdit={() => setEditingAppointment(apt)}
+                                                    />
                                                 </div>
                                             </td>
                                         </tr>
@@ -194,6 +430,20 @@ export default function AppointmentsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Edit Dialog */}
+            {editingAppointment && (
+                <EditAppointmentDialog
+                    appointment={editingAppointment}
+                    open={!!editingAppointment}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setEditingAppointment(null);
+                            fetchAppointments();
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 }

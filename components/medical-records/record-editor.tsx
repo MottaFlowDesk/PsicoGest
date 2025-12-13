@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,7 +25,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { createMedicalRecord, updateMedicalRecord, MedicalRecord } from "@/app/dashboard/patients/[id]/records/actions";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const formSchema = z.object({
     title: z.string().min(2, "Título deve ter pelo menos 2 caracteres"),
@@ -49,18 +49,26 @@ export function RecordEditor({
     onSuccess,
 }: RecordEditorProps) {
     const [isLoading, setIsLoading] = useState(false);
-    // We need to define useToast. I'll check if it exists or if I need to fallback.
-    // Assuming standard shadcn implementation used in project.
-    const { toast } = useToast();
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            title: record?.title || "",
-            content: record?.versions?.[0]?.content?.text || "",
+            title: "",
+            content: "",
             editReason: "",
         },
     });
+
+    // Reset form when record changes or dialog opens
+    useEffect(() => {
+        if (open) {
+            form.reset({
+                title: record?.title || "",
+                content: record?.versions?.[0]?.content?.text || "",
+                editReason: "",
+            });
+        }
+    }, [open, record, form]);
 
     async function onSubmit(values: z.infer<typeof formSchema>, isFinalizing: boolean = false) {
         setIsLoading(true);
@@ -74,8 +82,7 @@ export function RecordEditor({
                     status: isFinalizing ? "finalized" : "draft",
                     editReason: values.editReason,
                 });
-                toast({
-                    title: isFinalizing ? "Prontuário finalizado" : "Prontuário atualizado",
+                toast.success(isFinalizing ? "Prontuário finalizado" : "Prontuário atualizado", {
                     description: "As alterações foram salvas com sucesso.",
                 });
             } else {
@@ -85,8 +92,7 @@ export function RecordEditor({
                     title: values.title,
                     content: values.content,
                 });
-                toast({
-                    title: "Prontuário criado",
+                toast.success("Prontuário criado", {
                     description: "O novo registro foi criado com sucesso.",
                 });
             }
@@ -95,10 +101,8 @@ export function RecordEditor({
             form.reset();
         } catch (error) {
             console.error(error);
-            toast({
-                title: "Erro",
+            toast.error("Erro ao salvar prontuário", {
                 description: "Ocorreu um erro ao salvar o prontuário. Tente novamente.",
-                variant: "destructive",
             });
         } finally {
             setIsLoading(false);

@@ -9,22 +9,38 @@ import {
     Filter,
     FileText,
     MessageSquare,
-    Loader2
+    Loader2,
+    X,
+    Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 import { PatientActionsMenu } from "@/components/patients/patient-actions-menu";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { ImportPatientDialog } from "@/components/patients/import-dialog";
+
+type StatusFilter = "active" | "archived" | "all";
 
 export default function PatientsPage() {
     const [patients, setPatients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
     const supabase = createClient();
 
     useEffect(() => {
         fetchPatients();
-    }, []);
+    }, [statusFilter]);
 
     async function fetchPatients() {
         setLoading(true);
@@ -40,12 +56,20 @@ export default function PatientsPage() {
 
         if (!professional) return;
 
-        const { data } = await supabase
+        let query = supabase
             .from("patients")
             .select("*")
             .eq("professional_id", professional.id)
-            .eq("archived", false)
             .order("created_at", { ascending: false });
+
+        // Apply status filter
+        if (statusFilter === "active") {
+            query = query.eq("archived", false);
+        } else if (statusFilter === "archived") {
+            query = query.eq("archived", true);
+        }
+
+        const { data } = await query;
 
         setPatients(data || []);
         setLoading(false);
@@ -69,15 +93,40 @@ export default function PatientsPage() {
         window.open(`https://wa.me/55${cleanPhone}`, '_blank');
     };
 
+    const clearFilters = () => {
+        setStatusFilter("active");
+        setSearchQuery("");
+    };
+
+    const hasActiveFilters = statusFilter !== "active" || searchQuery !== "";
+
+    const getStatusBadge = (archived: boolean) => {
+        if (archived) {
+            return (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-500/20">
+                    Arquivado
+                </span>
+            );
+        }
+        return (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20">
+                Ativo
+            </span>
+        );
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
-                <Link href="/dashboard/patients/new">
-                    <Button className="bg-brand-600 hover:bg-brand-700 shadow-sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Novo Paciente
-                    </Button>
-                </Link>
+                <div className="flex gap-2">
+                    <ImportPatientDialog />
+                    <Link href="/dashboard/patients/new">
+                        <Button className="bg-brand-600 hover:bg-brand-700 shadow-sm">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Novo Paciente
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             {/* Filters & Search */}
@@ -95,12 +144,62 @@ export default function PatientsPage() {
                     />
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2">
-                        <Filter size={18} />
-                        Filtros
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2">
+                                <Filter size={18} />
+                                Filtros
+                                {statusFilter !== "active" && (
+                                    <Badge variant="secondary" className="ml-1 h-5 px-1.5">1</Badge>
+                                )}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>Status do Paciente</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuRadioGroup value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                                <DropdownMenuRadioItem value="active">Apenas Ativos</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="archived">Apenas Arquivados</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {hasActiveFilters && (
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={clearFilters}
+                            className="text-slate-500 hover:text-slate-700"
+                        >
+                            <X size={16} className="mr-1" />
+                            Limpar
+                        </Button>
+                    )}
                 </div>
             </div>
+
+            {/* Active Filters Display */}
+            {hasActiveFilters && (
+                <div className="flex flex-wrap gap-2">
+                    {statusFilter !== "active" && (
+                        <Badge variant="secondary" className="gap-1">
+                            Status: {statusFilter === "archived" ? "Arquivados" : "Todos"}
+                            <button onClick={() => setStatusFilter("active")} className="ml-1 hover:text-red-500">
+                                <X size={12} />
+                            </button>
+                        </Badge>
+                    )}
+                    {searchQuery && (
+                        <Badge variant="secondary" className="gap-1">
+                            Busca: {searchQuery}
+                            <button onClick={() => setSearchQuery("")} className="ml-1 hover:text-red-500">
+                                <X size={12} />
+                            </button>
+                        </Badge>
+                    )}
+                </div>
+            )}
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 {loading ? (
@@ -135,9 +234,7 @@ export default function PatientsPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{patient.phone}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20">
-                                                Ativo
-                                            </span>
+                                            {getStatusBadge(patient.archived)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex items-center justify-end gap-3">
@@ -151,12 +248,14 @@ export default function PatientsPage() {
                                                 >
                                                     <MessageSquare size={18} />
                                                 </button>
-                                                <NewAppointmentDialog
-                                                    defaultPatientId={patient.id}
-                                                    triggerLabel=""
-                                                    className="p-1.5 h-auto bg-transparent hover:bg-transparent text-slate-400 hover:text-brand-600 transition-colors shadow-none"
-                                                    variant="ghost"
-                                                />
+                                                {!patient.archived && (
+                                                    <NewAppointmentDialog
+                                                        defaultPatientId={patient.id}
+                                                        triggerLabel=""
+                                                        className="p-1.5 h-auto bg-transparent hover:bg-transparent text-slate-400 hover:text-brand-600 transition-colors shadow-none"
+                                                        variant="ghost"
+                                                    />
+                                                )}
                                                 <PatientActionsMenu
                                                     patientId={patient.id}
                                                     patientName={patient.full_name}
@@ -175,15 +274,17 @@ export default function PatientsPage() {
                             <Plus className="h-6 w-6 text-slate-400" />
                         </div>
                         <h3 className="text-lg font-medium text-slate-900">
-                            {searchQuery ? "Nenhum paciente encontrado" : "Nenhum paciente cadastrado"}
+                            {searchQuery || statusFilter !== "active" 
+                                ? "Nenhum paciente encontrado" 
+                                : "Nenhum paciente cadastrado"}
                         </h3>
                         <p className="text-slate-500 mt-1 max-w-sm mx-auto">
-                            {searchQuery
-                                ? "Tente buscar com outros termos."
+                            {searchQuery || statusFilter !== "active"
+                                ? "Tente ajustar os filtros ou busca."
                                 : "Comece cadastrando seu primeiro paciente para gerenciar atendimentos e prontuários."
                             }
                         </p>
-                        {!searchQuery && (
+                        {!searchQuery && statusFilter === "active" && (
                             <Link href="/dashboard/patients/new" className="mt-6 inline-block">
                                 <Button variant="outline">Cadastrar Paciente</Button>
                             </Link>

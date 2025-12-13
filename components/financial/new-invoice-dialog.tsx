@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, PlusCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createManualInvoice } from "@/app/dashboard/financial/actions";
+import { toast } from "sonner";
 
 interface PatientOption {
     id: string;
@@ -77,12 +78,13 @@ export function NewInvoiceDialog({ className, variant }: NewInvoiceDialogProps) 
                 description: description || "Consulta Avulsa" // Default description if empty? Or make required.
             });
 
+            toast.success("Fatura criada com sucesso!");
             setOpen(false);
             router.refresh();
             resetForm();
         } catch (error: any) {
             console.error("Error creating invoice:", error);
-            alert("Erro ao criar fatura. Tente novamente.");
+            toast.error("Erro ao criar fatura. Tente novamente.");
         } finally {
             setIsLoading(false);
         }

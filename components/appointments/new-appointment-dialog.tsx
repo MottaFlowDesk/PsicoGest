@@ -21,18 +21,17 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, AlertCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { createAppointment } from "@/app/dashboard/appointments/actions";
+import { getAvailableSlots, TimeSlot } from "@/lib/availability-utils";
 
 interface PatientOption {
     id: string;
     full_name: string;
 }
-
-import { useRouter } from "next/navigation";
-import { createAppointment } from "@/app/dashboard/appointments/actions";
 
 interface NewAppointmentDialogProps {
     onAppointmentCreated?: () => void;
@@ -52,12 +51,15 @@ export function NewAppointmentDialog({
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [patients, setPatients] = useState<PatientOption[]>([]);
+    const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+    const [professionalId, setProfessionalId] = useState<string | null>(null);
     const router = useRouter();
 
     // Form state
     const [patientId, setPatientId] = useState(defaultPatientId || "");
     const [date, setDate] = useState<Date>();
-    const [time, setTime] = useState("09:00");
+    const [time, setTime] = useState("");
     const [duration, setDuration] = useState("50");
     const [type, setType] = useState("in_person");
 
@@ -66,16 +68,64 @@ export function NewAppointmentDialog({
     useEffect(() => {
         if (open) {
             fetchPatients();
+            fetchProfessionalId();
         }
     }, [open]);
+
+    useEffect(() => {
+        if (date && professionalId) {
+            fetchAvailableSlots();
+        } else {
+            setAvailableSlots([]);
+            setTime("");
+        }
+    }, [date, duration, professionalId]);
+
+    const fetchProfessionalId = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data } = await supabase
+            .from("professionals")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+
+        if (data) setProfessionalId(data.id);
+    };
 
     const fetchPatients = async () => {
         const { data } = await supabase
             .from("patients")
             .select("id, full_name")
+            .eq("archived", false)
             .order("full_name");
 
         if (data) setPatients(data);
+    };
+
+    const fetchAvailableSlots = async () => {
+        if (!date || !professionalId) return;
+
+        setLoadingSlots(true);
+        try {
+            const slots = await getAvailableSlots(
+                professionalId,
+                date,
+                parseInt(duration)
+            );
+            setAvailableSlots(slots);
+            
+            // Reset time if previously selected time is not available
+            if (time && !slots.find(s => s.start === time)) {
+                setTime("");
+            }
+        } catch (error) {
+            console.error("Error fetching slots:", error);
+            setAvailableSlots([]);
+        } finally {
+            setLoadingSlots(false);
+        }
     };
 
     const handleSubmit = async () => {
@@ -83,7 +133,6 @@ export function NewAppointmentDialog({
 
         setIsLoading(true);
         try {
-            // Adjust date string for input
             const dateStr = format(date, "yyyy-MM-dd");
 
             await createAppointment({
@@ -94,6 +143,7 @@ export function NewAppointmentDialog({
                 type: type as "in_person" | "telehealth"
             });
 
+            toast.success("Agendamento criado com sucesso!");
             setOpen(false);
             onAppointmentCreated?.();
             router.refresh();
@@ -101,29 +151,33 @@ export function NewAppointmentDialog({
 
         } catch (error: any) {
             console.error("Error creating appointment:", error);
-            alert(`Erro ao criar agendamento: ${error.message || "Erro desconhecido"}`);
+            toast.error(error.message || "Erro ao criar agendamento");
         } finally {
             setIsLoading(false);
         }
     };
 
     const resetForm = () => {
-        setPatientId("");
+        setPatientId(defaultPatientId || "");
         setDate(undefined);
-        setTime("09:00");
+        setTime("");
         setDuration("50");
         setType("in_person");
+        setAvailableSlots([]);
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) resetForm();
+        }}>
             <DialogTrigger asChild>
                 <Button className={className} variant={variant}>
                     <Plus className="mr-2 h-4 w-4" />
                     {triggerLabel}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
                     <DialogTitle>Novo Agendamento</DialogTitle>
                     <DialogDescription>
@@ -151,8 +205,26 @@ export function NewAppointmentDialog({
                         </div>
                     </div>
 
-                    {/* Date Picker (Native for MVP simplicity or Shadcn Calendar) */}
-                    {/* Let's try native date input first for robustness if calendar component is missing */}
+                    {/* Duration */}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Duração</Label>
+                        <div className="col-span-3">
+                            <Select value={duration} onValueChange={setDuration}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Duração" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="30">30 minutos</SelectItem>
+                                    <SelectItem value="45">45 minutos</SelectItem>
+                                    <SelectItem value="50">50 minutos</SelectItem>
+                                    <SelectItem value="60">1 hora</SelectItem>
+                                    <SelectItem value="90">1h30</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    {/* Date */}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="date" className="text-right">
                             Data
@@ -161,35 +233,77 @@ export function NewAppointmentDialog({
                             <Input
                                 type="date"
                                 id="date"
+                                min={format(new Date(), "yyyy-MM-dd")}
                                 onChange={(e) => setDate(e.target.valueAsDate || undefined)}
                                 className="block"
                             />
                         </div>
                     </div>
 
-                    {/* Time & Duration */}
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="time" className="text-right">Horário</Label>
-                        <div className="col-span-3 flex gap-2">
-                            <Input
-                                type="time"
-                                value={time}
-                                onChange={(e) => setTime(e.target.value)}
-                                className="w-1/2"
-                            />
-                            <Select value={duration} onValueChange={setDuration}>
-                                <SelectTrigger className="w-1/2">
-                                    <SelectValue placeholder="Duração" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="30">30 min</SelectItem>
-                                    <SelectItem value="45">45 min</SelectItem>
-                                    <SelectItem value="50">50 min</SelectItem>
-                                    <SelectItem value="60">1 hora</SelectItem>
-                                </SelectContent>
-                            </Select>
+                    {/* Available Time Slots */}
+                    <div className="grid grid-cols-4 items-start gap-4">
+                        <Label className="text-right pt-2">Horário</Label>
+                        <div className="col-span-3">
+                            {!date ? (
+                                <p className="text-sm text-slate-500 py-2">
+                                    Selecione uma data para ver os horários disponíveis
+                                </p>
+                            ) : loadingSlots ? (
+                                <div className="flex items-center gap-2 text-sm text-slate-500 py-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Carregando horários...
+                                </div>
+                            ) : availableSlots.length === 0 ? (
+                                <div className="flex items-center gap-2 text-sm text-orange-600 py-2">
+                                    <AlertCircle className="h-4 w-4" />
+                                    Nenhum horário disponível nesta data
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                                        {availableSlots.map((slot) => (
+                                            <Button
+                                                key={slot.start}
+                                                type="button"
+                                                variant={time === slot.start ? "default" : "outline"}
+                                                size="sm"
+                                                className={`${
+                                                    time === slot.start 
+                                                        ? "bg-brand-600 hover:bg-brand-700" 
+                                                        : "hover:bg-brand-50 hover:border-brand-300"
+                                                }`}
+                                                onClick={() => setTime(slot.start)}
+                                            >
+                                                <Clock className="h-3 w-3 mr-1" />
+                                                {slot.start}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-slate-500">
+                                        {availableSlots.length} horário(s) disponível(is)
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
+
+                    {/* Manual time input as fallback */}
+                    {date && availableSlots.length === 0 && (
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right text-xs text-slate-500">
+                                Ou digite:
+                            </Label>
+                            <div className="col-span-3">
+                                <Input
+                                    type="time"
+                                    value={time}
+                                    onChange={(e) => setTime(e.target.value)}
+                                    className="w-32"
+                                    placeholder="HH:MM"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Type */}
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -212,7 +326,11 @@ export function NewAppointmentDialog({
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleSubmit} disabled={isLoading || !patientId || !date}>
+                    <Button 
+                        onClick={handleSubmit} 
+                        disabled={isLoading || !patientId || !date || !time}
+                        className="bg-brand-600 hover:bg-brand-700"
+                    >
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Agendar
                     </Button>

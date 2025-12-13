@@ -6,9 +6,8 @@ import { patientSchema, PatientValues } from "@/lib/validations/patient";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { CalendarIcon, Loader2, Save } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Loader2, Save } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,15 +15,39 @@ import { Textarea } from "@/components/ui/textarea";
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
+import { updatePatient } from "@/app/dashboard/patients/[id]/actions";
 
-export function PatientForm() {
+interface PatientFormProps {
+    mode?: "create" | "edit";
+    initialData?: {
+        id: string;
+        full_name: string;
+        date_of_birth: string;
+        phone: string;
+        email?: string | null;
+        cpf?: string | null;
+        occupation?: string | null;
+        notes?: string | null;
+        address?: {
+            zip?: string;
+            street?: string;
+            number?: string;
+            complement?: string;
+            neighborhood?: string;
+            city?: string;
+            state?: string;
+        } | null;
+    };
+    onSuccess?: () => void;
+}
+
+export function PatientForm({ mode = "create", initialData, onSuccess }: PatientFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const supabase = createClient();
     const router = useRouter();
@@ -32,20 +55,21 @@ export function PatientForm() {
     const form = useForm<PatientValues>({
         resolver: zodResolver(patientSchema),
         defaultValues: {
-            fullName: "",
-            cpf: "",
-            phone: "",
-            email: "",
-            occupation: "",
-            notes: "",
+            fullName: initialData?.full_name || "",
+            cpf: initialData?.cpf || "",
+            dateOfBirth: initialData?.date_of_birth || "",
+            phone: initialData?.phone || "",
+            email: initialData?.email || "",
+            occupation: initialData?.occupation || "",
+            notes: initialData?.notes || "",
             address: {
-                cep: "",
-                street: "",
-                number: "",
-                complement: "",
-                neighborhood: "",
-                city: "",
-                state: "",
+                cep: initialData?.address?.zip || "",
+                street: initialData?.address?.street || "",
+                number: initialData?.address?.number || "",
+                complement: initialData?.address?.complement || "",
+                neighborhood: initialData?.address?.neighborhood || "",
+                city: initialData?.address?.city || "",
+                state: initialData?.address?.state || "",
             },
         },
     });
@@ -53,45 +77,65 @@ export function PatientForm() {
     async function onSubmit(data: PatientValues) {
         setIsSubmitting(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Not authenticated");
+            if (mode === "edit" && initialData?.id) {
+                // Update existing patient
+                await updatePatient({
+                    patientId: initialData.id,
+                    fullName: data.fullName,
+                    dateOfBirth: data.dateOfBirth,
+                    phone: data.phone,
+                    email: data.email,
+                    cpf: data.cpf,
+                    occupation: data.occupation,
+                    notes: data.notes,
+                    address: data.address,
+                });
 
-            // Get professional ID
-            const { data: professional } = await supabase
-                .from('professionals')
-                .select('id')
-                .eq('user_id', user.id)
-                .single();
+                toast.success("Paciente atualizado com sucesso!");
+                onSuccess?.();
+                router.refresh();
+            } else {
+                // Create new patient
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error("Not authenticated");
 
-            if (!professional) throw new Error("Professional profile not found");
+                const { data: professional } = await supabase
+                    .from('professionals')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .single();
 
-            const { error } = await supabase.from('patients').insert({
-                professional_id: professional.id,
-                full_name: data.fullName,
-                cpf: data.cpf || null,
-                date_of_birth: data.dateOfBirth,
-                phone: data.phone,
-                email: data.email || null,
-                occupation: data.occupation,
-                notes: data.notes,
-                address: { // Storing as JSONB
-                    zip: data.address.cep,
-                    street: data.address.street,
-                    number: data.address.number,
-                    complement: data.address.complement,
-                    neighborhood: data.address.neighborhood,
-                    city: data.address.city,
-                    state: data.address.state
-                }
-            });
+                if (!professional) throw new Error("Professional profile not found");
 
-            if (error) throw error;
+                const { error } = await supabase.from('patients').insert({
+                    professional_id: professional.id,
+                    full_name: data.fullName,
+                    cpf: data.cpf || null,
+                    date_of_birth: data.dateOfBirth,
+                    phone: data.phone,
+                    email: data.email || null,
+                    occupation: data.occupation,
+                    notes: data.notes,
+                    address: {
+                        zip: data.address.cep,
+                        street: data.address.street,
+                        number: data.address.number,
+                        complement: data.address.complement,
+                        neighborhood: data.address.neighborhood,
+                        city: data.address.city,
+                        state: data.address.state
+                    }
+                });
 
-            router.push("/dashboard/patients");
-            router.refresh();
+                if (error) throw error;
+
+                toast.success("Paciente cadastrado com sucesso!");
+                router.push("/dashboard/patients");
+                router.refresh();
+            }
         } catch (error) {
-            console.error("Error creating patient:", error);
-            // Add toast error here
+            console.error("Error saving patient:", error);
+            toast.error(mode === "edit" ? "Erro ao atualizar paciente" : "Erro ao cadastrar paciente");
         } finally {
             setIsSubmitting(false);
         }
@@ -321,17 +365,19 @@ export function PatientForm() {
                 </div>
 
                 <div className="flex justify-end gap-3">
-                    <Button variant="outline" type="button" onClick={() => router.back()}>Cancelar</Button>
+                    <Button variant="outline" type="button" onClick={() => mode === "edit" ? onSuccess?.() : router.back()}>
+                        Cancelar
+                    </Button>
                     <Button type="submit" className="bg-brand-600 hover:bg-brand-700" disabled={isSubmitting}>
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Cadastrando...
+                                {mode === "edit" ? "Salvando..." : "Cadastrando..."}
                             </>
                         ) : (
                             <>
                                 <Save className="mr-2 h-4 w-4" />
-                                Cadastrar Paciente
+                                {mode === "edit" ? "Salvar Alterações" : "Cadastrar Paciente"}
                             </>
                         )}
                     </Button>

@@ -8,14 +8,11 @@ import {
     Calendar,
     CalendarClock,
     Settings,
-    User,
     LogOut,
     FileText,
     DollarSign,
     BrainCircuit,
     X,
-    Shield,
-    Bell
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -36,7 +33,6 @@ const navigation = [
 ];
 
 const secondaryNavigation = [
-    { name: "Perfil", href: "/dashboard/profile", icon: User },
     { name: "Configurações", href: "/dashboard/settings", icon: Settings },
 ];
 

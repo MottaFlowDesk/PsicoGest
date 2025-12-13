@@ -1,11 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, MapPin, Phone, Mail, FileText, Clock, File, DollarSign } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Mail, FileText } from "lucide-react";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArchivePatientButton } from "@/components/patients/archive-button";
 import { DocumentList } from "@/components/patients/document-list";
@@ -15,6 +14,7 @@ import { RecordList } from "@/components/medical-records/record-list";
 import { getPatientRecords } from "./records/actions";
 import { getInvoices } from "@/app/dashboard/financial/actions";
 import { PatientFinancialList } from "@/components/patients/patient-financial-list";
+import { EditPatientDialog } from "@/components/patients/edit-patient-dialog";
 
 interface PatientPageProps {
     params: Promise<{
@@ -128,10 +128,7 @@ export default async function PatientPage({ params }: PatientPageProps) {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="hidden sm:flex">
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                    </Button>
+                    <EditPatientDialog patient={patient} />
                     <ArchivePatientButton patientId={patient.id} patientName={patient.full_name} />
                 </div>
             </div>

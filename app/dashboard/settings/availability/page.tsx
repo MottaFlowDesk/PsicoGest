@@ -3,6 +3,9 @@ import { WeeklyScheduler } from "@/components/availability/weekly-scheduler";
 import { AvailabilityExceptions } from "@/components/availability/availability-exceptions";
 import { redirect } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default async function AvailabilitySettingsPage() {
     const supabase = await createClient();
@@ -18,23 +21,20 @@ export default async function AvailabilitySettingsPage() {
 
     if (!professional) redirect("/onboarding");
 
-    // Fetch existing settings
-    // Since we just created the table, likely empty first time.
-    // The component will handle fetching or we can fetch here.
-    // Let's fetch pure data here and pass to client components? 
-    // Or let client components fetch via client? Client fetching allows simpler optimistic updates.
-    // Let's stick to client fetching for the interactive scheduler for now or server + client.
-    // To make it simpler and robust, I'll pass the professionalId and let the client component manage state.
-
     return (
-        <div className="space-y-6 max-w-4xl mx-auto p-6">
-            <div>
-                <h3 className="text-lg font-medium text-slate-900">Disponibilidade de Atendimento</h3>
-                <p className="text-sm text-slate-500">Defina seus horários semanais padrão e exceções.</p>
+        <div className="space-y-6 max-w-4xl mx-auto">
+            <div className="flex items-center gap-4">
+                <Link href="/dashboard/settings">
+                    <Button variant="ghost" size="icon" className="-ml-2">
+                        <ArrowLeft className="h-5 w-5 text-slate-500" />
+                    </Button>
+                </Link>
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Disponibilidade</h1>
+                    <p className="text-sm text-slate-500">Defina seus horários semanais padrão e exceções.</p>
+                </div>
             </div>
-            <Separator />
-
-            <div className="grid gap-8">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-8">
                 <section>
                     <h4 className="text-sm font-semibold mb-4 text-slate-900 uppercase tracking-wider">Horário Semanal Padrão</h4>
                     <WeeklyScheduler professionalId={professional.id} />

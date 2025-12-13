@@ -1,7 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { addMinutes, parseISO } from "date-fns";
+import { addMinutes } from "date-fns";
+import { revalidatePath } from "next/cache";
+
+export type AppointmentStatus = "scheduled" | "confirmed" | "completed" | "cancelled" | "no_show";
 
 export async function createAppointment(data: {
     patientId: string;
@@ -30,20 +33,7 @@ export async function createAppointment(data: {
     scheduledAt.setHours(hours, minutes, 0, 0);
     const scheduledEnd = addMinutes(scheduledAt, data.duration);
 
-    // Check availability (Overlaps)
-    // Overlap: (StartA < EndB) and (EndA > StartB)
-    const { data: conflicts } = await supabase
-        .from("appointments")
-        .select("id")
-        .eq("professional_id", professional.id)
-        .neq("status", "cancelled")
-        .lt("scheduled_at", scheduledEnd.toISOString())
-        .gt("scheduled_end_at", scheduledAt.toISOString()) // Assuming we have a computed column or we compute it? 
-    // Wait, usually we store start + duration.
-    // If we only store start and duration, we have to rely on a function or check manually.
-    // Let's assume for MVP we fetch nearby appointments and check in memory if we don't have a range type or computed column.
-
-    // Actually, let's fetch appointments for that day to be safe and simple
+    // Fetch appointments for that day to check conflicts
     const dayStart = new Date(data.date);
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(data.date);
@@ -60,7 +50,6 @@ export async function createAppointment(data: {
     const hasConflict = daysAppointments?.some(apt => {
         const aptStart = new Date(apt.scheduled_at);
         const aptEnd = addMinutes(aptStart, apt.duration_minutes);
-
         return (scheduledAt < aptEnd && scheduledEnd > aptStart);
     });
 
@@ -78,9 +67,203 @@ export async function createAppointment(data: {
         telehealth_provider: data.type === 'telehealth' ? 'native' : null,
         status: 'scheduled',
         timezone: 'America/Sao_Paulo'
-        // Note: If we added `scheduled_end_at` column it would be easier for querying, but let's stick to schema
     });
 
     if (error) throw error;
+    
+    revalidatePath("/dashboard/appointments");
+    revalidatePath("/dashboard/calendar");
+    revalidatePath("/dashboard");
+    
     return { success: true };
+}
+
+export async function updateAppointment(data: {
+    appointmentId: string;
+    date?: string; // YYYY-MM-DD
+    time?: string; // HH:MM
+    duration?: number;
+    type?: "in_person" | "telehealth";
+    notes?: string;
+}) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) throw new Error("Professional not found");
+
+    // Verify ownership
+    const { data: existing } = await supabase
+        .from("appointments")
+        .select("professional_id, status, scheduled_at, duration_minutes")
+        .eq("id", data.appointmentId)
+        .single();
+
+    if (!existing || existing.professional_id !== professional.id) {
+        throw new Error("Appointment not found or access denied");
+    }
+
+    if (existing.status === "cancelled" || existing.status === "completed") {
+        throw new Error("Cannot edit a cancelled or completed appointment");
+    }
+
+    const updateData: any = {};
+
+    if (data.date && data.time) {
+        const [hours, minutes] = data.time.split(':').map(Number);
+        const scheduledAt = new Date(data.date);
+        scheduledAt.setHours(hours, minutes, 0, 0);
+        const duration = data.duration || existing.duration_minutes;
+        const scheduledEnd = addMinutes(scheduledAt, duration);
+
+        // Check conflicts (excluding this appointment)
+        const dayStart = new Date(data.date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(data.date);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const { data: daysAppointments } = await supabase
+            .from("appointments")
+            .select("id, scheduled_at, duration_minutes")
+            .eq("professional_id", professional.id)
+            .neq("status", "cancelled")
+            .neq("id", data.appointmentId)
+            .gte("scheduled_at", dayStart.toISOString())
+            .lte("scheduled_at", dayEnd.toISOString());
+
+        const hasConflict = daysAppointments?.some(apt => {
+            const aptStart = new Date(apt.scheduled_at);
+            const aptEnd = addMinutes(aptStart, apt.duration_minutes);
+            return (scheduledAt < aptEnd && scheduledEnd > aptStart);
+        });
+
+        if (hasConflict) {
+            throw new Error("Horário indisponível! Já existe um agendamento neste período.");
+        }
+
+        updateData.scheduled_at = scheduledAt.toISOString();
+    }
+
+    if (data.duration) updateData.duration_minutes = data.duration;
+    if (data.type) {
+        updateData.type = data.type;
+        updateData.telehealth_provider = data.type === 'telehealth' ? 'native' : null;
+    }
+    if (data.notes !== undefined) updateData.notes = data.notes;
+
+    const { error } = await supabase
+        .from("appointments")
+        .update(updateData)
+        .eq("id", data.appointmentId);
+
+    if (error) throw error;
+
+    revalidatePath("/dashboard/appointments");
+    revalidatePath("/dashboard/calendar");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+}
+
+export async function updateAppointmentStatus(
+    appointmentId: string,
+    status: AppointmentStatus,
+    reason?: string
+) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) throw new Error("Professional not found");
+
+    // Verify ownership
+    const { data: existing } = await supabase
+        .from("appointments")
+        .select("professional_id, status")
+        .eq("id", appointmentId)
+        .single();
+
+    if (!existing || existing.professional_id !== professional.id) {
+        throw new Error("Appointment not found or access denied");
+    }
+
+    const updateData: any = { status };
+
+    if (status === "cancelled") {
+        updateData.cancelled_at = new Date().toISOString();
+        updateData.cancelled_by = "professional";
+        updateData.cancellation_reason = reason || null;
+    }
+
+    if (status === "completed") {
+        updateData.completed_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+        .from("appointments")
+        .update(updateData)
+        .eq("id", appointmentId);
+
+    if (error) throw error;
+
+    revalidatePath("/dashboard/appointments");
+    revalidatePath("/dashboard/calendar");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+}
+
+export async function confirmAppointment(appointmentId: string) {
+    return updateAppointmentStatus(appointmentId, "confirmed");
+}
+
+export async function completeAppointment(appointmentId: string) {
+    return updateAppointmentStatus(appointmentId, "completed");
+}
+
+export async function cancelAppointment(appointmentId: string, reason?: string) {
+    return updateAppointmentStatus(appointmentId, "cancelled", reason);
+}
+
+export async function markAsNoShow(appointmentId: string) {
+    return updateAppointmentStatus(appointmentId, "no_show");
+}
+
+export async function getAppointment(appointmentId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    const { data, error } = await supabase
+        .from("appointments")
+        .select(`
+            *,
+            patients (
+                id,
+                full_name,
+                phone,
+                email
+            )
+        `)
+        .eq("id", appointmentId)
+        .single();
+
+    if (error) throw error;
+
+    return data;
 }
