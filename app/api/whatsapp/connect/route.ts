@@ -3,6 +3,9 @@ import { connectWhatsApp } from "@/lib/whatsapp/client";
 import { NextResponse } from "next/server";
 
 export async function POST() {
+    console.log('[WhatsApp Connect] Starting...');
+    console.log('[WhatsApp Connect] API URL:', process.env.NEXT_PUBLIC_WHATSAPP_SERVER_URL);
+    console.log('[WhatsApp Connect] API Key exists:', !!process.env.EVOLUTION_API_KEY);
     try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();

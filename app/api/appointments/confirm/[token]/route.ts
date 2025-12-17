@@ -220,6 +220,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                         appointment.patients.phone,
                         generateMeetLinkMessage({
                             patientName: appointment.patients.full_name,
+                            professionalName: appointment.professionals.full_name,
                             date: formattedDate,
                             time: formattedTime,
                             meetLink: meetingLink,

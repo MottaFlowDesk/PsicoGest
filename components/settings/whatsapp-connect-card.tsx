@@ -1,282 +1,237 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MessageCircle, CheckCircle, Smartphone, RefreshCw } from "lucide-react";
+import { Loader2, MessageCircle, QrCode, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-interface WhatsAppConnectCardProps {
-    isConnected: boolean;
-    phone: string | null;
-    professionalId: string;
-}
-
-export function WhatsAppConnectCard({ isConnected, phone, professionalId }: WhatsAppConnectCardProps) {
-    const [loading, setLoading] = useState(false);
-    const [connected, setConnected] = useState(isConnected);
-    const [connectedPhone, setConnectedPhone] = useState(phone);
-    const [showQR, setShowQR] = useState(false);
+export function WhatsAppConnectCard() {
+    const [status, setStatus] = useState<'loading' | 'disconnected' | 'connecting' | 'connected'>('loading');
     const [qrCode, setQrCode] = useState<string | null>(null);
-    const [status, setStatus] = useState<"idle" | "generating" | "waiting" | "connected" | "error">("idle");
+    const [phone, setPhone] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const checkStatus = useCallback(async () => {
+    useEffect(() => {
+        checkStatus();
+        return () => {
+            if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+            }
+        };
+    }, []);
+
+    async function checkStatus() {
         try {
-            const response = await fetch("/api/whatsapp/status");
+            const response = await fetch('/api/whatsapp/status');
             const data = await response.json();
             
             if (data.connected) {
-                setConnected(true);
-                setConnectedPhone(data.phone);
-                setShowQR(false);
-                setStatus("connected");
-                return true;
-            }
-            return false;
-        } catch {
-            return false;
-        }
-    }, []);
-
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        
-        if (showQR && status === "waiting") {
-            interval = setInterval(async () => {
-                const isConnected = await checkStatus();
-                if (isConnected) {
-                    toast.success("WhatsApp conectado!", {
-                        description: "Agora você pode enviar lembretes automáticos.",
-                    });
-                    clearInterval(interval);
-                }
-            }, 3000);
-        }
-
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [showQR, status, checkStatus]);
-
-    const handleConnect = async () => {
-        setLoading(true);
-        setStatus("generating");
-        setShowQR(true);
-
-        try {
-            const response = await fetch("/api/whatsapp/connect", { method: "POST" });
-            const data = await response.json();
-
-            if (data.qrCode) {
-                setQrCode(data.qrCode);
-                setStatus("waiting");
-            } else if (data.error) {
-                throw new Error(data.error);
-            }
-        } catch (error: any) {
-            toast.error("Erro ao gerar QR Code", {
-                description: error.message || "Tente novamente mais tarde.",
-            });
-            setShowQR(false);
-            setStatus("error");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleRefreshQR = async () => {
-        setLoading(true);
-        try {
-            const response = await fetch("/api/whatsapp/connect", { method: "POST" });
-            const data = await response.json();
-
-            if (data.qrCode) {
-                setQrCode(data.qrCode);
-                setStatus("waiting");
-            }
-        } catch (error: any) {
-            toast.error("Erro ao atualizar QR Code");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDisconnect = async () => {
-        setLoading(true);
-        try {
-            const response = await fetch("/api/whatsapp/disconnect", { method: "POST" });
-
-            if (response.ok) {
-                setConnected(false);
-                setConnectedPhone(null);
-                setShowQR(false);
+                setStatus('connected');
+                setPhone(data.phone || null);
                 setQrCode(null);
-                setStatus("idle");
-                toast.success("WhatsApp desconectado");
+            } else {
+                setStatus('disconnected');
+                setPhone(null);
             }
-        } catch (error: any) {
+        } catch (error) {
+            console.error('Error checking status:', error);
+            setStatus('disconnected');
+        }
+    }
+
+    async function handleConnect() {
+        setIsLoading(true);
+        setStatus('connecting');
+
+        try {
+            const response = await fetch('/api/whatsapp/connect', { method: 'POST' });
+            const data = await response.json();
+
+            if (data.error) {
+                toast.error(data.error);
+                setStatus('disconnected');
+                return;
+            }
+
+            if (data.connected) {
+                setStatus('connected');
+                setPhone(data.phone);
+                toast.success("WhatsApp já está conectado!");
+            } else if (data.qrCode) {
+                setQrCode(data.qrCode);
+                toast.info("Escaneie o QR Code com seu WhatsApp");
+                
+                // Poll for connection status
+                pollIntervalRef.current = setInterval(async () => {
+                    const statusResponse = await fetch('/api/whatsapp/status');
+                    const statusData = await statusResponse.json();
+                    
+                    if (statusData.connected) {
+                        if (pollIntervalRef.current) {
+                            clearInterval(pollIntervalRef.current);
+                            pollIntervalRef.current = null;
+                        }
+                        setStatus('connected');
+                        setPhone(statusData.phone || null);
+                        setQrCode(null);
+                        toast.success("WhatsApp conectado com sucesso!");
+                    }
+                }, 3000);
+
+                // Stop polling after 2 minutes
+                setTimeout(() => {
+                    if (pollIntervalRef.current) {
+                        clearInterval(pollIntervalRef.current);
+                        pollIntervalRef.current = null;
+                        setStatus('disconnected');
+                        setQrCode(null);
+                        toast.error("Tempo esgotado. Tente novamente.");
+                    }
+                }, 120000);
+            } else {
+                toast.error("Erro ao gerar QR Code");
+                setStatus('disconnected');
+            }
+        } catch (error) {
+            console.error('Error connecting:', error);
+            toast.error("Erro ao conectar com o servidor WhatsApp");
+            setStatus('disconnected');
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    async function handleDisconnect() {
+        setIsLoading(true);
+
+        try {
+            await fetch('/api/whatsapp/disconnect', { method: 'POST' });
+            
+            setStatus('disconnected');
+            setPhone(null);
+            setQrCode(null);
+            toast.success("WhatsApp desconectado");
+        } catch (error) {
+            console.error('Error disconnecting:', error);
             toast.error("Erro ao desconectar");
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
-    };
+    }
 
-    const handleCancel = () => {
-        setShowQR(false);
-        setQrCode(null);
-        setStatus("idle");
-    };
+    async function handleRefresh() {
+        setIsLoading(true);
+        await checkStatus();
+        setIsLoading(false);
+    }
 
     return (
-        <Card className="border-slate-200">
-            <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
+        <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
-                            <MessageCircle className="w-7 h-7 text-green-600" />
+                        <div className="p-2 bg-green-100 rounded-lg">
+                            <MessageCircle className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
                             <CardTitle className="text-lg">WhatsApp</CardTitle>
-                            <CardDescription>
-                                Envie lembretes de confirmação aos pacientes
-                            </CardDescription>
+                            <CardDescription>Envie lembretes automáticos</CardDescription>
                         </div>
                     </div>
-                    {connected && (
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Conectado
-                        </Badge>
-                    )}
+                    <Badge variant={status === 'connected' ? 'default' : 'secondary'}>
+                        {status === 'loading' && 'Carregando...'}
+                        {status === 'disconnected' && 'Desconectado'}
+                        {status === 'connecting' && 'Conectando...'}
+                        {status === 'connected' && 'Conectado'}
+                    </Badge>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
-                {!showQR && !connected && (
-                    <>
-                        <ul className="text-sm text-slate-500 space-y-1.5">
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-500" />
-                                Lembrete automático 24h antes da consulta
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-500" />
-                                Paciente confirma com 1 clique
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-500" />
-                                100% gratuito
-                            </li>
-                        </ul>
-
-                        <div className="pt-2">
-                            <Button 
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={handleConnect}
-                                disabled={loading}
-                            >
-                                {loading ? (
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                ) : (
-                                    <Smartphone className="w-4 h-4 mr-2" />
-                                )}
-                                Conectar WhatsApp
-                            </Button>
-                        </div>
-                    </>
-                )}
-
-                {showQR && !connected && (
-                    <div className="space-y-4">
-                        <div className="bg-slate-50 rounded-xl p-6 text-center">
-                            {status === "generating" ? (
-                                <div className="py-8">
-                                    <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-3" />
-                                    <p className="text-sm text-slate-600">Gerando QR Code...</p>
-                                </div>
-                            ) : qrCode ? (
-                                <div className="space-y-4">
-                                    <div className="bg-white p-4 rounded-lg inline-block shadow-sm">
-                                        <img 
-                                            src={qrCode} 
-                                            alt="QR Code WhatsApp" 
-                                            className="w-48 h-48 mx-auto"
-                                        />
-                                    </div>
-                                    <div className="text-left space-y-2 text-sm text-slate-600 max-w-xs mx-auto">
-                                        <p className="font-medium text-slate-900">Como conectar:</p>
-                                        <ol className="list-decimal list-inside space-y-1">
-                                            <li>Abra o WhatsApp no celular</li>
-                                            <li>Toque em <strong>Dispositivos conectados</strong></li>
-                                            <li>Toque em <strong>Conectar dispositivo</strong></li>
-                                            <li>Escaneie este QR Code</li>
-                                        </ol>
-                                    </div>
-                                    <div className="flex items-center justify-center gap-2 pt-2">
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm"
-                                            onClick={handleRefreshQR}
-                                            disabled={loading}
-                                        >
-                                            <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-                                            Atualizar QR
-                                        </Button>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm"
-                                            onClick={handleCancel}
-                                        >
-                                            Cancelar
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="py-8">
-                                    <p className="text-red-600">Erro ao gerar QR Code</p>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="mt-2"
-                                        onClick={handleConnect}
-                                    >
-                                        Tentar novamente
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
+                {status === 'loading' && (
+                    <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
                     </div>
                 )}
 
-                {connected && (
+                {status === 'disconnected' && (
+                    <div className="text-center py-4">
+                        <p className="text-sm text-slate-500 mb-4">
+                            Conecte seu WhatsApp para enviar lembretes automáticos aos pacientes.
+                        </p>
+                        <Button onClick={handleConnect} disabled={isLoading}>
+                            {isLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                                <QrCode className="h-4 w-4 mr-2" />
+                            )}
+                            Conectar WhatsApp
+                        </Button>
+                    </div>
+                )}
+
+                {status === 'connecting' && qrCode && (
+                    <div className="text-center py-4">
+                        <p className="text-sm text-slate-500 mb-4">
+                            Abra o WhatsApp no celular → Menu (⋮) → Aparelhos conectados → Conectar
+                        </p>
+                        <div className="flex justify-center mb-4">
+                            <img 
+                                src={qrCode} 
+                                alt="QR Code WhatsApp" 
+                                className="w-64 h-64 border rounded-lg"
+                            />
+                        </div>
+                        <p className="text-xs text-slate-400">
+                            Escaneie o QR Code acima com seu WhatsApp
+                        </p>
+                    </div>
+                )}
+
+                {status === 'connecting' && !qrCode && (
+                    <div className="flex flex-col items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-green-500 mb-2" />
+                        <p className="text-sm text-slate-500">Gerando QR Code...</p>
+                    </div>
+                )}
+
+                {status === 'connected' && (
                     <div className="space-y-4">
-                        <div className="bg-green-50 rounded-lg p-4 flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                                <CheckCircle className="w-5 h-5 text-green-600" />
-                            </div>
+                        <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
                             <div>
-                                <p className="font-medium text-green-900">WhatsApp Ativo</p>
-                                <p className="text-sm text-green-700">
-                                    {connectedPhone || "Número conectado"}
-                                </p>
+                                <p className="text-sm font-medium text-green-800">WhatsApp conectado</p>
+                                {phone && (
+                                    <p className="text-xs text-green-600">+{phone}</p>
+                                )}
                             </div>
                         </div>
-
-                        <Button 
-                            variant="outline" 
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={handleDisconnect}
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : null}
-                            Desconectar
-                        </Button>
+                        
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleRefresh}
+                                disabled={isLoading}
+                            >
+                                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                                Atualizar
+                            </Button>
+                            <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                onClick={handleDisconnect}
+                                disabled={isLoading}
+                            >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Desconectar
+                            </Button>
+                        </div>
                     </div>
                 )}
             </CardContent>
         </Card>
     );
 }
-
