@@ -37,11 +37,10 @@ export async function POST() {
                 .from("professionals")
                 .update({
                     whatsapp_connected_at: new Date().toISOString(),
-                    whatsapp_phone: result.phone,
                 })
                 .eq("id", professional.id);
 
-            return NextResponse.json({ connected: true, phone: result.phone });
+            return NextResponse.json({ connected: true });
         }
 
         return NextResponse.json({ qrCode: result.qrCode });
