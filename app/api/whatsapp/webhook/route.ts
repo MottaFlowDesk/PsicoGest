@@ -1,6 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+// Helper to normalize Supabase relations (returns array sometimes)
+function normalizeRelations(data: any) {
+    if (!data) return data;
+    return {
+        ...data,
+        patients: Array.isArray(data.patients) ? data.patients[0] : data.patients,
+        professionals: Array.isArray(data.professionals) ? data.professionals[0] : data.professionals,
+    };
+}
+
 // Evolution API Webhook - receives button responses and messages
 export async function POST(request: NextRequest) {
     try {
@@ -59,7 +69,7 @@ async function handleConfirmation(appointmentId: string, phone: string, instance
     const supabase = await createClient();
 
     // Update appointment status to confirmed
-    const { data: appointment, error } = await supabase
+    const { data: appointmentData, error } = await supabase
         .from('appointments')
         .update({
             status: 'confirmed',
@@ -79,6 +89,7 @@ async function handleConfirmation(appointmentId: string, phone: string, instance
         return;
     }
 
+    const appointment = normalizeRelations(appointmentData);
     console.log('[WhatsApp Webhook] Appointment confirmed:', appointment);
 
     // Send confirmation message back
@@ -99,7 +110,7 @@ async function handleRescheduleRequest(appointmentId: string, phone: string, ins
     const supabase = await createClient();
 
     // Get appointment details
-    const { data: appointment, error } = await supabase
+    const { data: appointmentData, error } = await supabase
         .from('appointments')
         .select(`
             *,
@@ -109,10 +120,12 @@ async function handleRescheduleRequest(appointmentId: string, phone: string, ins
         .eq('id', appointmentId)
         .single();
 
-    if (error || !appointment) {
+    if (error || !appointmentData) {
         console.error('[WhatsApp Webhook] Error fetching appointment:', error);
         return;
     }
+
+    const appointment = normalizeRelations(appointmentData);
 
     // Update status to indicate reschedule requested
     await supabase
@@ -162,7 +175,7 @@ async function handleTextConfirmation(phone: string, instanceName: string) {
         return;
     }
 
-    const appointment = appointments[0];
+    const appointment = normalizeRelations(appointments[0]);
 
     // Confirm the appointment
     await supabase

@@ -32,6 +32,15 @@ interface AppointmentWithRelations {
     } | null;
 }
 
+// Helper to normalize Supabase relations (returns array sometimes)
+function normalizeAppointment(data: any): AppointmentWithRelations {
+    return {
+        ...data,
+        patients: Array.isArray(data.patients) ? data.patients[0] : data.patients,
+        professionals: Array.isArray(data.professionals) ? data.professionals[0] : data.professionals,
+    };
+}
+
 // GET - Fetch appointment data
 export async function GET(request: NextRequest, context: RouteContext) {
     try {
@@ -70,7 +79,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             );
         }
 
-        const appointment = data as unknown as AppointmentWithRelations;
+        const appointment = normalizeAppointment(data);
 
         // Check if appointment is in the past
         if (new Date(appointment.scheduled_at) < new Date()) {
@@ -135,7 +144,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             );
         }
 
-        const appointment = appointmentData as unknown as AppointmentWithRelations;
+        const appointment = normalizeAppointment(appointmentData);
 
         // Check if already confirmed
         if (appointment.status === "confirmed") {

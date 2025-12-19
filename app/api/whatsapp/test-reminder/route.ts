@@ -80,12 +80,17 @@ export async function POST(request: NextRequest) {
         const formattedDate = format(scheduledDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
         const formattedTime = format(scheduledDate, "HH:mm");
 
+        // Get patient data (Supabase returns as array)
+        const patient = Array.isArray(appointment.patients) 
+            ? appointment.patients[0] 
+            : appointment.patients;
+
         // Send the reminder
         const result = await sendAppointmentReminder(
             professional.id,
             phone, // Use the provided phone for testing
             {
-                patientName: appointment.patients?.full_name || "Paciente",
+                patientName: patient?.full_name || "Paciente",
                 professionalName: professional.full_name,
                 date: formattedDate,
                 time: formattedTime,
@@ -104,7 +109,7 @@ export async function POST(request: NextRequest) {
             messageId: result.messageId,
             appointmentId: appointment.id,
             confirmationLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/confirm/${confirmationToken}`,
-            patientName: appointment.patients?.full_name,
+            patientName: patient?.full_name,
             scheduledAt: appointment.scheduled_at,
         });
 
