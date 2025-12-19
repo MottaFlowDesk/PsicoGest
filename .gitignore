@@ -55,3 +55,12 @@ next-env.d.ts
 *.sw?
 *.local
 
+# Railway projects (deployed separately)
+evolution-api/
+whatsapp-server/
+
+# Test files
+*.test.json
+reminder-*.json
+test-msg.json
+

@@ -186,3 +186,4 @@ async function handleTextConfirmation(phone: string, instanceName: string) {
     }
 }
 
+
