@@ -7,21 +7,32 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageCircle, QrCode, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-export function WhatsAppConnectCard() {
-    const [status, setStatus] = useState<'loading' | 'disconnected' | 'connecting' | 'connected'>('loading');
+interface WhatsAppConnectCardProps {
+    isConnected?: boolean;
+    phone?: string | null;
+    professionalId?: string;
+}
+
+export function WhatsAppConnectCard({ isConnected: initialConnected, phone: initialPhone, professionalId }: WhatsAppConnectCardProps = {}) {
+    const [status, setStatus] = useState<'loading' | 'disconnected' | 'connecting' | 'connected'>(
+        initialConnected ? 'connected' : 'loading'
+    );
     const [qrCode, setQrCode] = useState<string | null>(null);
-    const [phone, setPhone] = useState<string | null>(null);
+    const [phone, setPhone] = useState<string | null>(initialPhone || null);
     const [isLoading, setIsLoading] = useState(false);
     const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        checkStatus();
+        // Se já temos status inicial, não precisa buscar novamente
+        if (!initialConnected) {
+            checkStatus();
+        }
         return () => {
             if (pollIntervalRef.current) {
                 clearInterval(pollIntervalRef.current);
             }
         };
-    }, []);
+    }, [initialConnected]);
 
     async function checkStatus() {
         try {
