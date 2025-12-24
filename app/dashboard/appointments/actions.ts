@@ -36,9 +36,23 @@ export async function createAppointment(data: {
         .single();
 
     // Construct timestamps
+    // Parse date and time, ensuring we're working with the correct timezone
     const [hours, minutes] = data.time.split(':').map(Number);
-    const scheduledAt = new Date(data.date);
-    scheduledAt.setHours(hours, minutes, 0, 0);
+    
+    // Create date string in ISO format to ensure correct timezone handling
+    // Format: YYYY-MM-DDTHH:mm:ss (local time, will be converted to UTC by toISOString())
+    const dateTimeString = `${data.date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+    const scheduledAt = new Date(dateTimeString);
+    
+    // Ensure the date is in the future (at least 10 seconds from now to satisfy constraint)
+    // The constraint requires scheduled_at > created_at, so we need a small buffer
+    const now = new Date();
+    const bufferTime = new Date(now.getTime() + 10000); // 10 seconds buffer
+    
+    if (scheduledAt <= bufferTime) {
+        throw new Error("Não é possível agendar no passado ou muito próximo do momento atual. Por favor, selecione uma data e horário futuros.");
+    }
+    
     const scheduledEnd = addMinutes(scheduledAt, data.duration);
 
     // Fetch appointments for that day to check conflicts
@@ -83,6 +97,14 @@ export async function createAppointment(data: {
     }
 
     // Insert appointment
+    // Ensure scheduled_at is properly formatted and in the future
+    // The constraint requires scheduled_at > created_at, so we need to ensure
+    // the date is at least a few seconds in the future to account for any timing differences
+    const now = new Date();
+    if (scheduledAt <= now) {
+        throw new Error("Não é possível agendar no passado. Por favor, selecione uma data e horário futuros.");
+    }
+    
     const { data: appointment, error } = await supabase
         .from("appointments")
         .insert({
