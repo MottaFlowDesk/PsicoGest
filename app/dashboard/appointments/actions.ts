@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { addMinutes } from "date-fns";
+import { addMinutes, format } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, checkAvailability } from "@/lib/google/calendar";
 
@@ -44,13 +44,17 @@ export async function createAppointment(data: {
     const dateTimeString = `${data.date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
     const scheduledAt = new Date(dateTimeString);
     
-    // Ensure the date is in the future (at least 10 seconds from now to satisfy constraint)
-    // The constraint requires scheduled_at > created_at, so we need a small buffer
+    // Ensure the date is in the future
+    // For today, require at least 1 hour from now
+    // For future dates, just ensure it's not in the past
     const now = new Date();
-    const bufferTime = new Date(now.getTime() + 10000); // 10 seconds buffer
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+    const isToday = format(scheduledAt, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
     
-    if (scheduledAt <= bufferTime) {
-        throw new Error("Não é possível agendar no passado ou muito próximo do momento atual. Por favor, selecione uma data e horário futuros.");
+    if (isToday && scheduledAt < oneHourFromNow) {
+        throw new Error("Para agendamentos hoje, o horário deve ser pelo menos 1 hora a partir de agora.");
+    } else if (!isToday && scheduledAt <= now) {
+        throw new Error("Não é possível agendar no passado. Por favor, selecione uma data e horário futuros.");
     }
     
     const scheduledEnd = addMinutes(scheduledAt, data.duration);

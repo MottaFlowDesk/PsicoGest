@@ -104,11 +104,23 @@ export async function getAvailableSlots(
     let currentTime = setMinutes(setHours(date, startTimeParsed.hour), startTimeParsed.minute);
     const dayEndTime = setMinutes(setHours(date, endTimeParsed.hour), endTimeParsed.minute);
 
+    // Get current time to filter out past slots if date is today
+    const now = new Date();
+    const isToday = format(date, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
+    // For today, only show slots that start at least 1 hour from now
+    const minTimeForToday = isToday ? addMinutes(now, 60) : null;
+
     while (currentTime < dayEndTime) {
         const slotEnd = addMinutes(currentTime, duration);
 
         // Check if slot fits within working hours
         if (slotEnd > dayEndTime) break;
+
+        // If today, skip past slots (must be at least 1 hour from now)
+        if (isToday && minTimeForToday && currentTime < minTimeForToday) {
+            currentTime = addMinutes(currentTime, duration);
+            continue;
+        }
 
         // Check if slot conflicts with existing appointments
         const hasConflict = appointments?.some(apt => {
