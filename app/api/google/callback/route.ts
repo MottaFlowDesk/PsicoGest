@@ -17,8 +17,15 @@ export async function GET(request: NextRequest) {
 
         if (error) {
             console.error("Google OAuth error:", error);
+            
+            // Provide more helpful error messages
+            let errorMessage = error;
+            if (error === "access_denied") {
+                errorMessage = "access_denied_test_user";
+            }
+            
             return NextResponse.redirect(
-                new URL(`/dashboard/settings/integrations?error=${error}`, request.url)
+                new URL(`/dashboard/settings/integrations?error=${errorMessage}`, request.url)
             );
         }
 

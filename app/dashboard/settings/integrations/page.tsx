@@ -3,11 +3,16 @@ import { redirect } from "next/navigation";
 import { GoogleConnectCard } from "@/components/settings/google-connect-card";
 import { WhatsAppConnectCard } from "@/components/settings/whatsapp-connect-card";
 import { ReminderSettingsCard } from "@/components/settings/reminder-settings-card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle, ExternalLink, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 
-export default async function IntegrationsPage() {
+interface IntegrationsPageProps {
+    searchParams: Promise<{ error?: string; google?: string }>;
+}
+
+export default async function IntegrationsPage({ searchParams }: IntegrationsPageProps) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -27,6 +32,10 @@ export default async function IntegrationsPage() {
         .eq("professional_id", professional.id)
         .single();
 
+    const params = await searchParams;
+    const error = params?.error;
+    const googleConnected = params?.google === "connected";
+
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
             <div className="flex items-center gap-4">
@@ -42,6 +51,53 @@ export default async function IntegrationsPage() {
                     </p>
                 </div>
             </div>
+
+            {/* Success Message */}
+            {googleConnected && (
+                <Alert className="bg-green-50 border-green-200">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-900">Google conectado com sucesso!</AlertTitle>
+                    <AlertDescription className="text-green-700">
+                        Sua conta Google foi conectada. Agora você pode sincronizar sua agenda e enviar emails.
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            {/* Error Messages */}
+            {error && (
+                <Alert className={error === "access_denied_test_user" ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200"}>
+                    <AlertCircle className={`h-4 w-4 ${error === "access_denied_test_user" ? "text-orange-600" : "text-red-600"}`} />
+                    <AlertTitle className={error === "access_denied_test_user" ? "text-orange-900" : "text-red-900"}>
+                        {error === "access_denied_test_user" 
+                            ? "App em Modo de Teste" 
+                            : "Erro ao Conectar"}
+                    </AlertTitle>
+                    <AlertDescription className={error === "access_denied_test_user" ? "text-orange-700" : "text-red-700"}>
+                        {error === "access_denied_test_user" ? (
+                            <div className="space-y-2">
+                                <p>O app Google OAuth está em modo de teste e seu email precisa ser adicionado como testador.</p>
+                                <ol className="list-decimal list-inside space-y-1 text-sm">
+                                    <li>Acesse o <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener noreferrer" className="underline font-medium">Google Cloud Console</a></li>
+                                    <li>Vá em <strong>OAuth consent screen</strong></li>
+                                    <li>Na seção <strong>Test users</strong>, clique em <strong>+ ADD USERS</strong></li>
+                                    <li>Adicione seu email: <strong>{user.email}</strong></li>
+                                    <li>Tente conectar novamente</li>
+                                </ol>
+                                <div className="mt-3">
+                                    <Link href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener noreferrer">
+                                        <Button variant="outline" size="sm" className="mt-2">
+                                            <ExternalLink className="w-4 h-4 mr-2" />
+                                            Abrir Google Cloud Console
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
+                        ) : (
+                            <p>Ocorreu um erro ao conectar. Tente novamente ou verifique as configurações.</p>
+                        )}
+                    </AlertDescription>
+                </Alert>
+            )}
 
             <div className="grid gap-6">
                 {/* Google Integration */}

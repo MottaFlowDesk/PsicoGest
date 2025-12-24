@@ -28,8 +28,16 @@ export function GoogleConnectCard({ isConnected, professionalId }: GoogleConnect
                 throw new Error(data.error || "Erro ao conectar");
             }
         } catch (error: any) {
-            toast.error("Erro ao conectar", {
-                description: error.message || "Tente novamente mais tarde.",
+            let errorMessage = error.message || "Tente novamente mais tarde.";
+            
+            // Check if it's an OAuth access denied error
+            if (errorMessage.includes("access_denied") || errorMessage.includes("403")) {
+                errorMessage = "O app está em modo de teste. Adicione seu email como testador no Google Cloud Console.";
+            }
+            
+            toast.error("Erro ao conectar com Google", {
+                description: errorMessage,
+                duration: 6000,
             });
             setLoading(false);
         }
