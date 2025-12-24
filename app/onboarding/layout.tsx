@@ -1,6 +1,10 @@
 import { BrainCircuit } from "lucide-react";
 import Link from "next/link";
 
+// Force dynamic rendering to avoid build-time Supabase client errors
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function OnboardingLayout({
     children,
 }: {
