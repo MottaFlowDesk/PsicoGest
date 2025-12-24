@@ -97,13 +97,8 @@ export async function createAppointment(data: {
     }
 
     // Insert appointment
-    // Ensure scheduled_at is properly formatted and in the future
-    // The constraint requires scheduled_at > created_at, so we need to ensure
-    // the date is at least a few seconds in the future to account for any timing differences
-    const now = new Date();
-    if (scheduledAt <= now) {
-        throw new Error("Não é possível agendar no passado. Por favor, selecione uma data e horário futuros.");
-    }
+    // The validation above already ensures scheduled_at is in the future
+    // The constraint requires scheduled_at > created_at, which is satisfied by the buffer check above
     
     const { data: appointment, error } = await supabase
         .from("appointments")
