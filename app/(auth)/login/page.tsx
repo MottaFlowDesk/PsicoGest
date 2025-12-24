@@ -33,7 +33,6 @@ function LoginForm() {
     const registered = searchParams.get("registered");
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
-    const supabase = createClient();
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -48,6 +47,9 @@ function LoginForm() {
         setErrorMessage("");
 
         try {
+            // Initialize here to prevent build/runtime errors if env vars missing
+            const supabase = createClient();
+
             const { error } = await supabase.auth.signInWithPassword({
                 email: data.email,
                 password: data.password,
@@ -66,8 +68,18 @@ function LoginForm() {
 
             router.push("/dashboard");
             router.refresh();
-        } catch (error) {
-            setErrorMessage("Ocorreu um erro inesperado.");
+        } catch (error: any) {
+            console.error("Login error:", error);
+            
+            // Check if it's a configuration error
+            if (error.message && error.message.includes("Configuração do Supabase")) {
+                setErrorMessage(
+                    "Erro de configuração: As variáveis de ambiente do Supabase não estão configuradas. " +
+                    "Por favor, entre em contato com o suporte."
+                );
+            } else {
+                setErrorMessage("Ocorreu um erro inesperado. Tente novamente.");
+            }
         } finally {
             setIsLoading(false);
         }
