@@ -32,36 +32,39 @@ export async function getAvailableSlots(
     const supabase = createClient();
     const dayOfWeek = date.getDay(); // 0 = Sunday
 
-    // 1. Get weekly availability for this day
+    // 1. Check for exceptions on this date first (holidays, blocks, etc.)
+    const dateStr = format(date, "yyyy-MM-dd");
+    const { data: exception } = await supabase
+        .from("availability_overrides")
+        .select("*")
+        .eq("professional_id", professionalId)
+        .eq("date", dateStr)
+        .single();
+
+    // If there's an exception marking the day as unavailable (all_day = true), return empty
+    if (exception && exception.all_day) {
+        return [];
+    }
+
+    // 2. Get weekly availability for this day
     const { data: availability } = await supabase
         .from("professional_availability")
         .select("*")
         .eq("professional_id", professionalId)
         .eq("day_of_week", dayOfWeek)
-        .eq("is_active", true)
         .single();
 
     if (!availability) {
         return []; // Professional doesn't work this day
     }
 
-    // 2. Check for exceptions on this date
-    const dateStr = format(date, "yyyy-MM-dd");
-    const { data: exception } = await supabase
-        .from("availability_overrides")
-        .select("*")
-        .eq("professional_id", professionalId)
-        .eq("override_date", dateStr)
-        .single();
-
-    // If there's an exception marking the day as unavailable, return empty
-    if (exception && !exception.is_available) {
-        return [];
-    }
-
-    // Use exception times if available, otherwise use weekly availability
-    const startTime = exception?.start_time || availability.start_time;
-    const endTime = exception?.end_time || availability.end_time;
+    // Use exception times if available and not all_day, otherwise use weekly availability
+    const startTime = (exception && !exception.all_day && exception.start_time) 
+        ? exception.start_time 
+        : availability.start_time;
+    const endTime = (exception && !exception.all_day && exception.end_time) 
+        ? exception.end_time 
+        : availability.end_time;
 
     // 3. Get existing appointments for this date
     const dayStart = new Date(date);
@@ -133,10 +136,10 @@ export async function isTimeSlotAvailable(
         .from("availability_overrides")
         .select("*")
         .eq("professional_id", professionalId)
-        .eq("override_date", dateStr)
+        .eq("date", dateStr)
         .single();
 
-    if (exception && !exception.is_available) {
+    if (exception && exception.all_day) {
         return {
             available: false,
             reason: exception.reason || "Profissional indisponível nesta data",
@@ -149,7 +152,6 @@ export async function isTimeSlotAvailable(
         .select("*")
         .eq("professional_id", professionalId)
         .eq("day_of_week", dayOfWeek)
-        .eq("is_active", true)
         .single();
 
     if (!availability) {
@@ -159,9 +161,13 @@ export async function isTimeSlotAvailable(
         };
     }
 
-    // Use exception times if available
-    const workStart = exception?.start_time || availability.start_time;
-    const workEnd = exception?.end_time || availability.end_time;
+    // Use exception times if available and not all_day, otherwise use weekly availability
+    const workStart = (exception && !exception.all_day && exception.start_time) 
+        ? exception.start_time 
+        : availability.start_time;
+    const workEnd = (exception && !exception.all_day && exception.end_time) 
+        ? exception.end_time 
+        : availability.end_time;
 
     // Check if requested time is within working hours
     const [workStartH, workStartM] = workStart.split(":").map(Number);
