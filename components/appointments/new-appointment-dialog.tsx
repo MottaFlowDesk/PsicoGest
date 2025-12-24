@@ -117,22 +117,33 @@ export function NewAppointmentDialog(props: NewAppointmentDialogProps) {
     }
 
     async function fetchAvailableSlots() {
-        if (!date || !professionalId) return;
+        if (!date || !professionalId) {
+            console.log("[fetchAvailableSlots] Missing date or professionalId:", { date, professionalId });
+            return;
+        }
 
         setLoadingSlots(true);
         try {
+            console.log("[fetchAvailableSlots] Fetching slots for:", { 
+                professionalId, 
+                date: date.toISOString(), 
+                duration: parseInt(duration) 
+            });
+            
             const slots = await getAvailableSlots(
                 professionalId,
                 date,
                 parseInt(duration)
             );
+            
+            console.log("[fetchAvailableSlots] Found slots:", slots);
             setAvailableSlots(slots);
             
             if (time && !slots.find(s => s.start === time)) {
                 setTime("");
             }
         } catch (error) {
-            console.error("Error fetching slots:", error);
+            console.error("[fetchAvailableSlots] Error fetching slots:", error);
             setAvailableSlots([]);
         } finally {
             setLoadingSlots(false);

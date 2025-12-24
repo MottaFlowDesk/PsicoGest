@@ -34,27 +34,33 @@ export async function getAvailableSlots(
 
     // 1. Check for exceptions on this date first (holidays, blocks, etc.)
     const dateStr = format(date, "yyyy-MM-dd");
-    const { data: exception } = await supabase
+    const { data: exception, error: exceptionError } = await supabase
         .from("availability_overrides")
         .select("*")
         .eq("professional_id", professionalId)
         .eq("date", dateStr)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no exception exists
 
     // If there's an exception marking the day as unavailable (all_day = true), return empty
     if (exception && exception.all_day) {
+        console.log(`[getAvailableSlots] Day ${dateStr} is blocked by exception`);
         return [];
     }
 
     // 2. Get weekly availability for this day
-    const { data: availability } = await supabase
+    const { data: availability, error: availabilityError } = await supabase
         .from("professional_availability")
         .select("*")
         .eq("professional_id", professionalId)
         .eq("day_of_week", dayOfWeek)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single
+
+    if (availabilityError) {
+        console.error("[getAvailableSlots] Error fetching availability:", availabilityError);
+    }
 
     if (!availability) {
+        console.log(`[getAvailableSlots] No availability configured for day ${dayOfWeek} (${dateStr})`);
         return []; // Professional doesn't work this day
     }
 
@@ -82,11 +88,21 @@ export async function getAvailableSlots(
 
     // 4. Generate available slots
     const slots: TimeSlot[] = [];
-    const [startHour, startMin] = startTime.split(":").map(Number);
-    const [endHour, endMin] = endTime.split(":").map(Number);
+    
+    // Parse time strings (format: "HH:MM" or "HH:MM:SS")
+    const parseTime = (timeStr: string) => {
+        const parts = timeStr.split(":");
+        return {
+            hour: parseInt(parts[0], 10),
+            minute: parseInt(parts[1], 10) || 0
+        };
+    };
+    
+    const startTimeParsed = parseTime(startTime);
+    const endTimeParsed = parseTime(endTime);
 
-    let currentTime = setMinutes(setHours(date, startHour), startMin);
-    const dayEndTime = setMinutes(setHours(date, endHour), endMin);
+    let currentTime = setMinutes(setHours(date, startTimeParsed.hour), startTimeParsed.minute);
+    const dayEndTime = setMinutes(setHours(date, endTimeParsed.hour), endTimeParsed.minute);
 
     while (currentTime < dayEndTime) {
         const slotEnd = addMinutes(currentTime, duration);
