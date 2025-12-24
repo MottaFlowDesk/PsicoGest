@@ -36,7 +36,6 @@ export default function PatientsPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
-    const supabase = createClient();
 
     useEffect(() => {
         fetchPatients();
@@ -44,6 +43,7 @@ export default function PatientsPage() {
 
     async function fetchPatients() {
         setLoading(true);
+        const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) return;

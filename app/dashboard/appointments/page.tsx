@@ -46,7 +46,6 @@ export default function AppointmentsPage() {
     const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
     const [editingAppointment, setEditingAppointment] = useState<any | null>(null);
     const [confirmingId, setConfirmingId] = useState<string | null>(null);
-    const supabase = createClient();
     const router = useRouter();
 
     useEffect(() => {
@@ -55,6 +54,7 @@ export default function AppointmentsPage() {
 
     async function fetchAppointments() {
         setLoading(true);
+        const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) return;

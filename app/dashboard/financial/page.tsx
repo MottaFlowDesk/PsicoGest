@@ -52,7 +52,6 @@ export default function FinancialPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
-    const supabase = createClient();
 
     useEffect(() => {
         fetchData();
@@ -60,6 +59,7 @@ export default function FinancialPage() {
 
     async function fetchData() {
         setLoading(true);
+        const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) return;
