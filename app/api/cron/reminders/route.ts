@@ -1,27 +1,29 @@
 import { sendReminders } from "@/lib/notifications/reminder-service";
 import { NextRequest, NextResponse } from "next/server";
 
-// This endpoint should be called by a cron job (e.g., Vercel Cron)
-// Configure in vercel.json:
-// {
-//   "crons": [{
-//     "path": "/api/cron/reminders",
-//     "schedule": "0 * * * *"  // Every hour
-//   }]
-// }
+// This endpoint can be called by:
+// 1. Vercel Cron (with x-vercel-cron header)
+// 2. cron-job.org (with Authorization: Bearer CRON_SECRET header)
+// 3. Manual trigger (with Authorization: Bearer CRON_SECRET header)
 
 export async function GET(request: NextRequest) {
     try {
         // Verify cron secret
         const authHeader = request.headers.get("authorization");
         const cronSecret = process.env.CRON_SECRET;
+        const vercelCron = request.headers.get("x-vercel-cron");
 
-        // In production, verify the cron secret
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-            // Also check Vercel cron header
-            const vercelCron = request.headers.get("x-vercel-cron");
-            if (!vercelCron) {
-                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        // Check authentication
+        // Allow if: Vercel cron header OR valid Bearer token
+        if (cronSecret) {
+            const isValidToken = authHeader === `Bearer ${cronSecret}`;
+            const isVercelCron = !!vercelCron;
+            
+            if (!isValidToken && !isVercelCron) {
+                return NextResponse.json({ 
+                    error: "Unauthorized",
+                    message: "Missing or invalid authorization. Use 'Authorization: Bearer YOUR_CRON_SECRET' header."
+                }, { status: 401 });
             }
         }
 

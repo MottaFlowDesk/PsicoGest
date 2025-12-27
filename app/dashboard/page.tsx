@@ -7,13 +7,13 @@ import {
     DollarSign,
     TrendingUp,
     Clock,
-    Video,
     MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getDashboardStats, getUpcomingSessions } from "./actions";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { TelehealthEnterButton } from "@/components/appointments/telehealth-enter-button";
 
 export default async function DashboardPage() {
     const supabase = await createClient();
@@ -158,10 +158,11 @@ export default async function DashboardPage() {
                                         </div>
                                         <div className="flex items-center gap-3">
                                             {session.type === 'telehealth' && (
-                                                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 text-brand-700 rounded-lg text-xs font-semibold hover:bg-brand-100 transition-colors">
-                                                    <Video size={14} />
-                                                    Entrar
-                                                </button>
+                                                <TelehealthEnterButton
+                                                    meetingLink={session.meeting_link}
+                                                    scheduledAt={session.scheduled_at}
+                                                    status={session.status}
+                                                />
                                             )}
                                             <button className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100">
                                                 <MoreVertical size={18} />

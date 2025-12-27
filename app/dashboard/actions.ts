@@ -129,6 +129,7 @@ export async function getUpcomingSessions() {
             type,
             status,
             duration_minutes,
+            meeting_link,
             patients (
                 id,
                 full_name,

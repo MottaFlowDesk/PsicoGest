@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AppointmentActionsMenu } from "@/components/appointments/appointment-actions-menu";
 import { EditAppointmentDialog } from "@/components/appointments/edit-appointment-dialog";
+import { TelehealthEnterButton } from "@/components/appointments/telehealth-enter-button";
 import { confirmAppointment } from "./actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -398,6 +399,13 @@ export default function AppointmentsPage() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-2">
+                                                    {apt.type === 'telehealth' && (
+                                                        <TelehealthEnterButton
+                                                            meetingLink={apt.meeting_link}
+                                                            scheduledAt={apt.scheduled_at}
+                                                            status={apt.status}
+                                                        />
+                                                    )}
                                                     {canConfirm && (
                                                         <Button
                                                             variant="ghost"

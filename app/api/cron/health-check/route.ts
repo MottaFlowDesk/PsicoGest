@@ -3,20 +3,29 @@ import { NextRequest, NextResponse } from "next/server";
 
 /**
  * Health check endpoint to keep Supabase project active
- * This endpoint is called periodically by Vercel Cron to prevent the project from going inactive
+ * This endpoint can be called by:
+ * 1. Vercel Cron (with x-vercel-cron header)
+ * 2. cron-job.org (with Authorization: Bearer CRON_SECRET header)
+ * 3. Manual trigger (with Authorization: Bearer CRON_SECRET header)
  */
 export async function GET(request: NextRequest) {
     try {
-        // Verify cron secret or Vercel cron header
+        // Verify cron secret
         const authHeader = request.headers.get("authorization");
         const cronSecret = process.env.CRON_SECRET;
         const vercelCron = request.headers.get("x-vercel-cron");
 
-        // In production, verify the cron secret
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-            // Also check Vercel cron header
-            if (!vercelCron) {
-                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        // Check authentication
+        // Allow if: Vercel cron header OR valid Bearer token
+        if (cronSecret) {
+            const isValidToken = authHeader === `Bearer ${cronSecret}`;
+            const isVercelCron = !!vercelCron;
+            
+            if (!isValidToken && !isVercelCron) {
+                return NextResponse.json({ 
+                    error: "Unauthorized",
+                    message: "Missing or invalid authorization. Use 'Authorization: Bearer YOUR_CRON_SECRET' header."
+                }, { status: 401 });
             }
         }
 

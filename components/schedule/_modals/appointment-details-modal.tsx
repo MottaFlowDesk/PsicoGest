@@ -3,6 +3,7 @@
 import React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import Link from "next/link";
 import {
     Calendar,
     Clock,
@@ -123,9 +124,14 @@ export default function AppointmentDetailsModal({ event }: AppointmentDetailsMod
                                 <h4 className="text-sm font-medium text-slate-900">Paciente</h4>
                                 <p className="text-sm text-slate-600 mt-0.5">{event.title}</p>
                                 {event.metadata?.patientId && (
-                                    <Button variant="link" className="h-auto p-0 text-xs mt-1 text-blue-600">
-                                        Ver perfil do paciente
-                                    </Button>
+                                    <Link 
+                                        href={`/dashboard/patients/${event.metadata.patientId}`}
+                                        onClick={() => setClose()}
+                                    >
+                                        <Button variant="link" className="h-auto p-0 text-xs mt-1 text-blue-600 hover:text-blue-700">
+                                            Ver perfil do paciente
+                                        </Button>
+                                    </Link>
                                 )}
                             </div>
                         </div>
