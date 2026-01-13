@@ -1,13 +1,60 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useOnboardingStore } from "@/hooks/use-onboarding-store";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export function StepSuccess() {
     const router = useRouter();
     const { reset } = useOnboardingStore();
+    const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+
+    useEffect(() => {
+        // Check if there's a pending subscription
+        const pendingSubscription = localStorage.getItem('pendingSubscription');
+        
+        if (pendingSubscription) {
+            const { planId, billingPeriod } = JSON.parse(pendingSubscription);
+            handleCreateCheckout(planId, billingPeriod);
+        }
+    }, []);
+
+    const handleCreateCheckout = async (planId: string, billingPeriod: string) => {
+        setIsCreatingCheckout(true);
+        try {
+            const response = await fetch('/api/stripe/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    planId,
+                    billingPeriod,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.url) {
+                // Remove pending subscription from localStorage
+                localStorage.removeItem('pendingSubscription');
+                // Redirect to Stripe Checkout
+                window.location.href = data.url;
+                return;
+            } else {
+                throw new Error(data.error || 'Erro ao criar checkout');
+            }
+        } catch (error: any) {
+            console.error("Error creating checkout:", error);
+            toast.error(error.message || 'Erro ao processar assinatura. Você pode escolher um plano depois no dashboard.');
+            // Remove pending subscription even if it fails
+            localStorage.removeItem('pendingSubscription');
+            setIsCreatingCheckout(false);
+        }
+    };
 
     const handleGoToDashboard = () => {
         reset(); // Clear store (step 1)
@@ -28,10 +75,17 @@ export function StepSuccess() {
                 Seu perfil foi configurado com sucesso. Agora você já pode começar a gerenciar seus pacientes.
             </p>
 
-            <Button onClick={handleGoToDashboard} className="w-full bg-brand-600 hover:bg-brand-700 h-12 text-lg">
-                Ir para o Dashboard
-                <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            {isCreatingCheckout ? (
+                <Button disabled className="w-full bg-brand-600 h-12 text-lg">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Redirecionando para pagamento...
+                </Button>
+            ) : (
+                <Button onClick={handleGoToDashboard} className="w-full bg-brand-600 hover:bg-brand-700 h-12 text-lg">
+                    Ir para o Dashboard
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+            )}
         </div>
     );
 }
