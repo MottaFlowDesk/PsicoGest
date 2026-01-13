@@ -69,102 +69,80 @@ export async function POST(request: NextRequest) {
 
         const professional = invoice.professionals;
 
-        // Check if professional has Stripe Connect account
-        if (professional?.stripe_account_id) {
-            // Verify account is active
-            try {
-                const account = await stripe.accounts.retrieve(professional.stripe_account_id);
-                
-                if (!account.charges_enabled || !account.payouts_enabled) {
-                    return NextResponse.json(
-                        { error: "Conta Stripe do profissional não está ativa. O profissional precisa completar o onboarding." },
-                        { status: 400 }
-                    );
-                }
-
-                // Create checkout session with connected account (direct charge)
-                // Calculate application fee (2.9% + R$ 0,30)
-                const applicationFeeAmount = Math.round(
-                    (invoice.amount_cents * 0.029) + 30
-                );
-
-                // Create checkout session with direct charge to connected account
-                const session = await stripe.checkout.sessions.create({
-                    payment_method_types: ["card"],
-                    mode: "payment",
-                    line_items: [
-                        {
-                            price_data: {
-                                currency: "brl",
-                                product_data: {
-                                    name: `Fatura ${invoice.invoice_number}`,
-                                    description: invoice.description || "Pagamento de fatura",
-                                },
-                                unit_amount: invoice.amount_cents,
-                            },
-                            quantity: 1,
-                        },
-                    ],
-                    payment_intent_data: {
-                        application_fee_amount: applicationFeeAmount,
-                        on_behalf_of: professional.stripe_account_id,
-                        transfer_data: {
-                            destination: professional.stripe_account_id,
-                        },
-                    },
-                    success_url: `${request.nextUrl.origin}/pay/${invoiceId}?success=true`,
-                    cancel_url: `${request.nextUrl.origin}/pay/${invoiceId}?canceled=true`,
-                    metadata: {
-                        invoice_id: invoiceId,
-                        professional_id: professional.id,
-                        invoice_number: invoice.invoice_number,
-                    },
-                });
-
-                return NextResponse.json({
-                    url: session.url,
-                    sessionId: session.id,
-                });
-            } catch (accountError: any) {
-                console.error("Error retrieving Stripe account:", accountError);
-                return NextResponse.json(
-                    { error: "Erro ao verificar conta Stripe do profissional" },
-                    { status: 500 }
-                );
-            }
-        } else {
-            // Professional doesn't have Stripe Connect - create regular checkout
-            // Payment goes to platform account
-            const session = await stripe.checkout.sessions.create({
-                payment_method_types: ["card"],
-                mode: "payment",
-                line_items: [
-                    {
-                        price_data: {
-                            currency: "brl",
-                            product_data: {
-                                name: `Fatura ${invoice.invoice_number}`,
-                                description: invoice.description || "Pagamento de fatura",
-                            },
-                            unit_amount: invoice.amount_cents,
-                        },
-                        quantity: 1,
-                    },
-                ],
-                success_url: `${request.nextUrl.origin}/pay/${invoiceId}?success=true`,
-                cancel_url: `${request.nextUrl.origin}/pay/${invoiceId}?canceled=true`,
-                metadata: {
-                    invoice_id: invoiceId,
-                    professional_id: professional?.id || "",
-                    invoice_number: invoice.invoice_number,
+        // OBRIGATÓRIO: Profissional deve ter conta Stripe Connect ativa para receber pagamentos
+        if (!professional?.stripe_account_id) {
+            return NextResponse.json(
+                { 
+                    error: "Pagamento online não disponível. O profissional precisa conectar sua conta Stripe para receber pagamentos online. Entre em contato com o profissional para outras formas de pagamento." 
                 },
-            });
-
-            return NextResponse.json({
-                url: session.url,
-                sessionId: session.id,
-            });
+                { status: 400 }
+            );
         }
+
+        // Verify account is active
+        let account;
+        try {
+            account = await stripe.accounts.retrieve(professional.stripe_account_id);
+        } catch (accountError: any) {
+            console.error("Error retrieving Stripe account:", accountError);
+            return NextResponse.json(
+                { error: "Erro ao verificar conta Stripe do profissional" },
+                { status: 500 }
+            );
+        }
+
+        if (!account.charges_enabled || !account.payouts_enabled) {
+            return NextResponse.json(
+                { 
+                    error: "Conta Stripe do profissional não está ativa. O profissional precisa completar o onboarding do Stripe Connect para receber pagamentos online. Entre em contato com o profissional para outras formas de pagamento." 
+                },
+                { status: 400 }
+            );
+        }
+
+        // Create checkout session with connected account (direct charge)
+        // Calculate application fee (2.9% + R$ 0,30)
+        const applicationFeeAmount = Math.round(
+            (invoice.amount_cents * 0.029) + 30
+        );
+
+        // Create checkout session with direct charge to connected account
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            mode: "payment",
+            line_items: [
+                {
+                    price_data: {
+                        currency: "brl",
+                        product_data: {
+                            name: `Fatura ${invoice.invoice_number}`,
+                            description: invoice.description || "Pagamento de fatura",
+                        },
+                        unit_amount: invoice.amount_cents,
+                    },
+                    quantity: 1,
+                },
+            ],
+            payment_intent_data: {
+                application_fee_amount: applicationFeeAmount,
+                on_behalf_of: professional.stripe_account_id,
+                transfer_data: {
+                    destination: professional.stripe_account_id,
+                },
+            },
+            success_url: `${request.nextUrl.origin}/pay/${invoiceId}?success=true`,
+            cancel_url: `${request.nextUrl.origin}/pay/${invoiceId}?canceled=true`,
+            metadata: {
+                invoice_id: invoiceId,
+                professional_id: professional.id,
+                invoice_number: invoice.invoice_number,
+            },
+        });
+
+        return NextResponse.json({
+            url: session.url,
+            sessionId: session.id,
+        });
     } catch (error: any) {
         console.error("Invoice checkout error:", error);
         return NextResponse.json(
