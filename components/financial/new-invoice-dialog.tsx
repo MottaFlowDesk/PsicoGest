@@ -67,15 +67,36 @@ export function NewInvoiceDialog({ className, variant }: NewInvoiceDialogProps) 
     };
 
     const handleSubmit = async () => {
-        if (!patientId || !amount || !dueDate) return;
+        if (!patientId || !amount || !dueDate) {
+            toast.error("Preencha todos os campos obrigatórios.");
+            return;
+        }
+
+        // Validate amount
+        const amountValue = parseFloat(amount);
+        if (isNaN(amountValue) || amountValue <= 0) {
+            toast.error("Valor deve ser maior que zero.");
+            return;
+        }
+
+        // Validate due date
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const selectedDate = new Date(dueDate);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        if (selectedDate < today) {
+            toast.error("Data de vencimento não pode ser anterior à data de hoje.");
+            return;
+        }
 
         setIsLoading(true);
         try {
             await createManualInvoice({
                 patientId,
-                amount: parseFloat(amount),
+                amount: amountValue,
                 dueDate,
-                description: description || "Consulta Avulsa" // Default description if empty? Or make required.
+                description: description || "Consulta Avulsa"
             });
 
             toast.success("Fatura criada com sucesso!");
@@ -84,7 +105,10 @@ export function NewInvoiceDialog({ className, variant }: NewInvoiceDialogProps) 
             resetForm();
         } catch (error: any) {
             console.error("Error creating invoice:", error);
-            toast.error("Erro ao criar fatura. Tente novamente.");
+            
+            // Show specific error message if available
+            const errorMessage = error?.message || "Erro ao criar fatura. Tente novamente.";
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }

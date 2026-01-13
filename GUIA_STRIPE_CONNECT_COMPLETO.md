@@ -42,6 +42,36 @@ O Stripe Connect permite que profissionais conectem suas próprias contas Stripe
 
 5. Clique em **Save** ou **Continue**
 
+### 1.3 ⚠️ IMPORTANTE: Completar Perfil da Plataforma
+
+**Este passo é OBRIGATÓRIO antes de criar contas Connect!**
+
+1. Ainda em **Settings** → **Connect**, procure por **Platform profile** ou acesse diretamente:
+   ```
+   https://dashboard.stripe.com/settings/connect/platform-profile
+   ```
+
+2. Você verá uma página sobre "Responsabilities of managing losses for connected accounts"
+
+3. **Leia cuidadosamente** as informações sobre:
+   - Responsabilidades de gerenciar perdas
+   - Termos e condições do Stripe Connect
+   - Políticas de segurança
+
+4. Marque a caixa de seleção indicando que você:
+   - ✅ Entendeu as responsabilidades
+   - ✅ Aceita os termos
+   - ✅ Concorda em gerenciar perdas para contas conectadas
+
+5. Clique em **Save** ou **Accept**
+
+**⚠️ Sem completar este passo, você receberá o erro:**
+```
+"Please review the responsibilities of managing losses for connected accounts"
+```
+
+**📖 Para mais detalhes, veja:** [GUIA_STRIPE_CONNECT_PERFIL_PLATAFORMA.md](GUIA_STRIPE_CONNECT_PERFIL_PLATAFORMA.md)
+
 ---
 
 ## ⚙️ Passo 2: Configurar Branding (Opcional mas Recomendado)
@@ -296,6 +326,7 @@ Marque conforme completar:
 - [ ] Conta Stripe criada e ativada
 - [ ] Stripe Connect ativado
 - [ ] Tipo de conta escolhido (Express)
+- [ ] **Perfil da plataforma completado (OBRIGATÓRIO)**
 - [ ] Branding configurado (opcional)
 
 ### Variáveis de Ambiente
@@ -332,6 +363,19 @@ Marque conforme completar:
 1. Acesse Stripe Dashboard → **Settings** → **Connect**
 2. Siga o processo de ativação
 3. Complete todas as etapas necessárias
+
+### Erro: "Please review the responsibilities of managing losses"
+
+**Causa:** Perfil da plataforma não foi completado.
+
+**Solução:**
+1. Acesse: https://dashboard.stripe.com/settings/connect/platform-profile
+2. Leia e aceite as responsabilidades
+3. Marque a caixa de seleção
+4. Clique em **Save** ou **Accept**
+5. Tente conectar novamente
+
+**📖 Guia detalhado:** [GUIA_STRIPE_CONNECT_PERFIL_PLATAFORMA.md](GUIA_STRIPE_CONNECT_PERFIL_PLATAFORMA.md)
 
 ### Erro: "Email do profissional inválido"
 

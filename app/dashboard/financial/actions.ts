@@ -121,34 +121,103 @@ export async function createManualInvoice(data: {
     dueDate: string;
     description: string;
 }) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
+    try {
+        const supabase = await createClient();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+            throw new Error("Não autorizado. Faça login novamente.");
+        }
 
-    const { data: professional } = await supabase
-        .from("professionals")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
+        // Get professional
+        const { data: professional, error: profError } = await supabase
+            .from("professionals")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
 
-    const { error } = await supabase.from("invoices").insert({
-        professional_id: professional?.id,
-        patient_id: data.patientId,
-        amount_cents: Math.round(data.amount * 100),
-        due_date: data.dueDate,
-        description: data.description,
-        status: "pending",
-        fiscal_year: new Date().getFullYear(),
-        sequence_number: 999999, // Dummy, trigger should overwrite
-        invoice_number: null // Trigger target
-    });
+        if (profError || !professional) {
+            throw new Error("Perfil profissional não encontrado. Complete o onboarding primeiro.");
+        }
 
-    if (error) throw error;
-    
-    revalidatePath("/dashboard/financial");
-    revalidatePath("/dashboard");
-    
-    return { success: true };
+        // Validate amount
+        if (!data.amount || data.amount <= 0) {
+            throw new Error("Valor da fatura deve ser maior que zero.");
+        }
+
+        // Validate due date
+        if (!data.dueDate) {
+            throw new Error("Data de vencimento é obrigatória.");
+        }
+
+        // Ensure due_date is not before issue_date
+        const issueDate = new Date().toISOString().split('T')[0]; // Today's date
+        const dueDate = data.dueDate;
+        
+        if (dueDate < issueDate) {
+            throw new Error("Data de vencimento não pode ser anterior à data de emissão.");
+        }
+
+        // Validate patient exists
+        const { data: patient, error: patientError } = await supabase
+            .from("patients")
+            .select("id")
+            .eq("id", data.patientId)
+            .single();
+
+        if (patientError || !patient) {
+            throw new Error("Paciente não encontrado.");
+        }
+
+        // Insert invoice
+        const { data: invoice, error: insertError } = await supabase
+            .from("invoices")
+            .insert({
+                professional_id: professional.id,
+                patient_id: data.patientId,
+                amount_cents: Math.round(data.amount * 100),
+                due_date: dueDate,
+                issue_date: issueDate, // Explicitly set issue_date
+                description: data.description || "Consulta Avulsa",
+                status: "pending",
+                fiscal_year: new Date().getFullYear(),
+                sequence_number: 999999, // Dummy, trigger should overwrite
+                invoice_number: null // Trigger target
+            })
+            .select()
+            .single();
+
+        if (insertError) {
+            console.error("Error inserting invoice:", insertError);
+            
+            // Provide more specific error messages
+            if (insertError.code === '23505') { // Unique constraint violation
+                throw new Error("Erro ao gerar número da fatura. Tente novamente.");
+            } else if (insertError.code === '23503') { // Foreign key violation
+                throw new Error("Paciente ou profissional inválido.");
+            } else if (insertError.code === '23514') { // Check constraint violation
+                throw new Error("Data de vencimento inválida. Verifique a data selecionada.");
+            } else {
+                throw new Error(`Erro ao criar fatura: ${insertError.message}`);
+            }
+        }
+
+        if (!invoice) {
+            throw new Error("Fatura criada mas não foi retornada. Verifique se foi criada corretamente.");
+        }
+        
+        revalidatePath("/dashboard/financial");
+        revalidatePath("/dashboard");
+        
+        return { success: true, invoiceId: invoice.id };
+    } catch (error: any) {
+        console.error("createManualInvoice error:", error);
+        // Re-throw with a user-friendly message
+        if (error.message) {
+            throw error;
+        }
+        throw new Error("Erro ao criar fatura. Tente novamente.");
+    }
 }
 
 export async function markInvoiceAsPaid(invoiceId: string, paymentMethod?: string) {
