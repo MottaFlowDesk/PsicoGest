@@ -8,7 +8,6 @@
       "path": "/api/cron/health-check",
       "schedule": "0 2 * * *"
     }
-  ],
-  "comment": "Cron jobs também configurados no cron-job.org para garantir execução sem restrições. Ver CRON_JOB_SETUP.md"
+  ]
 }
 
