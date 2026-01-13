@@ -529,7 +529,7 @@ async function handleSubscriptionDeleted(db: SupabaseAdminClient, subscription: 
         // Find by subscription ID
         const { data: sub } = await db
             .from("subscriptions")
-            .select("professional_id")
+            .select("professional_id, plan_name")
             .eq("stripe_subscription_id", subscription.id)
             .single();
 
@@ -540,6 +540,15 @@ async function handleSubscriptionDeleted(db: SupabaseAdminClient, subscription: 
 
         professionalId = sub.professional_id;
     }
+
+    // Get plan name from subscription before updating
+    const { data: subscriptionData } = await db
+        .from("subscriptions")
+        .select("plan_name")
+        .eq("stripe_subscription_id", subscription.id)
+        .single();
+
+    const planName = subscriptionData?.plan_name || subscription.metadata?.plan_id || subscription.items.data[0]?.price.metadata?.plan_id || 'essencial';
 
     // Update subscription status
     await db
@@ -566,12 +575,12 @@ async function handleSubscriptionDeleted(db: SupabaseAdminClient, subscription: 
     // Create notification for subscription expiration
     try {
         const { getSubscriptionNotificationTemplate, createNotificationFromTemplate } = await import("@/lib/notifications/templates");
-        const template = getSubscriptionNotificationTemplate("expired", { planName: planName || "desconhecido" });
+        const template = getSubscriptionNotificationTemplate("expired", { planName: planName });
         await createNotificationFromTemplate(
             professionalId,
             "subscription",
             template,
-            { planName: planName || "desconhecido", status: "expired" }
+            { planName, status: "expired" }
         );
     } catch (notificationError) {
         console.error("Failed to create subscription expiration notification:", notificationError);
