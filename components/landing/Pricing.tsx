@@ -68,9 +68,8 @@ const Pricing: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        // User not logged in - redirect to login with plan parameter
-        toast.info('Faça login para escolher um plano');
-        router.push(`/login?plan=${planId}&billingPeriod=${isAnnual ? 'annual' : 'monthly'}`);
+        // User not logged in - redirect to signup with plan parameter
+        router.push(`/signup?plan=${planId}&billingPeriod=${isAnnual ? 'annual' : 'monthly'}`);
         setLoadingPlan(null);
         return;
       }
@@ -90,9 +89,8 @@ const Pricing: React.FC = () => {
 
       if (!response.ok) {
         if (response.status === 401) {
-          // User not authenticated
-          toast.info('Faça login para escolher um plano');
-          router.push(`/login?plan=${planId}&billingPeriod=${isAnnual ? 'annual' : 'monthly'}`);
+          // User not authenticated - redirect to signup
+          router.push(`/signup?plan=${planId}&billingPeriod=${isAnnual ? 'annual' : 'monthly'}`);
           setLoadingPlan(null);
           return;
         }

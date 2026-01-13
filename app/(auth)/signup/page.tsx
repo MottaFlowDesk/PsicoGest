@@ -102,9 +102,37 @@ function SignupForm() {
             }
 
             if (authData.user) {
-                // Success! Sign out immediately to force manual login, then redirect to checkout
+                // Success! User is now logged in, redirect to checkout
+                // Get billing period from URL params
+                const billingPeriod = searchParams.get("billingPeriod") || "monthly";
+                
+                try {
+                    const response = await fetch('/api/stripe/subscribe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            planId,
+                            billingPeriod,
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.url) {
+                        // Redirect to Stripe Checkout
+                        window.location.href = data.url;
+                        return;
+                    }
+                } catch (error) {
+                    console.error("Error creating checkout:", error);
+                    // Fall through to login redirect
+                }
+                
+                // If checkout creation fails, redirect to login
                 await supabase.auth.signOut();
-                router.push(`/login?registered=true&plan=${planId}`);
+                router.push(`/login?registered=true&plan=${planId}&billingPeriod=${billingPeriod}`);
             }
 
         } catch (error) {
