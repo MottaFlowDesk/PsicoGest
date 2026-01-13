@@ -1,8 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { AppointmentReportData, ReportFilters } from "@/lib/reports/types";
-import { getPeriodRange, groupByPeriod, PeriodFilter } from "@/lib/reports/utils";
+import { AppointmentReportData, ReportFilters, PeriodFilter } from "@/lib/reports/types";
+import { getPeriodRange, groupByPeriod } from "@/lib/reports/utils";
 import { format, eachDayOfInterval, eachMonthOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
