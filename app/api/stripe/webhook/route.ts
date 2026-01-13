@@ -111,24 +111,77 @@ type SupabaseAdminClient = SupabaseClient<any>;
 
 async function handleCheckoutCompleted(db: SupabaseAdminClient, session: Stripe.Checkout.Session) {
     const invoiceId = session.metadata?.invoice_id;
+    const professionalId = session.metadata?.professional_id;
 
-    if (!invoiceId) {
-        console.error("No invoice ID in checkout session metadata");
+    // Check if this is an invoice payment (not subscription)
+    if (invoiceId && session.mode === "payment") {
+        if (session.payment_status === "paid") {
+            // Get invoice to get professional_id
+            const { data: invoice } = await db
+                .from("invoices")
+                .select("professional_id, amount_cents")
+                .eq("id", invoiceId)
+                .single();
+
+            if (!invoice) {
+                console.error("Invoice not found:", invoiceId);
+                return;
+            }
+
+            // Update invoice status
+            await db
+                .from("invoices")
+                .update({
+                    status: "paid",
+                    paid_at: new Date().toISOString(),
+                    stripe_payment_intent_id: session.payment_intent as string,
+                    payment_method: "credit_card",
+                })
+                .eq("id", invoiceId)
+                .eq("status", "pending");
+
+            // Get payment intent to calculate fees
+            let applicationFee = 0;
+            let netAmount = invoice.amount_cents;
+            
+            if (session.payment_intent && stripe) {
+                try {
+                    const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent as string);
+                    applicationFee = paymentIntent.application_fee_amount || 0;
+                    netAmount = paymentIntent.amount - applicationFee;
+                } catch (error) {
+                    console.error("Error retrieving payment intent:", error);
+                }
+            }
+
+            // Create payment record
+            await db.from("payments").insert({
+                invoice_id: invoiceId,
+                professional_id: invoice.professional_id,
+                amount_cents: invoice.amount_cents,
+                stripe_payment_intent_id: session.payment_intent as string,
+                stripe_charge_id: session.payment_intent as string, // Will be updated when payment_intent.succeeded fires
+                status: "succeeded",
+                payment_method: "credit_card",
+                stripe_fee_cents: applicationFee,
+                net_amount_cents: netAmount,
+                paid_at: new Date().toISOString(),
+            });
+
+            console.log(`Invoice ${invoiceId} marked as paid via checkout session`);
+            return;
+        }
+    }
+
+    // Handle subscription checkout (existing logic)
+    if (session.mode === "subscription" && session.subscription) {
+        // This is handled by handleSubscriptionCheckoutCompleted
         return;
     }
 
-    if (session.payment_status === "paid") {
-        await db
-            .from("invoices")
-            .update({
-                status: "paid",
-                paid_at: new Date().toISOString(),
-                stripe_payment_intent_id: session.payment_intent as string,
-                payment_method: "credit_card",
-            })
-            .eq("id", invoiceId);
-
-        console.log(`Invoice ${invoiceId} marked as paid`);
+    // If no invoiceId, it might be a subscription checkout
+    if (!invoiceId) {
+        console.log("Checkout session without invoice_id (likely subscription)");
     }
 }
 

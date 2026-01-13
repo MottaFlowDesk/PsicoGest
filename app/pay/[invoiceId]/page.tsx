@@ -22,6 +22,17 @@ export default function PayPage({ params }: PayPageProps) {
 
     useEffect(() => {
         fetchInvoice();
+        
+        // Check for success/cancel parameters in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("success") === "true") {
+            // Payment successful - refresh invoice data
+            setTimeout(() => {
+                fetchInvoice();
+            }, 1000);
+        } else if (urlParams.get("canceled") === "true") {
+            setError("Pagamento cancelado. Você pode tentar novamente.");
+        }
     }, [invoiceId]);
 
     async function fetchInvoice() {
@@ -55,7 +66,7 @@ export default function PayPage({ params }: PayPageProps) {
         setError(null);
 
         try {
-            const response = await fetch("/api/stripe/checkout", {
+            const response = await fetch("/api/stripe/invoice-checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ invoiceId }),
@@ -67,10 +78,15 @@ export default function PayPage({ params }: PayPageProps) {
                 throw new Error(data.error || "Erro ao processar pagamento");
             }
 
+            if (!data.url) {
+                throw new Error("URL de checkout não foi retornada");
+            }
+
             // Redirect to Stripe Checkout
             window.location.href = data.url;
         } catch (err: any) {
-            setError(err.message);
+            console.error("Payment error:", err);
+            setError(err.message || "Erro ao processar pagamento. Tente novamente.");
             setPaying(false);
         }
     }
