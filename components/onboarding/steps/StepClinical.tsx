@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"; // Assuming we have this, i
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 // Common approaches list
 const approaches = [
@@ -58,37 +59,46 @@ export function StepClinical() {
             }
 
             // Update professional profile
+            // Clean CPF (remove dots, dashes, spaces)
+            const cleanCpf = fullData.cpf ? fullData.cpf.replace(/\D/g, '') : null;
+            
             const { error } = await supabase
                 .from('professionals')
                 .update({
                     full_name: fullData.fullName,
-                    phone: fullData.phone,
-                    specialty: fullData.approach, // Mapping approach to specialty mostly, or create a new column
-                    registration_number: fullData.crp,
-                    bio: fullData.bio,
+                    phone: fullData.phone || null,
+                    specialty: fullData.approach || null, // Mapping approach to specialty mostly, or create a new column
+                    registration_number: fullData.crp || null,
+                    bio: fullData.bio || null,
                     // Address fields
-                    address_zip: fullData.cep,
-                    address_street: fullData.street,
-                    address_number: fullData.number,
-                    address_complement: fullData.complement,
-                    address_neighborhood: fullData.neighborhood,
-                    address_city: fullData.city,
-                    address_state: fullData.state,
+                    address_zip: fullData.cep || null,
+                    address_street: fullData.street || null,
+                    address_number: fullData.number || null,
+                    address_complement: fullData.complement || null,
+                    address_neighborhood: fullData.neighborhood || null,
+                    address_city: fullData.city || null,
+                    address_state: fullData.state || null,
 
                     // New fields
-                    cpf: fullData.cpf,
-                    target_audience: fullData.targetAudience,
+                    cpf: cleanCpf || null,
+                    target_audience: fullData.targetAudience && fullData.targetAudience.length > 0 ? fullData.targetAudience : null,
                 })
                 .eq('user_id', user.id);
 
-            if (error) throw error;
+            if (error) {
+                console.error("Erro ao salvar perfil:", error);
+                toast.error(error.message || "Erro ao salvar perfil clínico. Tente novamente.");
+                throw error;
+            }
 
             // Advance to success step
             nextStep();
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Erro ao salvar perfil:", error);
-            // Handle error (toast?)
+            if (error.message && !error.message.includes("Usuário não autenticado")) {
+                toast.error(error.message || "Erro ao salvar perfil clínico. Tente novamente.");
+            }
         } finally {
             setIsSubmitting(false);
         }

@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { ArrowRight, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function StepPersonal() {
     const { data, updateData, nextStep } = useOnboardingStore();
@@ -36,24 +37,33 @@ export function StepPersonal() {
             if (!user) throw new Error("No user found");
 
             // Upsert personal info. Note: we use upsert to create if not exists
+            // Clean CPF (remove dots, dashes, spaces)
+            const cleanCpf = values.cpf ? values.cpf.replace(/\D/g, '') : null;
+            
             const { error } = await supabase
                 .from('professionals')
                 .upsert({
                     user_id: user.id,
                     email: user.email,
                     full_name: values.fullName,
-                    cpf: values.cpf,
-                    registration_number: values.crp,
-                    phone: values.phone,
+                    cpf: cleanCpf || null,
+                    registration_number: values.crp || null,
+                    phone: values.phone || null,
                     updated_at: new Date().toISOString(),
                 }, { onConflict: 'user_id' });
 
-            if (error) throw error;
+            if (error) {
+                console.error("Error saving personal info:", error);
+                toast.error(error.message || "Erro ao salvar dados pessoais. Tente novamente.");
+                throw error;
+            }
 
             nextStep();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving personal info:", error);
-            // Ideally show toast here
+            if (error.message && !error.message.includes("No user found")) {
+                toast.error(error.message || "Erro ao salvar dados pessoais. Tente novamente.");
+            }
         } finally {
             setIsLoading(false);
         }

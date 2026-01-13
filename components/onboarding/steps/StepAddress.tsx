@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { ArrowLeft, ArrowRight, Loader2, Search } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export function StepAddress() {
     const { data, updateData, nextStep, prevStep } = useOnboardingStore();
@@ -52,11 +53,18 @@ export function StepAddress() {
                 })
                 .eq('user_id', user.id);
 
-            if (error) throw error;
+            if (error) {
+                console.error("Error saving address:", error);
+                toast.error(error.message || "Erro ao salvar endereço. Tente novamente.");
+                throw error;
+            }
 
             nextStep();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving address:", error);
+            if (error.message && !error.message.includes("No user")) {
+                toast.error(error.message || "Erro ao salvar endereço. Tente novamente.");
+            }
         } finally {
             setIsSubmitting(false);
         }
