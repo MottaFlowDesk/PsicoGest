@@ -87,7 +87,7 @@ function generateSummarySheet(
 
 function addFinancialSheets(workbook: XLSX.WorkBook, data: FinancialReportData) {
   // Revenue sheet
-  const revenueData = [["Período", "Receita (R$)"]];
+  const revenueData: any[][] = [["Período", "Receita (R$)"]];
   data.revenue.forEach(item => {
     revenueData.push([item.period, item.amount]);
   });
@@ -95,7 +95,7 @@ function addFinancialSheets(workbook: XLSX.WorkBook, data: FinancialReportData) 
   XLSX.utils.book_append_sheet(workbook, revenueSheet, "Receita");
 
   // Status distribution
-  const statusData = [["Status", "Quantidade", "Valor (R$)"]];
+  const statusData: any[][] = [["Status", "Quantidade", "Valor (R$)"]];
   data.statusDistribution.forEach(item => {
     statusData.push([item.status, item.count, item.amount]);
   });
@@ -103,7 +103,7 @@ function addFinancialSheets(workbook: XLSX.WorkBook, data: FinancialReportData) 
   XLSX.utils.book_append_sheet(workbook, statusSheet, "Status");
 
   // Top patients
-  const topPatientsData = [["Paciente", "Receita Total (R$)", "Número de Faturas"]];
+  const topPatientsData: any[][] = [["Paciente", "Receita Total (R$)", "Número de Faturas"]];
   data.topPatients.forEach(patient => {
     topPatientsData.push([patient.patientName, patient.totalRevenue, patient.invoiceCount]);
   });
@@ -113,7 +113,7 @@ function addFinancialSheets(workbook: XLSX.WorkBook, data: FinancialReportData) 
 
 function addAppointmentsSheets(workbook: XLSX.WorkBook, data: AppointmentReportData) {
   // Volume sheet
-  const volumeData = [["Período", "Total", "Completos", "Cancelados", "No-Show"]];
+  const volumeData: any[][] = [["Período", "Total", "Completos", "Cancelados", "No-Show"]];
   data.volume.forEach(item => {
     volumeData.push([item.period, item.count, item.completed, item.cancelled, item.noShow]);
   });
@@ -121,7 +121,7 @@ function addAppointmentsSheets(workbook: XLSX.WorkBook, data: AppointmentReportD
   XLSX.utils.book_append_sheet(workbook, volumeSheet, "Volume");
 
   // Status distribution
-  const statusData = [["Status", "Quantidade", "Percentual (%)"]];
+  const statusData: any[][] = [["Status", "Quantidade", "Percentual (%)"]];
   data.statusDistribution.forEach(item => {
     statusData.push([item.status, item.count, item.percentage]);
   });
@@ -131,7 +131,7 @@ function addAppointmentsSheets(workbook: XLSX.WorkBook, data: AppointmentReportD
 
 function addPatientsSheets(workbook: XLSX.WorkBook, data: PatientReportData) {
   // Growth sheet
-  const growthData = [["Período", "Novos", "Total", "Ativos"]];
+  const growthData: any[][] = [["Período", "Novos", "Total", "Ativos"]];
   data.growth.forEach(item => {
     growthData.push([item.period, item.newPatients, item.totalPatients, item.activePatients]);
   });
@@ -139,7 +139,7 @@ function addPatientsSheets(workbook: XLSX.WorkBook, data: PatientReportData) {
   XLSX.utils.book_append_sheet(workbook, growthSheet, "Crescimento");
 
   // Top patients
-  const topPatientsData = [["Paciente", "Sessões", "Última Sessão"]];
+  const topPatientsData: any[][] = [["Paciente", "Sessões", "Última Sessão"]];
   data.topPatients.forEach(patient => {
     topPatientsData.push([
       patient.patientName,
@@ -153,7 +153,7 @@ function addPatientsSheets(workbook: XLSX.WorkBook, data: PatientReportData) {
 
 function addPerformanceSheets(workbook: XLSX.WorkBook, data: PerformanceReportData) {
   // KPIs sheet
-  const kpisData = [
+  const kpisData: any[][] = [
     ["KPI", "Atual", "Anterior", "Variação (%)"],
     ["Receita", formatCurrency(data.kpis.revenue.current), formatCurrency(data.kpis.revenue.previous), formatPercentage(data.kpis.revenue.change)],
     ["Atendimentos", data.kpis.appointments.current, data.kpis.appointments.previous, formatPercentage(data.kpis.appointments.change)],
@@ -165,7 +165,7 @@ function addPerformanceSheets(workbook: XLSX.WorkBook, data: PerformanceReportDa
   XLSX.utils.book_append_sheet(workbook, kpisSheet, "KPIs");
 
   // Trends sheet
-  const trendsData = [["Período", "Receita (R$)", "Atendimentos", "Pacientes"]];
+  const trendsData: any[][] = [["Período", "Receita (R$)", "Atendimentos", "Pacientes"]];
   data.trends.forEach(item => {
     trendsData.push([item.period, item.revenue, item.appointments, item.patients]);
   });
