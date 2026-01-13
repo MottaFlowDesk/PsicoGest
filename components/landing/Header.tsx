@@ -60,7 +60,7 @@ const Header: React.FC = () => {
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <Link
-              href="/login"
+              href="/login?logout=true"
               className="text-slate-600 hover:text-brand-600 font-medium text-sm"
             >
               Entrar
@@ -102,7 +102,7 @@ const Header: React.FC = () => {
             ))}
             <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
               <Link
-                href="/login"
+                href="/login?logout=true"
                 className="w-full text-center text-slate-600 font-medium py-2"
                 onClick={() => setIsOpen(false)}
               >

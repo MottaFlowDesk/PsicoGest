@@ -33,6 +33,7 @@ export async function middleware(request: NextRequest) {
 
     const {
         data: { user },
+        error: authError,
     } = await supabase.auth.getUser()
 
     // Protected routes logic
@@ -41,7 +42,14 @@ export async function middleware(request: NextRequest) {
     }
 
     // If user is logged in and trying to access login, check if they have profile
+    // But allow access to login if there's a query parameter to force logout
     if (user && request.nextUrl.pathname.startsWith('/login')) {
+        // Allow access to login page if user explicitly wants to logout
+        // This can be done by adding ?logout=true to the URL
+        if (request.nextUrl.searchParams.get('logout') === 'true') {
+            return response
+        }
+
         // Check if user has completed onboarding
         const { data: profile, error } = await supabase
             .from("professionals")

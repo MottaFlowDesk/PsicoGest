@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,8 +34,21 @@ function LoginForm() {
     const registered = searchParams.get("registered");
     const planId = searchParams.get("plan"); // Legacy - not used in new flow
     const fromCheckout = searchParams.get("from_checkout") === "true";
+    const forceLogout = searchParams.get("logout") === "true";
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+
+    // If user explicitly wants to logout, clear session
+    useEffect(() => {
+        if (forceLogout) {
+            const supabase = createClient();
+            supabase.auth.signOut().then(() => {
+                // Clear URL parameter
+                router.replace('/login');
+                router.refresh();
+            });
+        }
+    }, [forceLogout, router]);
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
