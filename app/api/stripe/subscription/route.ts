@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 
 /**
  * Obter informações da assinatura atual
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Get subscription details from Stripe
-        let stripeSubscription = null;
+        let stripeSubscription: Stripe.Subscription | null = null;
         try {
             stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
         } catch (error) {
