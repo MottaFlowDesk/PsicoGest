@@ -13,6 +13,7 @@ import {
     DollarSign,
     BrainCircuit,
     X,
+    BarChart3,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const navigation = [
     { name: "Sessões", href: "/dashboard/appointments", icon: CalendarClock },
     { name: "Financeiro", href: "/dashboard/financial", icon: DollarSign },
     { name: "Prontuários", href: "/dashboard/medical-records", icon: FileText },
+    { name: "Relatórios", href: "/dashboard/reports", icon: BarChart3 },
 ];
 
 const secondaryNavigation = [

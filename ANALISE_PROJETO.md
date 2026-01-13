@@ -77,6 +77,29 @@
 - ✅ Serviço de lembretes implementado
 - ✅ Webhook do WhatsApp para confirmações
 
+### 7.1. 🔔 Sistema de Notificações In-App
+- ✅ Tabela `notifications` no banco de dados com RLS
+- ✅ API routes completas para CRUD de notificações
+- ✅ Componente NotificationBell integrado no header
+- ✅ Página de gerenciamento de notificações (`/dashboard/notifications`)
+- ✅ Notificações em tempo real com Supabase Realtime
+- ✅ Integração com eventos de agendamentos:
+  - Criação, confirmação, cancelamento, no-show
+  - Lembrete de agendamento próximo (2h antes)
+- ✅ Integração com eventos de pagamentos:
+  - Pagamento realizado, vencendo (3 dias), vencido, falha
+- ✅ Integração com eventos de pacientes:
+  - Novo paciente cadastrado
+- ✅ Integração com eventos de sistema:
+  - Assinatura ativada/atualizada/cancelada/expirada
+  - Integração desconectada (Google/WhatsApp)
+  - Limite de plano atingido (pacientes ou IA)
+- ✅ Contador de não lidas em tempo real
+- ✅ Marcar como lida individual ou em massa
+- ✅ Filtros por tipo e status (lida/não lida)
+- ✅ Templates pré-definidos para cada tipo de notificação
+- ✅ Função de limpeza automática de notificações antigas (90 dias)
+
 ### 8. 🔗 Integrações
 
 #### Google Calendar
@@ -152,6 +175,8 @@
   - settings
   - professional_availability
   - availability_exceptions
+  - subscriptions
+  - notifications
   - ai_usage_logs (estrutura criada)
   - ai_transcriptions (estrutura criada)
   - audit_logs
@@ -233,7 +258,7 @@
 - ⚠️ **Nota:** Mencionado na landing ("O paciente agenda online se você permitir")
 
 ### 3. 📧 Notificações e Comunicações
-- ❌ Sistema de notificações in-app
+- ✅ Sistema de notificações in-app (implementado)
 - ❌ Notificações push (se implementar PWA)
 - ❌ Email templates mais elaborados
 - ❌ Histórico de comunicações
@@ -273,9 +298,9 @@
 - ❌ Suporte a múltiplos idiomas
 
 ### 10. 🔔 Notificações em Tempo Real
-- ❌ WebSockets ou Supabase Realtime
-- ❌ Notificações instantâneas
-- ❌ Atualizações ao vivo
+- ✅ Supabase Realtime implementado para notificações
+- ✅ Notificações instantâneas funcionando
+- ✅ Atualizações ao vivo no NotificationBell
 
 ### 11. 📊 Analytics e Monitoramento
 - ❌ Error tracking (Sentry, etc.)
@@ -338,9 +363,9 @@
 
 ### Média Prioridade (Melhorias)
 5. **Relatórios** - Valor agregado
-6. **Notificações In-App** - Melhor UX
-7. **Busca Global** - Facilita navegação
-8. **Analytics** - Monitoramento
+6. **Busca Global** - Facilita navegação
+7. **Analytics** - Monitoramento
+8. **Notificações Push (PWA)** - Expansão do sistema de notificações
 
 ### Baixa Prioridade (Futuro)
 9. **PWA** - App-like experience
@@ -371,18 +396,21 @@
 3. Finalizar integração de pagamentos de faturas (testes e validações)
 4. Adicionar testes críticos
 5. Configurar error tracking (Sentry)
-6. Implementar notificações in-app
+6. Expandir sistema de notificações com push (PWA)
 
 ---
 
 ## 📊 RESUMO ESTATÍSTICO
 
-- **Funcionalidades Implementadas:** ~90%
-- **Funcionalidades Faltantes:** ~10%
+- **Funcionalidades Implementadas:** ~92%
+- **Funcionalidades Faltantes:** ~8%
 - **Pronto para Produção:** ⚠️ Parcialmente (faltam features de IA prometidas)
-- **Pronto para MVP:** ✅ Sim (sistema de assinaturas completo)
+- **Pronto para MVP:** ✅ Sim (sistema de assinaturas e notificações completo)
 
 ---
 
 **Última atualização:** Janeiro 2025
+
+### 📝 Changelog Recente
+- **Janeiro 2025:** Sistema completo de notificações in-app implementado com Supabase Realtime
 
