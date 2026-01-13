@@ -50,7 +50,30 @@ export async function POST(request: NextRequest) {
         switch (event.type) {
             case "checkout.session.completed": {
                 const session = event.data.object as Stripe.Checkout.Session;
-                await handleCheckoutCompleted(supabaseAdmin, session);
+                // Check if it's a subscription checkout
+                if (session.mode === "subscription" && session.subscription) {
+                    await handleSubscriptionCheckoutCompleted(supabaseAdmin, session);
+                } else {
+                    await handleCheckoutCompleted(supabaseAdmin, session);
+                }
+                break;
+            }
+
+            case "customer.subscription.created": {
+                const subscription = event.data.object as Stripe.Subscription;
+                await handleSubscriptionCreated(supabaseAdmin, subscription);
+                break;
+            }
+
+            case "customer.subscription.updated": {
+                const subscription = event.data.object as Stripe.Subscription;
+                await handleSubscriptionUpdated(supabaseAdmin, subscription);
+                break;
+            }
+
+            case "customer.subscription.deleted": {
+                const subscription = event.data.object as Stripe.Subscription;
+                await handleSubscriptionDeleted(supabaseAdmin, subscription);
                 break;
             }
 
@@ -194,5 +217,197 @@ async function handleAccountUpdated(db: SupabaseAdminClient, account: Stripe.Acc
                 .eq("id", professionalId);
         }
     }
+}
+
+// Subscription handlers
+async function handleSubscriptionCheckoutCompleted(db: SupabaseAdminClient, session: Stripe.Checkout.Session) {
+    const professionalId = session.metadata?.professional_id;
+    const planId = session.metadata?.plan_id;
+
+    if (!professionalId || !planId) {
+        console.error("Missing metadata in subscription checkout session");
+        return;
+    }
+
+    // Subscription will be created via customer.subscription.created event
+    // This handler just logs the checkout completion
+    console.log(`Subscription checkout completed for professional ${professionalId}, plan ${planId}`);
+}
+
+async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: Stripe.Subscription) {
+    const professionalId = subscription.metadata?.professional_id;
+    const planId = subscription.metadata?.plan_id;
+
+    if (!professionalId) {
+        // Try to find by customer_id
+        const { data: professional } = await db
+            .from("professionals")
+            .select("id")
+            .eq("stripe_customer_id", subscription.customer as string)
+            .single();
+
+        if (!professional) {
+            console.error("Professional not found for subscription:", subscription.id);
+            return;
+        }
+
+        // Get plan from subscription metadata or default
+        const planName = planId || subscription.items.data[0]?.price.metadata?.plan_id || 'essencial';
+
+        // Create subscription record
+        await db.from("subscriptions").upsert({
+            professional_id: professional.id,
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: subscription.customer as string,
+            plan_name: planName,
+            status: subscription.status,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
+            trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            metadata: subscription.metadata,
+        }, {
+            onConflict: 'stripe_subscription_id',
+        });
+
+        // Update professional
+        await db
+            .from("professionals")
+            .update({
+                subscription_plan: planName,
+                subscription_status: subscription.status,
+                subscription_trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+                subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            })
+            .eq("id", professional.id);
+
+        console.log(`Subscription created for professional ${professional.id}`);
+    } else {
+        const planName = planId || subscription.items.data[0]?.price.metadata?.plan_id || 'essencial';
+
+        // Create subscription record
+        await db.from("subscriptions").upsert({
+            professional_id: professionalId,
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: subscription.customer as string,
+            plan_name: planName,
+            status: subscription.status,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
+            trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            metadata: subscription.metadata,
+        }, {
+            onConflict: 'stripe_subscription_id',
+        });
+
+        // Update professional
+        await db
+            .from("professionals")
+            .update({
+                subscription_plan: planName,
+                subscription_status: subscription.status,
+                subscription_trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+                subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            })
+            .eq("id", professionalId);
+
+        console.log(`Subscription created for professional ${professionalId}`);
+    }
+}
+
+async function handleSubscriptionUpdated(db: SupabaseAdminClient, subscription: Stripe.Subscription) {
+    const professionalId = subscription.metadata?.professional_id;
+
+    if (!professionalId) {
+        // Find by subscription ID
+        const { data: sub } = await db
+            .from("subscriptions")
+            .select("professional_id")
+            .eq("stripe_subscription_id", subscription.id)
+            .single();
+
+        if (!sub) {
+            console.error("Subscription not found in database:", subscription.id);
+            return;
+        }
+
+        professionalId = sub.professional_id;
+    }
+
+    const planName = subscription.metadata?.plan_id || subscription.items.data[0]?.price.metadata?.plan_id || 'essencial';
+
+    // Update subscription record
+    await db
+        .from("subscriptions")
+        .update({
+            status: subscription.status,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
+            trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
+            plan_name: planName,
+            metadata: subscription.metadata,
+        })
+        .eq("stripe_subscription_id", subscription.id);
+
+    // Update professional
+    await db
+        .from("professionals")
+        .update({
+            subscription_plan: planName,
+            subscription_status: subscription.status,
+            subscription_trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+            subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        })
+        .eq("id", professionalId);
+
+    console.log(`Subscription updated for professional ${professionalId}, status: ${subscription.status}`);
+}
+
+async function handleSubscriptionDeleted(db: SupabaseAdminClient, subscription: Stripe.Subscription) {
+    const professionalId = subscription.metadata?.professional_id;
+
+    if (!professionalId) {
+        // Find by subscription ID
+        const { data: sub } = await db
+            .from("subscriptions")
+            .select("professional_id")
+            .eq("stripe_subscription_id", subscription.id)
+            .single();
+
+        if (!sub) {
+            console.error("Subscription not found in database:", subscription.id);
+            return;
+        }
+
+        professionalId = sub.professional_id;
+    }
+
+    // Update subscription status
+    await db
+        .from("subscriptions")
+        .update({
+            status: 'canceled',
+            canceled_at: new Date().toISOString(),
+        })
+        .eq("stripe_subscription_id", subscription.id);
+
+    // Update professional to free plan
+    await db
+        .from("professionals")
+        .update({
+            subscription_plan: 'free',
+            subscription_status: 'canceled',
+            subscription_trial_ends_at: null,
+            subscription_current_period_end: null,
+        })
+        .eq("id", professionalId);
+
+    console.log(`Subscription deleted for professional ${professionalId}`);
 }
 

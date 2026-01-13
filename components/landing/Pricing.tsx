@@ -1,12 +1,18 @@
 "use client";
 import React, { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
 
 const Pricing: React.FC = () => {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const router = useRouter();
 
   const plans = [
     {
+      id: "essencial",
       name: "Essencial",
       price: 97,
       description: "Para quem está começando a organizar o consultório.",
@@ -23,6 +29,7 @@ const Pricing: React.FC = () => {
       buttonVariant: "outline"
     },
     {
+      id: "profissional",
       name: "Profissional",
       price: 147,
       description: "Ideal para psicólogos com agenda cheia.",
@@ -38,6 +45,7 @@ const Pricing: React.FC = () => {
       buttonVariant: "solid"
     },
     {
+      id: "premium",
       name: "Premium",
       price: 247,
       description: "Para quem busca máxima eficiência e escala.",
@@ -51,6 +59,58 @@ const Pricing: React.FC = () => {
       buttonVariant: "outline"
     }
   ];
+
+  const handleSelectPlan = async (planId: string) => {
+    setLoadingPlan(planId);
+    try {
+      // Check if user is logged in
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // User not logged in - redirect to login with plan parameter
+        toast.info('Faça login para escolher um plano');
+        router.push(`/login?plan=${planId}&billingPeriod=${isAnnual ? 'annual' : 'monthly'}`);
+        setLoadingPlan(null);
+        return;
+      }
+
+      const response = await fetch('/api/stripe/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId,
+          billingPeriod: isAnnual ? 'annual' : 'monthly',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // User not authenticated
+          toast.info('Faça login para escolher um plano');
+          router.push(`/login?plan=${planId}&billingPeriod=${isAnnual ? 'annual' : 'monthly'}`);
+          setLoadingPlan(null);
+          return;
+        }
+        throw new Error(data.error || 'Erro ao processar assinatura');
+      }
+
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error('URL de checkout não disponível');
+      }
+    } catch (error: any) {
+      console.error('Error selecting plan:', error);
+      toast.error(error.message || 'Erro ao processar assinatura. Tente novamente.');
+      setLoadingPlan(null);
+    }
+  };
 
   return (
     <section id="pricing" className="py-24 bg-slate-50 relative overflow-hidden">
@@ -117,11 +177,25 @@ const Pricing: React.FC = () => {
                 </div>
 
                 <div className="p-8 pt-0 mt-auto">
-                  <button className={`w-full py-3 px-4 rounded-xl font-bold transition-all ${plan.buttonVariant === 'solid'
-                      ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg hover:shadow-brand-500/30'
-                      : 'bg-white hover:bg-slate-50 text-brand-700 border-2 border-brand-100 hover:border-brand-200'
-                    }`}>
-                    Escolher {plan.name}
+                  <button 
+                    onClick={() => handleSelectPlan(plan.id)}
+                    disabled={loadingPlan === plan.id}
+                    className={`w-full py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                      loadingPlan === plan.id
+                        ? 'opacity-50 cursor-not-allowed'
+                        : plan.buttonVariant === 'solid'
+                        ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg hover:shadow-brand-500/30'
+                        : 'bg-white hover:bg-slate-50 text-brand-700 border-2 border-brand-100 hover:border-brand-200'
+                    }`}
+                  >
+                    {loadingPlan === plan.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      `Escolher ${plan.name}`
+                    )}
                   </button>
                 </div>
               </div>

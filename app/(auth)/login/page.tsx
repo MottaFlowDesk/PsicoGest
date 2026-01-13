@@ -31,6 +31,8 @@ function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const registered = searchParams.get("registered");
+    const planId = searchParams.get("plan");
+    const billingPeriod = searchParams.get("billingPeriod") || "monthly";
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -64,6 +66,32 @@ function LoginForm() {
                     setErrorMessage("Erro ao fazer login. Verifique suas credenciais.");
                 }
                 return;
+            }
+
+            // If user came from plan selection, redirect to checkout
+            if (planId) {
+                try {
+                    const response = await fetch('/api/stripe/subscribe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            planId,
+                            billingPeriod,
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.url) {
+                        window.location.href = data.url;
+                        return;
+                    }
+                } catch (error) {
+                    console.error("Error creating checkout:", error);
+                    // Fall through to dashboard redirect
+                }
             }
 
             router.push("/dashboard");
@@ -158,9 +186,15 @@ function LoginForm() {
 
             <div className="text-center text-sm">
                 <span className="text-slate-500">Não tem uma conta? </span>
-                <Link href="/signup" className="text-brand-600 font-semibold hover:underline">
-                    Criar conta grátis
-                </Link>
+                {planId ? (
+                    <Link href={`/signup?plan=${planId}&billingPeriod=${billingPeriod}`} className="text-brand-600 font-semibold hover:underline">
+                        Criar conta
+                    </Link>
+                ) : (
+                    <Link href="/#pricing" className="text-brand-600 font-semibold hover:underline">
+                        Ver planos
+                    </Link>
+                )}
             </div>
         </div>
     );

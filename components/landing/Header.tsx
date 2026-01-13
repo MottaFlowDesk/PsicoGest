@@ -65,12 +65,13 @@ const Header: React.FC = () => {
             >
               Entrar
             </Link>
-            <Link
-              href="/signup"
+            <a
+              href="#pricing"
+              onClick={(e) => handleScroll(e, 'pricing')}
               className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-brand-500/30 text-sm"
             >
-              Começar Grátis
-            </Link>
+              Ver Planos
+            </a>
           </div>
 
           {/* Mobile Menu Button */}
@@ -107,13 +108,16 @@ const Header: React.FC = () => {
               >
                 Entrar
               </Link>
-              <Link
-                href="/signup"
+              <a
+                href="#pricing"
+                onClick={(e) => {
+                  handleScroll(e, 'pricing');
+                  setIsOpen(false);
+                }}
                 className="w-full text-center bg-brand-600 text-white px-4 py-3 rounded-lg font-semibold shadow-md"
-                onClick={() => setIsOpen(false)}
               >
-                Começar Teste Grátis
-              </Link>
+                Ver Planos
+              </a>
             </div>
           </div>
         </div>

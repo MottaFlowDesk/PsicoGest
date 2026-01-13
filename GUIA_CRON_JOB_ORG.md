@@ -83,7 +83,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
    **Address (URL):**
    ```
-   https://SEU-DOMINIO.vercel.app/api/cron/reminders
+   https://psicogest-ebon.vercel.app//api/cron/reminders
    ```
    *(Substitua `SEU-DOMINIO` pela URL real da sua aplicação)*
 
@@ -132,7 +132,7 @@ Após criar, clique no job criado e configure:
 
    **Address (URL):**
    ```
-   https://SEU-DOMINIO.vercel.app/api/cron/health-check
+   https://psicogest-ebon.vercel.app/api/cron/health-check
    ```
 
    **Request method:**

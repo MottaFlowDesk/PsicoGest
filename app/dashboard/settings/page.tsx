@@ -1,5 +1,5 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, User, CalendarClock, ChevronRight, Plug } from "lucide-react";
+import { Clock, User, CalendarClock, ChevronRight, Plug, CreditCard } from "lucide-react";
 import Link from "next/link";
 
 export default function SettingsPage() {
@@ -31,6 +31,13 @@ export default function SettingsPage() {
             href: "/dashboard/settings/calendar-preferences",
             icon: CalendarClock,
             color: "bg-purple-50 text-purple-600",
+        },
+        {
+            title: "Assinatura",
+            description: "Gerencie seu plano e assinatura.",
+            href: "/dashboard/settings/subscription",
+            icon: CreditCard,
+            color: "bg-indigo-50 text-indigo-600",
         },
     ];
 

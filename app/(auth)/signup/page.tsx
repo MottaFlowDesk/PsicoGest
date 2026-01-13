@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,11 +32,40 @@ const signupSchema = z.object({
 
 type SignupFormValues = z.infer<typeof signupSchema>;
 
-export default function SignupPage() {
+function SignupForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const planId = searchParams.get("plan");
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     // supabase client initialized in onSubmit to avoid build errors if env vars missing
+
+    // Redirect if no plan selected
+    if (!planId) {
+        return (
+            <div className="space-y-6">
+                <div className="text-center">
+                    <AlertCircle className="mx-auto h-12 w-12 text-orange-500 mb-4" />
+                    <h2 className="text-lg font-semibold text-slate-900">Escolha um Plano</h2>
+                    <p className="text-sm text-slate-500 mt-2">
+                        Para criar sua conta, você precisa escolher um plano primeiro.
+                    </p>
+                </div>
+                <Link
+                    href="/#pricing"
+                    className="block w-full text-center bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 rounded-lg font-semibold shadow-md"
+                >
+                    Ver Planos e Preços
+                </Link>
+                <div className="text-center text-sm">
+                    <span className="text-slate-500">Já tem uma conta? </span>
+                    <Link href="/login" className="text-brand-600 font-semibold hover:underline">
+                        Fazer Login
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     const form = useForm<SignupFormValues>({
         resolver: zodResolver(signupSchema),
@@ -73,9 +102,9 @@ export default function SignupPage() {
             }
 
             if (authData.user) {
-                // Success! Sign out immediately to force manual login, then redirect
+                // Success! Sign out immediately to force manual login, then redirect to checkout
                 await supabase.auth.signOut();
-                router.push("/login?registered=true");
+                router.push(`/login?registered=true&plan=${planId}`);
             }
 
         } catch (error) {
@@ -88,9 +117,9 @@ export default function SignupPage() {
     return (
         <div className="space-y-6">
             <div className="text-center">
-                <h2 className="text-lg font-semibold text-slate-900">Crie sua conta grátis</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Crie sua conta</h2>
                 <p className="text-sm text-slate-500">
-                    Comece a transformar sua gestão clínica hoje
+                    Complete seu cadastro para começar seu teste grátis de 14 dias
                 </p>
             </div>
 
@@ -174,10 +203,18 @@ export default function SignupPage() {
 
             <div className="text-center text-sm">
                 <span className="text-slate-500">Já tem uma conta? </span>
-                <Link href="/login" className="text-brand-600 font-semibold hover:underline">
+                <Link href={`/login?plan=${planId}`} className="text-brand-600 font-semibold hover:underline">
                     Fazer Login
                 </Link>
             </div>
         </div>
+    );
+}
+
+export default function SignupPage() {
+    return (
+        <Suspense fallback={<div className="text-center p-8">Carregando...</div>}>
+            <SignupForm />
+        </Suspense>
     );
 }

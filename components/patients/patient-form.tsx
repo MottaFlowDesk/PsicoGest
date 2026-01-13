@@ -107,6 +107,31 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
 
                 if (!professional) throw new Error("Professional profile not found");
 
+                // Check subscription limits
+                try {
+                    const limitsResponse = await fetch(`/api/subscription/limits?professionalId=${professional.id}`);
+                    if (limitsResponse.ok) {
+                        const limits = await limitsResponse.json();
+                        if (!limits.canAddPatient) {
+                            toast.error(
+                                `Limite de pacientes atingido (${limits.currentCount}/${limits.maxAllowed}). ` +
+                                `Faça upgrade do seu plano para adicionar mais pacientes.`,
+                                {
+                                    action: {
+                                        label: "Ver Planos",
+                                        onClick: () => router.push("/dashboard/settings/subscription"),
+                                    },
+                                }
+                            );
+                            setIsSubmitting(false);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error checking subscription limits:", error);
+                    // Continue anyway - don't block patient creation if check fails
+                }
+
                 const { error } = await supabase.from('patients').insert({
                     professional_id: professional.id,
                     full_name: data.fullName,
