@@ -23,11 +23,11 @@ export function MonthGrid({ appointments, currentDate }: { appointments: Appoint
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'confirmed': return "bg-green-100 text-green-700 border-green-200";
-            case 'completed': return "bg-slate-100 text-slate-700 border-slate-200 line-through decoration-slate-400 opacity-70";
-            case 'cancelled': return "bg-red-50 text-red-400 border-red-100 line-through decoration-red-300 opacity-70";
-            case 'no_show': return "bg-orange-100 text-orange-700 border-orange-200";
-            default: return "bg-blue-50 text-blue-700 border-blue-100";
+            case 'confirmed': return "bg-green-100 text-green-800 border-green-300";
+            case 'completed': return "bg-slate-100 text-slate-700 border-slate-300 line-through decoration-slate-400 opacity-90";
+            case 'cancelled': return "bg-red-100 text-red-800 border-red-300 line-through decoration-red-400 opacity-80";
+            case 'no_show': return "bg-orange-100 text-orange-800 border-orange-300";
+            default: return "bg-blue-50 text-blue-700 border-blue-200";
         }
     };
 

@@ -167,9 +167,11 @@ export function WeekGrid({ appointments, currentDate, availability, view = 'week
                                             className={cn(
                                                 "absolute rounded px-3 py-2 text-xs border overflow-hidden shadow-sm z-10 hover:z-20 hover:scale-[1.01] transition-all cursor-pointer flex flex-col justify-center",
                                                 view === 'week' ? "left-0.5 right-0.5 px-1.5 py-0.5" : "left-4 right-4",
-                                                app.status === 'confirmed' ? "bg-green-100 border-green-200 text-green-800" :
-                                                    app.status === 'cancelled' ? "bg-red-50 border-red-100 text-red-400 line-through opacity-60" :
-                                                        "bg-blue-50 border-blue-200 text-blue-700"
+                                                app.status === 'confirmed' ? "bg-green-100 border-green-300 text-green-800" :
+                                                    app.status === 'cancelled' ? "bg-red-100 border-red-300 text-red-800 line-through opacity-80" :
+                                                        app.status === 'completed' ? "bg-slate-100 border-slate-300 text-slate-700 opacity-90" :
+                                                            app.status === 'no_show' ? "bg-orange-100 border-orange-300 text-orange-800" :
+                                                                "bg-blue-50 border-blue-200 text-blue-700"
                                             )}
                                         >
                                             <div className={cn("font-semibold truncate leading-tight", view === 'day' && "text-sm")}>{app.patients?.full_name}</div>

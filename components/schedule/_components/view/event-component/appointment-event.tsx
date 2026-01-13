@@ -15,10 +15,27 @@ export default function AppointmentEvent(props: Event) {
     const isOnline = props.metadata?.appointmentType === "online";
     const status = props.metadata?.status;
 
-    // Determine colors based on status/variant
+    // Determine colors based on status (priority) or variant (fallback)
     const getColorClasses = () => {
-        const variant = props.variant || "primary";
+        // Priority: Use status if available
+        if (status) {
+            switch (status) {
+                case "confirmed":
+                    return "bg-green-100 border-green-300 text-green-800 hover:bg-green-200";
+                case "cancelled":
+                    return "bg-red-100 border-red-300 text-red-800 hover:bg-red-200 line-through opacity-80";
+                case "completed":
+                    return "bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 opacity-90";
+                case "no_show":
+                    return "bg-orange-100 border-orange-300 text-orange-800 hover:bg-orange-200";
+                case "scheduled":
+                default:
+                    return "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100";
+            }
+        }
 
+        // Fallback: Use variant if status is not available
+        const variant = props.variant || "primary";
         const colors = {
             primary: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100",
             success: "bg-green-50 border-green-200 text-green-700 hover:bg-green-100",

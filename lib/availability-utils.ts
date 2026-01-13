@@ -80,9 +80,9 @@ export async function getAvailableSlots(
 
     const { data: appointments } = await supabase
         .from("appointments")
-        .select("scheduled_at, duration_minutes")
+        .select("scheduled_at, duration_minutes, status")
         .eq("professional_id", professionalId)
-        .neq("status", "cancelled")
+        .in("status", ["scheduled", "confirmed", "completed", "no_show"]) // Only cancelled appointments don't block slots
         .gte("scheduled_at", dayStart.toISOString())
         .lte("scheduled_at", dayEnd.toISOString());
 
@@ -104,7 +104,7 @@ export async function getAvailableSlots(
     let currentTime = setMinutes(setHours(date, startTimeParsed.hour), startTimeParsed.minute);
     const dayEndTime = setMinutes(setHours(date, endTimeParsed.hour), endTimeParsed.minute);
 
-    // Get current time to filter out past slots if date is today
+    // Get current time to filter out past slots
     const now = new Date();
     const isToday = format(date, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
     // For today, only show slots that start at least 1 hour from now
@@ -116,14 +116,29 @@ export async function getAvailableSlots(
         // Check if slot fits within working hours
         if (slotEnd > dayEndTime) break;
 
-        // If today, skip past slots (must be at least 1 hour from now)
-        if (isToday && minTimeForToday && currentTime < minTimeForToday) {
-            currentTime = addMinutes(currentTime, duration);
-            continue;
+        // Always skip slots that are in the past
+        // For today, require at least 1 hour buffer; for future dates, just check if time has passed
+        if (isToday) {
+            if (minTimeForToday && currentTime < minTimeForToday) {
+                currentTime = addMinutes(currentTime, duration);
+                continue;
+            }
+        } else {
+            // For future dates, still check if the time has passed (edge case: date selected but time already passed)
+            if (currentTime <= now) {
+                currentTime = addMinutes(currentTime, duration);
+                continue;
+            }
         }
 
         // Check if slot conflicts with existing appointments
+        // Only consider appointments that are not cancelled (scheduled, confirmed, completed, no_show all block slots)
         const hasConflict = appointments?.some(apt => {
+            // Skip cancelled appointments - they don't block slots
+            if (apt.status === "cancelled") {
+                return false;
+            }
+            
             const aptStart = new Date(apt.scheduled_at);
             const aptEnd = addMinutes(aptStart, apt.duration_minutes);
 
