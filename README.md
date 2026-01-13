@@ -44,5 +44,9 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 See the following guides for setting up integrations:
 - [Cron Jobs Setup](GUIA_CRON_JOB_ORG.md)
 - [Stripe Configuration](GUIA_STRIPE_SETUP.md)
+- [Stripe Connect Setup (Profissionais)](GUIA_STRIPE_CONNECT_COMPLETO.md) - **Configurar integração com profissionais**
+- [Stripe Subscriptions](GUIA_ASSINATURAS_STRIPE.md)
 - [Google OAuth Publishing](GUIA_GOOGLE_OAUTH_PUBLICAR.md)
+- [Environment Variables (Vercel)](GUIA_VARIAVEIS_AMBIENTE_VERCEL.md)
+- [Redirect URLs Configuration](GUIA_CONFIGURAR_REDIRECT_URLS.md)
 
