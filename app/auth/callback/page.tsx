@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const sessionId = searchParams.get("session_id");
@@ -20,6 +20,7 @@ export default function AuthCallbackPage() {
         }
 
         handleAccountCreation();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionId, success]);
 
     async function handleAccountCreation() {
@@ -40,10 +41,6 @@ export default function AuthCallbackPage() {
 
             if (!customerEmail) {
                 throw new Error("Email não encontrado no pagamento. Entre em contato com o suporte.");
-            }
-
-            if (!customerEmail) {
-                throw new Error("Email não encontrado no pagamento");
             }
 
             // Check if user already exists
@@ -173,6 +170,21 @@ export default function AuthCallbackPage() {
                 <p className="text-slate-600">Aguarde enquanto configuramos tudo para você.</p>
             </div>
         </div>
+    );
+}
+
+export default function AuthCallbackPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <div className="text-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-brand-600 mx-auto mb-4" />
+                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Carregando...</h1>
+                </div>
+            </div>
+        }>
+            <AuthCallbackContent />
+        </Suspense>
     );
 }
 
