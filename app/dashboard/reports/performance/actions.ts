@@ -196,28 +196,28 @@ function calculateHealth(
   score: number;
   indicators: { name: string; status: "good" | "warning" | "critical"; value: number; target: number }[];
 } {
-  const indicators = [
+  const indicators: Array<{ name: string; status: "good" | "warning" | "critical"; value: number; target: number }> = [
     {
       name: "Receita Mensal",
-      status: revenue >= 5000 ? "good" : revenue >= 2000 ? "warning" : "critical" as const,
+      status: revenue >= 5000 ? "good" : revenue >= 2000 ? "warning" : "critical",
       value: revenue,
       target: 5000,
     },
     {
       name: "Atendimentos",
-      status: appointments >= 40 ? "good" : appointments >= 20 ? "warning" : "critical" as const,
+      status: appointments >= 40 ? "good" : appointments >= 20 ? "warning" : "critical",
       value: appointments,
       target: 40,
     },
     {
       name: "Taxa de No-Show",
-      status: noShowRate <= 5 ? "good" : noShowRate <= 10 ? "warning" : "critical" as const,
+      status: noShowRate <= 5 ? "good" : noShowRate <= 10 ? "warning" : "critical",
       value: noShowRate,
       target: 5,
     },
     {
       name: "Pacientes Ativos",
-      status: patients >= 30 ? "good" : patients >= 15 ? "warning" : "critical" as const,
+      status: patients >= 30 ? "good" : patients >= 15 ? "warning" : "critical",
       value: patients,
       target: 30,
     },
