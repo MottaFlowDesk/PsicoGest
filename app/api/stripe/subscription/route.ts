@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 
 /**
  * Obter informações da assinatura atual
@@ -55,14 +54,6 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        // Get subscription details from Stripe
-        let stripeSubscription: Stripe.Subscription | null = null;
-        try {
-            stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
-        } catch (error) {
-            console.error("Error retrieving Stripe subscription:", error);
-        }
-
         return NextResponse.json({
             hasSubscription: true,
             plan: subscription.plan_name,
@@ -72,14 +63,6 @@ export async function GET(request: NextRequest) {
             trialEnd: subscription.trial_end,
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             canceledAt: subscription.canceled_at,
-            stripeSubscription: stripeSubscription ? {
-                id: stripeSubscription.id,
-                status: stripeSubscription.status,
-                current_period_start: stripeSubscription.current_period_start,
-                current_period_end: stripeSubscription.current_period_end,
-                cancel_at_period_end: stripeSubscription.cancel_at_period_end,
-                canceled_at: stripeSubscription.canceled_at,
-            } : null,
         });
     } catch (error: any) {
         console.error("Get subscription error:", error);
