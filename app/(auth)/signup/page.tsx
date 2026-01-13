@@ -19,6 +19,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 const signupSchema = z.object({
     fullName: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
