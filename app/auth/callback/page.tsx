@@ -27,6 +27,8 @@ function AuthCallbackContent() {
         if (!sessionId) return;
 
         setStatus("creating");
+        
+        let customerEmail: string | null = null;
 
         try {
             // Get checkout session details from Stripe
@@ -37,10 +39,11 @@ function AuthCallbackContent() {
                 throw new Error(data.error || "Erro ao obter informações do pagamento");
             }
 
-            const { customerEmail, subscriptionId, planId, billingPeriod } = data;
+            const { customerEmail: email, subscriptionId, planId, billingPeriod } = data;
+            customerEmail = email;
 
-            if (!customerEmail) {
-                throw new Error("Email não encontrado no pagamento. Entre em contato com o suporte.");
+            if (!customerEmail || !customerEmail.includes('@')) {
+                throw new Error("Email inválido no pagamento. Entre em contato com o suporte.");
             }
 
             // Check if user already exists
@@ -54,8 +57,8 @@ function AuthCallbackContent() {
             }
 
             // Create account - Supabase will send confirmation email
-            // User will set password via email link
-            const tempPassword = `Temp${Math.random().toString(36).slice(2)}${Date.now()}!`;
+            // Generate a secure temporary password
+            const tempPassword = `Temp${Math.random().toString(36).slice(2)}${Date.now()}${Math.random().toString(36).slice(2)}!A1`;
 
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: customerEmail,
@@ -63,17 +66,21 @@ function AuthCallbackContent() {
                 options: {
                     emailRedirectTo: `${window.location.origin}/auth/confirm`,
                     data: {
-                        from_checkout: true,
-                        subscription_id: subscriptionId,
-                        plan_id: planId,
-                        billing_period: billingPeriod,
+                        from_checkout: "true",
+                        subscription_id: subscriptionId || "",
+                        plan_id: planId || "",
+                        billing_period: billingPeriod || "monthly",
                     }
                 }
             });
 
             if (authError) {
+                console.error("Supabase signup error:", authError);
+                
                 // If user already exists, try to sign in or send password reset
-                if (authError.message.includes("already registered") || authError.message.includes("User already registered")) {
+                if (authError.message.includes("already registered") || 
+                    authError.message.includes("User already registered") ||
+                    authError.message.includes("already exists")) {
                     // Try to sign in with magic link
                     const { error: signInError } = await supabase.auth.signInWithOtp({
                         email: customerEmail,
@@ -92,7 +99,16 @@ function AuthCallbackContent() {
                     router.push(`/login?email=${encodeURIComponent(customerEmail)}&check_email=true`);
                     return;
                 }
-                throw authError;
+                
+                // Show the actual error message from Supabase
+                const errorMessage = authError.message || "Erro ao criar conta";
+                console.error("Signup error details:", {
+                    message: errorMessage,
+                    status: authError.status,
+                    email: customerEmail
+                });
+                
+                throw new Error(`Erro ao criar conta: ${errorMessage}`);
             }
 
             if (authData.user) {
@@ -142,7 +158,25 @@ function AuthCallbackContent() {
         } catch (error: any) {
             console.error("Error creating account:", error);
             setStatus("error");
-            toast.error(error.message || "Erro ao criar conta. Entre em contato com o suporte.");
+            
+            // Show more detailed error message
+            let errorMessage = "Erro ao criar conta. Entre em contato com o suporte.";
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            }
+            
+            toast.error(errorMessage);
+            
+            // Log full error for debugging
+            console.error("Full error details:", {
+                error,
+                sessionId,
+                customerEmail,
+                errorMessage: error.message,
+                errorStatus: error.status,
+            });
             
             // Redirect to pricing after 3 seconds
             setTimeout(() => {
