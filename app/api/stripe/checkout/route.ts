@@ -41,9 +41,44 @@ export async function POST(request: NextRequest) {
             ? plan.price_id_annual 
             : plan.price_id_monthly;
 
-        if (!priceId) {
+        if (!priceId || priceId.trim() === '') {
             return NextResponse.json(
-                { error: "Price ID não configurado para este plano. Configure as variáveis de ambiente STRIPE_PRICE_*" },
+                { 
+                    error: `Price ID não configurado para o plano ${planId} (${billingPeriod}). Configure a variável de ambiente STRIPE_PRICE_${planId.toUpperCase()}_${billingPeriod.toUpperCase()}`,
+                    planId,
+                    billingPeriod,
+                    missingVariable: `STRIPE_PRICE_${planId.toUpperCase()}_${billingPeriod.toUpperCase()}`
+                },
+                { status: 500 }
+            );
+        }
+
+        // Validate price ID format (should start with price_)
+        if (!priceId.startsWith('price_')) {
+            return NextResponse.json(
+                { 
+                    error: `Price ID inválido para o plano ${planId}. O Price ID deve começar com 'price_'. Valor atual: ${priceId}`,
+                    planId,
+                    billingPeriod,
+                    invalidPriceId: priceId
+                },
+                { status: 500 }
+            );
+        }
+
+        // Verify price exists in Stripe
+        try {
+            await stripe.prices.retrieve(priceId);
+        } catch (priceError: any) {
+            console.error(`Price ID ${priceId} não encontrado no Stripe:`, priceError);
+            return NextResponse.json(
+                { 
+                    error: `Price ID não encontrado no Stripe: ${priceId}. Verifique se o produto foi criado corretamente e se a variável de ambiente está correta.`,
+                    planId,
+                    billingPeriod,
+                    invalidPriceId: priceId,
+                    stripeError: priceError.message
+                },
                 { status: 500 }
             );
         }

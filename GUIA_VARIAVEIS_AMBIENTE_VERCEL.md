@@ -73,13 +73,28 @@ Para cada variável:
 1. No Stripe Dashboard, vá em **Products**
 2. Para cada produto criado:
    - Clique no produto
-   - Encontre o **Price ID** (começa com `price_`)
-   - Copie e cole no Vercel na variável correspondente
+   - Na seção **Pricing**, você verá os preços criados
+   - Clique no preço (mensal ou anual)
+   - Na página do preço, encontre o **Price ID** (começa com `price_`)
+   - **IMPORTANTE**: Copie o Price ID completo, começando com `price_`
+   - Cole no Vercel na variável correspondente
 
 **Exemplo:**
-- Produto "Essencial Mensal" → `STRIPE_PRICE_ESSENCIAL_MONTHLY`
-- Produto "Essencial Anual" → `STRIPE_PRICE_ESSENCIAL_ANNUAL`
+- Produto "Essencial Mensal" → `STRIPE_PRICE_ESSENCIAL_MONTHLY` = `price_1ABC...`
+- Produto "Essencial Anual" → `STRIPE_PRICE_ESSENCIAL_ANNUAL` = `price_1XYZ...`
 - E assim por diante...
+
+**⚠️ Erro comum:**
+- Se você ver o erro "No such price: price_1SpCAvDdXncmXPx3MqZwVKFD", significa que:
+  1. O Price ID não existe no Stripe (produto não foi criado)
+  2. O Price ID foi copiado incorretamente
+  3. O Price ID é de um ambiente diferente (test vs live)
+
+**Como verificar:**
+1. Acesse o Stripe Dashboard
+2. Vá em **Products**
+3. Verifique se todos os 6 produtos foram criados (3 planos × 2 períodos)
+4. Para cada produto, verifique se o Price ID na variável de ambiente corresponde ao Price ID no Stripe
 
 ---
 
@@ -131,11 +146,44 @@ Marque conforme configurar:
 3. Verifique se não há espaços extras nos valores
 4. Verifique se os Price IDs estão corretos (começam com `price_`)
 
+### Erro "No such price: price_1SpCAvDdXncmXPx3MqZwVKFD"
+
+Este erro significa que o Price ID não existe no Stripe. **Soluções:**
+
+1. **Verificar se o produto foi criado:**
+   - Acesse Stripe Dashboard → **Products**
+   - Verifique se o produto existe
+   - Se não existir, crie seguindo o `GUIA_ASSINATURAS_STRIPE.md`
+
+2. **Verificar se o Price ID está correto:**
+   - No Stripe Dashboard, vá em **Products**
+   - Clique no produto
+   - Na seção **Pricing**, clique no preço (mensal ou anual)
+   - Na página do preço, copie o **Price ID** completo
+   - Verifique se corresponde ao valor na variável de ambiente no Vercel
+
+3. **Verificar ambiente (Test vs Live):**
+   - Se estiver usando `sk_test_`, use Price IDs de **Test mode**
+   - Se estiver usando `sk_live_`, use Price IDs de **Live mode**
+   - No Stripe Dashboard, verifique se está no modo correto (toggle no canto superior direito)
+
+4. **Verificar se copiou o Price ID completo:**
+   - O Price ID deve começar com `price_`
+   - Deve ter aproximadamente 30-40 caracteres
+   - Exemplo: `price_1SpCAvDdXncmXPx3MqZwVKFD` (este é um exemplo, use o seu)
+
+5. **Recriar o produto (se necessário):**
+   - Se o Price ID não existir mais, recrie o produto no Stripe
+   - Copie o novo Price ID
+   - Atualize a variável de ambiente no Vercel
+   - Faça **Redeploy**
+
 ### Erro "Price ID não configurado"
 
 - Verifique se todos os 6 Price IDs estão configurados
 - Verifique se os nomes das variáveis estão exatamente como listado acima
 - Verifique se os produtos foram criados no Stripe corretamente
+- Verifique se não há espaços extras antes ou depois do Price ID
 
 ---
 
