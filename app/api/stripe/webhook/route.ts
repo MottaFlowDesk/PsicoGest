@@ -265,6 +265,11 @@ async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: 
             professional = profByCustomer;
         } else {
             // Try to find by customer email (for new accounts created after payment)
+            if (!stripe) {
+                console.error("Stripe not configured - cannot retrieve customer");
+                return;
+            }
+            
             const customer = typeof subscription.customer === 'string'
                 ? await stripe.customers.retrieve(subscription.customer)
                 : subscription.customer;
