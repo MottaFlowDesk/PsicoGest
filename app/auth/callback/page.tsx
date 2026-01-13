@@ -60,11 +60,15 @@ function AuthCallbackContent() {
             // Generate a secure temporary password
             const tempPassword = `Temp${Math.random().toString(36).slice(2)}${Date.now()}${Math.random().toString(36).slice(2)}!A1`;
 
+            // Use NEXT_PUBLIC_APP_URL if available, otherwise use window.location.origin
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+            const redirectUrl = `${appUrl}/auth/confirm`;
+
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: customerEmail,
                 password: tempPassword,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/auth/confirm`,
+                    emailRedirectTo: redirectUrl,
                     data: {
                         from_checkout: "true",
                         subscription_id: subscriptionId || "",
@@ -82,10 +86,13 @@ function AuthCallbackContent() {
                     authError.message.includes("User already registered") ||
                     authError.message.includes("already exists")) {
                     // Try to sign in with magic link
+                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+                    const redirectUrl = `${appUrl}/auth/confirm`;
+                    
                     const { error: signInError } = await supabase.auth.signInWithOtp({
                         email: customerEmail,
                         options: {
-                            emailRedirectTo: `${window.location.origin}/auth/confirm`,
+                            emailRedirectTo: redirectUrl,
                         }
                     });
 
