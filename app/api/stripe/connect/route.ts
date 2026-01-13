@@ -42,24 +42,52 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ url: accountLink.url });
         }
 
+        // Validate email
+        if (!professional.email || !professional.email.includes('@')) {
+            return NextResponse.json(
+                { error: "Email do profissional inválido" },
+                { status: 400 }
+            );
+        }
+
         // Create new Stripe Connect Express account
-        const account = await stripe.accounts.create({
-            type: "express",
-            country: "BR",
-            email: professional.email,
-            capabilities: {
-                card_payments: { requested: true },
-                transfers: { requested: true },
-            },
-            business_type: "individual",
-            business_profile: {
-                mcc: "8049", // Health practitioners office
-                product_description: "Serviços de psicologia e saúde mental",
-            },
-            metadata: {
-                professional_id: professional.id,
-            },
-        });
+        let account;
+        try {
+            account = await stripe.accounts.create({
+                type: "express",
+                country: "BR",
+                email: professional.email,
+                capabilities: {
+                    card_payments: { requested: true },
+                    transfers: { requested: true },
+                },
+                business_type: "individual",
+                business_profile: {
+                    mcc: "8049", // Health practitioners office
+                    product_description: "Serviços de psicologia e saúde mental",
+                },
+                metadata: {
+                    professional_id: professional.id,
+                },
+            });
+        } catch (stripeError: any) {
+            console.error("Stripe account creation error:", stripeError);
+            // Check if it's a Stripe Connect not enabled error
+            if (stripeError.code === 'resource_missing' || stripeError.message?.includes('Connect')) {
+                return NextResponse.json(
+                    { 
+                        error: "Stripe Connect não está habilitado na sua conta Stripe. Ative o Stripe Connect no dashboard do Stripe.",
+                        details: {
+                            type: stripeError.type,
+                            code: stripeError.code,
+                            message: stripeError.message,
+                        }
+                    },
+                    { status: 400 }
+                );
+            }
+            throw stripeError;
+        }
 
         // Save account ID to database
         const { error: updateError } = await supabase
@@ -76,18 +104,60 @@ export async function POST(request: NextRequest) {
         }
 
         // Create account link for onboarding
-        const accountLink = await stripe.accountLinks.create({
-            account: account.id,
-            refresh_url: `${request.nextUrl.origin}/dashboard/financial?stripe=refresh`,
-            return_url: `${request.nextUrl.origin}/api/stripe/connect/callback`,
-            type: "account_onboarding",
-        });
+        let accountLink;
+        try {
+            accountLink = await stripe.accountLinks.create({
+                account: account.id,
+                refresh_url: `${request.nextUrl.origin}/dashboard/financial?stripe=refresh`,
+                return_url: `${request.nextUrl.origin}/api/stripe/connect/callback`,
+                type: "account_onboarding",
+            });
+        } catch (linkError: any) {
+            console.error("Stripe account link creation error:", linkError);
+            // If account link creation fails, try to delete the account
+            try {
+                await stripe.accounts.del(account.id);
+            } catch (delError) {
+                console.error("Failed to cleanup account:", delError);
+            }
+            throw linkError;
+        }
 
         return NextResponse.json({ url: accountLink.url });
     } catch (error: any) {
         console.error("Stripe Connect error:", error);
+        
+        // Provide more detailed error information
+        let errorMessage = "Erro ao conectar conta Stripe";
+        let errorDetails: any = {};
+
+        if (error.type === 'StripeInvalidRequestError') {
+            errorMessage = `Erro do Stripe: ${error.message}`;
+            errorDetails = {
+                type: error.type,
+                code: error.code,
+                param: error.param,
+                message: error.message,
+            };
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        // Log full error for debugging
+        console.error("Full Stripe Connect error:", {
+            error,
+            errorType: error.type,
+            errorCode: error.code,
+            errorMessage: error.message,
+            stack: error.stack,
+        });
+
         return NextResponse.json(
-            { error: error.message || "Failed to create Stripe account" },
+            { 
+                error: errorMessage,
+                details: errorDetails,
+                type: error.type || 'UnknownError',
+            },
             { status: 500 }
         );
     }

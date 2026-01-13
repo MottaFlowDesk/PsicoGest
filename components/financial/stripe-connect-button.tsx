@@ -50,13 +50,22 @@ export function StripeConnectButton() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || "Failed to connect");
+                // Show detailed error message
+                const errorMsg = data.error || "Erro ao conectar com Stripe";
+                const errorDetails = data.details ? `\nDetalhes: ${JSON.stringify(data.details)}` : '';
+                console.error("Stripe Connect error:", data);
+                throw new Error(`${errorMsg}${errorDetails}`);
+            }
+
+            if (!data.url) {
+                throw new Error("URL de redirecionamento não recebida do servidor");
             }
 
             // Redirect to Stripe onboarding
             window.location.href = data.url;
         } catch (error: any) {
-            toast.error(error.message || "Erro ao conectar com Stripe");
+            console.error("Error connecting to Stripe:", error);
+            toast.error(error.message || "Erro ao conectar com Stripe. Verifique o console para mais detalhes.");
             setConnecting(false);
         }
     }
