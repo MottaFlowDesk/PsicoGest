@@ -39,3 +39,10 @@ To learn more about Next.js, take a look at the following resources:
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
+## Configuration Guides
+
+See the following guides for setting up integrations:
+- [Cron Jobs Setup](GUIA_CRON_JOB_ORG.md)
+- [Stripe Configuration](GUIA_STRIPE_SETUP.md)
+- [Google OAuth Publishing](GUIA_GOOGLE_OAUTH_PUBLICAR.md)
+
