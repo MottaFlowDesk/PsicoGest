@@ -168,6 +168,26 @@ async function handleCheckoutCompleted(db: SupabaseAdminClient, session: Stripe.
                 paid_at: new Date().toISOString(),
             });
 
+            // Create notification for payment received
+            try {
+                const { notifyPaymentReceived } = await import("@/lib/notifications/payment-notifications");
+                const { data: invoiceData } = await db
+                    .from("invoices")
+                    .select("invoice_number, amount_cents")
+                    .eq("id", invoiceId)
+                    .single();
+
+                if (invoiceData) {
+                    await notifyPaymentReceived(invoice.professional_id, {
+                        invoiceNumber: invoiceData.invoice_number,
+                        amount: invoiceData.amount_cents / 100,
+                        invoiceId: invoiceId,
+                    });
+                }
+            } catch (notificationError) {
+                console.error("Failed to create payment notification:", notificationError);
+            }
+
             console.log(`Invoice ${invoiceId} marked as paid via checkout session`);
             return;
         }
@@ -388,6 +408,20 @@ async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: 
             .eq("id", professional.id);
 
         console.log(`Subscription created for professional ${professional.id}`);
+
+        // Create notification for subscription activation
+        try {
+            const { getSubscriptionNotificationTemplate, createNotificationFromTemplate } = await import("@/lib/notifications/templates");
+            const template = getSubscriptionNotificationTemplate("created", { planName: planName });
+            await createNotificationFromTemplate(
+                professional.id,
+                "subscription",
+                template,
+                { planName, status: subscription.status }
+            );
+        } catch (notificationError) {
+            console.error("Failed to create subscription notification:", notificationError);
+        }
     } else {
         const planName = planId || subscription.items.data[0]?.price.metadata?.plan_id || 'essencial';
 
@@ -420,6 +454,20 @@ async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: 
             .eq("id", professionalId);
 
         console.log(`Subscription created for professional ${professionalId}`);
+
+        // Create notification for subscription activation
+        try {
+            const { getSubscriptionNotificationTemplate, createNotificationFromTemplate } = await import("@/lib/notifications/templates");
+            const template = getSubscriptionNotificationTemplate("created", { planName: planName });
+            await createNotificationFromTemplate(
+                professionalId,
+                "subscription",
+                template,
+                { planName, status: subscription.status }
+            );
+        } catch (notificationError) {
+            console.error("Failed to create subscription notification:", notificationError);
+        }
     }
 }
 
@@ -514,5 +562,19 @@ async function handleSubscriptionDeleted(db: SupabaseAdminClient, subscription: 
         .eq("id", professionalId);
 
     console.log(`Subscription deleted for professional ${professionalId}`);
+
+    // Create notification for subscription expiration
+    try {
+        const { getSubscriptionNotificationTemplate, createNotificationFromTemplate } = await import("@/lib/notifications/templates");
+        const template = getSubscriptionNotificationTemplate("expired", { planName: planName || "desconhecido" });
+        await createNotificationFromTemplate(
+            professionalId,
+            "subscription",
+            template,
+            { planName: planName || "desconhecido", status: "expired" }
+        );
+    } catch (notificationError) {
+        console.error("Failed to create subscription expiration notification:", notificationError);
+    }
 }
 

@@ -40,6 +40,41 @@ export async function checkCanAddPatient(professionalId: string): Promise<{
     const maxAllowed = limits.unlimited_patients ? 999999 : limits.max_patients;
     const canAdd = canAddPatient(planName, currentCount);
 
+    // Create notification when limit is reached (only once per day to avoid spam)
+    if (!canAdd) {
+        try {
+            const { notifyLimitReached } = await import("@/lib/notifications/system-notifications");
+            const today = new Date().toISOString().split('T')[0];
+            const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+            const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+            const supabaseAdmin = createSupabaseClient(supabaseUrl, supabaseServiceKey, {
+                auth: { autoRefreshToken: false, persistSession: false },
+            });
+
+            const { data: existingNotification } = await supabaseAdmin
+                .from("notifications")
+                .select("id")
+                .eq("professional_id", professionalId)
+                .eq("type", "system")
+                .eq("read", false)
+                .like("message", `%Limite de pacientes%`)
+                .gte("created_at", `${today}T00:00:00`)
+                .limit(1)
+                .single();
+
+            if (!existingNotification) {
+                await notifyLimitReached(professionalId, {
+                    limitType: "pacientes",
+                    currentValue: currentCount,
+                    maxValue: maxAllowed,
+                });
+            }
+        } catch (notificationError) {
+            console.error("Failed to create limit notification:", notificationError);
+        }
+    }
+
     return {
         canAdd,
         currentCount,
@@ -86,9 +121,45 @@ export async function checkCanUseAI(professionalId: string): Promise<{
     const totalSeconds = usage?.reduce((sum, log) => sum + (log.duration_seconds || 0), 0) || 0;
     const hoursUsed = totalSeconds / 3600;
     const maxHours = limits.unlimited_ai ? 999999 : limits.max_ai_hours_per_month;
+    const canUse = canUseAI(planName, hoursUsed);
+
+    // Create notification when limit is reached (only once per day to avoid spam)
+    if (!canUse) {
+        try {
+            const { notifyLimitReached } = await import("@/lib/notifications/system-notifications");
+            const today = new Date().toISOString().split('T')[0];
+            const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+            const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+            const supabaseAdmin = createSupabaseClient(supabaseUrl, supabaseServiceKey, {
+                auth: { autoRefreshToken: false, persistSession: false },
+            });
+
+            const { data: existingNotification } = await supabaseAdmin
+                .from("notifications")
+                .select("id")
+                .eq("professional_id", professionalId)
+                .eq("type", "system")
+                .eq("read", false)
+                .like("message", `%Limite de IA%`)
+                .gte("created_at", `${today}T00:00:00`)
+                .limit(1)
+                .single();
+
+            if (!existingNotification) {
+                await notifyLimitReached(professionalId, {
+                    limitType: "horas de IA",
+                    currentValue: Math.round(hoursUsed * 100) / 100,
+                    maxValue: maxHours,
+                });
+            }
+        } catch (notificationError) {
+            console.error("Failed to create limit notification:", notificationError);
+        }
+    }
 
     return {
-        canUse: canUseAI(planName, hoursUsed),
+        canUse,
         hoursUsed: Math.round(hoursUsed * 100) / 100, // 2 casas decimais
         maxHours,
         planName,

@@ -253,22 +253,42 @@ export async function markInvoiceAsPaid(invoiceId: string, paymentMethod?: strin
         throw new Error("Cannot mark a cancelled invoice as paid");
     }
 
-    const { error } = await supabase
-        .from("invoices")
-        .update({
-            status: "paid",
-            paid_at: new Date().toISOString(),
-            payment_method: paymentMethod || "other",
-        })
-        .eq("id", invoiceId);
+           const { error } = await supabase
+               .from("invoices")
+               .update({
+                   status: "paid",
+                   paid_at: new Date().toISOString(),
+                   payment_method: paymentMethod || "other",
+               })
+               .eq("id", invoiceId);
 
-    if (error) throw error;
+           if (error) throw error;
 
-    revalidatePath("/dashboard/financial");
-    revalidatePath("/dashboard");
+           // Create notification for payment received
+           try {
+               const { notifyPaymentReceived } = await import("@/lib/notifications/payment-notifications");
+               const { data: invoiceData } = await supabase
+                   .from("invoices")
+                   .select("invoice_number, amount_cents")
+                   .eq("id", invoiceId)
+                   .single();
 
-    return { success: true };
-}
+               if (invoiceData) {
+                   await notifyPaymentReceived(professional.id, {
+                       invoiceNumber: invoiceData.invoice_number,
+                       amount: invoiceData.amount_cents / 100,
+                       invoiceId: invoiceId,
+                   });
+               }
+           } catch (notificationError) {
+               console.error("Failed to create payment notification:", notificationError);
+           }
+
+           revalidatePath("/dashboard/financial");
+           revalidatePath("/dashboard");
+
+           return { success: true };
+       }
 
 export async function cancelInvoice(invoiceId: string, reason?: string) {
     const supabase = await createClient();

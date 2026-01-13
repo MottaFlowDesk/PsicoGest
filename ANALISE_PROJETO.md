@@ -112,7 +112,13 @@
 - ✅ Onboarding de profissionais
 - ✅ Webhooks configurados
 - ✅ Processamento de pagamentos
-- ⚠️ Planos de assinatura (estrutura no banco, mas não implementado no código)
+- ✅ Sistema de assinaturas e planos completo
+- ✅ Checkout de assinatura (pagamento antes do cadastro)
+- ✅ Gerenciamento de assinaturas
+- ✅ Limites por plano (pacientes, features de IA)
+- ✅ Controle de acesso baseado em plano
+- ✅ Período de trial (14 dias)
+- ✅ Cancelamento e reativação de assinatura
 
 ### 9. ⚙️ Configurações
 - ✅ Perfil do profissional
@@ -174,10 +180,34 @@
 - ✅ Ações rápidas
 - ✅ Cards informativos
 
-### 14. 📄 Documentação
+### 14. 💳 Sistema de Assinaturas e Planos
+- ✅ Três planos implementados (Essencial, Profissional, Premium)
+- ✅ Checkout público de assinatura (sem necessidade de login)
+- ✅ Pagamento antes do cadastro (fluxo otimizado)
+- ✅ Criação automática de conta após pagamento
+- ✅ Período de trial de 14 dias
+- ✅ Gerenciamento de assinatura no dashboard
+- ✅ Cancelamento e reativação de assinatura
+- ✅ Limites por plano:
+  - Máximo de pacientes
+  - Horas de IA por mês
+  - Recursos de WhatsApp
+  - Transcrição de IA
+  - Suporte prioritário
+- ✅ Controle de acesso baseado em plano
+- ✅ Validação de limites ao adicionar pacientes
+- ✅ Sincronização com Stripe via webhooks
+- ✅ Tabela `subscriptions` no banco de dados
+- ✅ Função `get_subscription_limits()` para verificar limites
+- ✅ Página de gerenciamento de assinatura
+
+### 15. 📄 Documentação
 - ✅ Guia de configuração do cron-job.org
 - ✅ Guia de configuração do Stripe
+- ✅ Guia de configuração do Stripe Connect
+- ✅ Guia de assinaturas Stripe
 - ✅ Guia de publicação do Google OAuth
+- ✅ Guia de variáveis de ambiente Vercel
 - ✅ README atualizado
 
 ---
@@ -194,18 +224,7 @@
 - ❌ Controle de uso/custos de IA
 - ⚠️ **Nota:** Estrutura no banco existe (`ai_usage_logs`, `ai_transcriptions`), mas funcionalidade não implementada
 
-### 2. 💳 Sistema de Assinaturas/Planos
-- ❌ Criação de planos no Stripe
-- ❌ Checkout de assinatura
-- ❌ Gerenciamento de assinaturas
-- ❌ Limites por plano (pacientes, features)
-- ❌ Upgrade/downgrade de planos
-- ❌ Cancelamento de assinatura
-- ❌ Período de trial (14 dias mencionado)
-- ❌ Controle de acesso baseado em plano
-- ⚠️ **Nota:** Landing page mostra planos, mas não há implementação
-
-### 3. 📱 Agendamento Online por Pacientes
+### 2. 📱 Agendamento Online por Pacientes
 - ❌ Página pública para pacientes agendarem
 - ❌ Link compartilhável por profissional
 - ❌ Visualização de disponibilidade
@@ -213,95 +232,95 @@
 - ❌ Confirmação automática
 - ⚠️ **Nota:** Mencionado na landing ("O paciente agenda online se você permitir")
 
-### 4. 📧 Notificações e Comunicações
+### 3. 📧 Notificações e Comunicações
 - ❌ Sistema de notificações in-app
 - ❌ Notificações push (se implementar PWA)
 - ❌ Email templates mais elaborados
 - ❌ Histórico de comunicações
 
-### 5. 📈 Relatórios Avançados
+### 4. 📈 Relatórios Avançados
 - ❌ Relatórios financeiros detalhados
 - ❌ Relatórios de atendimentos
 - ❌ Gráficos e visualizações
 - ❌ Exportação de dados (PDF, Excel)
 - ❌ Análise de performance
 
-### 6. 🔍 Busca Global
+### 5. 🔍 Busca Global
 - ❌ Busca unificada em toda a plataforma
 - ❌ Busca por paciente, agendamento, prontuário
 
-### 7. 👤 Perfil do Paciente
+### 6. 👤 Perfil do Paciente
 - ❌ Página de perfil mais completa
 - ❌ Histórico financeiro detalhado
 - ❌ Timeline de atendimentos
 - ❌ Gráficos de evolução
 
-### 8. 🧪 Testes
+### 7. 🧪 Testes
 - ❌ Testes unitários
 - ❌ Testes de integração
 - ❌ Testes E2E
 - ❌ Cobertura de código
 
-### 9. 📱 PWA (Progressive Web App)
+### 8. 📱 PWA (Progressive Web App)
 - ❌ Service Worker
 - ❌ Manifest.json
 - ❌ Instalação offline
 - ❌ Notificações push
 
-### 10. 🌐 Internacionalização
+### 9. 🌐 Internacionalização
 - ❌ Sistema de i18n
 - ❌ Traduções
 - ❌ Suporte a múltiplos idiomas
 
-### 11. 🔔 Notificações em Tempo Real
+### 10. 🔔 Notificações em Tempo Real
 - ❌ WebSockets ou Supabase Realtime
 - ❌ Notificações instantâneas
 - ❌ Atualizações ao vivo
 
-### 12. 📊 Analytics e Monitoramento
+### 11. 📊 Analytics e Monitoramento
 - ❌ Error tracking (Sentry, etc.)
 - ❌ Analytics de uso
 - ❌ Performance monitoring
 - ❌ Logs estruturados
 
-### 13. 🎯 Features Adicionais Mencionadas
+### 12. 🎯 Features Adicionais Mencionadas
 - ❌ Diário de gratidão (mencionado na landing)
 - ❌ Técnicas de respiração (mencionado na landing)
 - ❌ Sistema de tarefas/lembretes para pacientes
 
-### 14. 🔐 Melhorias de Segurança
+### 13. 🔐 Melhorias de Segurança
 - ❌ Autenticação de dois fatores (2FA)
 - ❌ Sessões ativas
 - ❌ Logout de todos os dispositivos
 - ❌ Histórico de acessos
 
-### 15. 💼 Features Empresariais
+### 14. 💼 Features Empresariais
 - ❌ Múltiplos profissionais no mesmo consultório
 - ❌ Compartilhamento de pacientes
 - ❌ Permissões e roles
 - ❌ Relatórios consolidados
 
-### 16. 📱 App Mobile
+### 15. 📱 App Mobile
 - ❌ App React Native
 - ❌ Notificações push nativas
 - ❌ Acesso offline
 
-### 17. 🔄 Melhorias de Integração
+### 16. 🔄 Melhorias de Integração
 - ❌ Sincronização bidirecional completa com Google Calendar
 - ❌ Integração com Zoom (estrutura existe, mas não implementada)
 - ❌ Mais opções de teleconsulta
 
-### 18. 📝 Templates e Modelos
+### 17. 📝 Templates e Modelos
 - ❌ Templates de prontuários
 - ❌ Modelos de anotações
 - ❌ Formulários customizáveis
 
-### 19. 🎨 Customização
+### 18. 🎨 Customização
 - ❌ Temas personalizados
 - ❌ Branding customizado
 - ❌ Campos customizados
 
-### 20. 📚 Documentação Técnica
+### 19. 📚 Documentação Técnica
 - ❌ API Documentation
 - ❌ Guias de desenvolvimento
 - ❌ Diagramas de arquitetura
@@ -312,10 +331,10 @@
 ## 🎯 PRIORIDADES RECOMENDADAS
 
 ### Alta Prioridade (MVP Completo)
-1. **Sistema de Assinaturas** - Essencial para monetização
-2. **IA Básica** - Diferencial competitivo mencionado
-3. **Agendamento Online** - Feature prometida na landing
-4. **Testes Básicos** - Garantir qualidade
+1. **IA Básica** - Diferencial competitivo mencionado
+2. **Agendamento Online** - Feature prometida na landing
+3. **Testes Básicos** - Garantir qualidade
+4. **Pagamentos de Faturas** - Finalizar integração Stripe Connect para recebimentos
 
 ### Média Prioridade (Melhorias)
 5. **Relatórios** - Valor agregado
@@ -341,15 +360,15 @@
 
 ### ⚠️ Pontos de Atenção
 - Features de IA prometidas mas não implementadas
-- Sistema de planos mencionado mas não funcional
 - Algumas estruturas no banco sem uso (AI tables)
 - Falta de testes automatizados
 - Falta de monitoramento/error tracking
+- Pagamentos de faturas requerem Stripe Connect ativo (implementado, mas precisa validação)
 
 ### 🚀 Próximos Passos Sugeridos
-1. Implementar sistema de assinaturas (Stripe Subscriptions)
-2. Adicionar funcionalidade básica de IA (transcrição)
-3. Criar página de agendamento público
+1. Adicionar funcionalidade básica de IA (transcrição)
+2. Criar página de agendamento público
+3. Finalizar integração de pagamentos de faturas (testes e validações)
 4. Adicionar testes críticos
 5. Configurar error tracking (Sentry)
 6. Implementar notificações in-app
@@ -358,10 +377,10 @@
 
 ## 📊 RESUMO ESTATÍSTICO
 
-- **Funcionalidades Implementadas:** ~85%
-- **Funcionalidades Faltantes:** ~15%
-- **Pronto para Produção:** ⚠️ Parcialmente (faltam features prometidas)
-- **Pronto para MVP:** ✅ Sim (com algumas ressalvas)
+- **Funcionalidades Implementadas:** ~90%
+- **Funcionalidades Faltantes:** ~10%
+- **Pronto para Produção:** ⚠️ Parcialmente (faltam features de IA prometidas)
+- **Pronto para MVP:** ✅ Sim (sistema de assinaturas completo)
 
 ---
 

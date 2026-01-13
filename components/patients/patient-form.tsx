@@ -132,7 +132,7 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                     // Continue anyway - don't block patient creation if check fails
                 }
 
-                const { error } = await supabase.from('patients').insert({
+                const { data: newPatient, error } = await supabase.from('patients').insert({
                     professional_id: professional.id,
                     full_name: data.fullName,
                     cpf: data.cpf || null,
@@ -150,9 +150,23 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                         city: data.address.city,
                         state: data.address.state
                     }
-                });
+                }).select("id").single();
 
                 if (error) throw error;
+
+                // Create notification for new patient
+                if (newPatient) {
+                    try {
+                        const { notifyPatientCreated } = await import("@/lib/notifications/patient-notifications");
+                        await notifyPatientCreated(professional.id, {
+                            patientName: data.fullName,
+                            patientId: newPatient.id,
+                        });
+                    } catch (notificationError) {
+                        console.error("Failed to create patient notification:", notificationError);
+                        // Don't fail the patient creation if notification fails
+                    }
+                }
 
                 toast.success("Paciente cadastrado com sucesso!");
                 router.push("/dashboard/patients");

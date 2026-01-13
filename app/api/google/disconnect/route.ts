@@ -24,6 +24,24 @@ export async function POST() {
             return NextResponse.json({ error: "Failed to disconnect" }, { status: 500 });
         }
 
+        // Create notification for integration disconnection
+        try {
+            const { data: professional } = await supabase
+                .from("professionals")
+                .select("id")
+                .eq("user_id", user.id)
+                .single();
+
+            if (professional) {
+                const { notifyIntegrationDisconnected } = await import("@/lib/notifications/system-notifications");
+                await notifyIntegrationDisconnected(professional.id, {
+                    integrationType: "google",
+                });
+            }
+        } catch (notificationError) {
+            console.error("Failed to create disconnection notification:", notificationError);
+        }
+
         return NextResponse.json({ success: true });
     } catch (error: any) {
         console.error("Google disconnect error:", error);

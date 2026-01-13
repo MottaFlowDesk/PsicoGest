@@ -34,6 +34,16 @@ export async function POST() {
             })
             .eq("id", professional.id);
 
+        // Create notification for integration disconnection
+        try {
+            const { notifyIntegrationDisconnected } = await import("@/lib/notifications/system-notifications");
+            await notifyIntegrationDisconnected(professional.id, {
+                integrationType: "whatsapp",
+            });
+        } catch (notificationError) {
+            console.error("Failed to create disconnection notification:", notificationError);
+        }
+
         return NextResponse.json({ success: true });
     } catch (error: any) {
         console.error("WhatsApp disconnect error:", error);

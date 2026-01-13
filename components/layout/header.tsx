@@ -1,10 +1,11 @@
 "use client";
 
-import { Bell, Menu, Plus, Search } from "lucide-react";
+import { Menu, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSidebarStore } from "./sidebar-store";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 interface HeaderProps {
     onMenuClick?: () => void;
@@ -37,10 +38,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             </div>
 
             <div className="flex items-center gap-3 ml-4">
-                <button className="p-2 text-slate-400 hover:text-slate-600 relative transition-colors">
-                    <Bell size={20} />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                </button>
+                <NotificationBell />
                 <NewAppointmentDialog
                     className="hidden sm:flex items-center gap-1 bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
                 />

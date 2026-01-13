@@ -148,6 +148,22 @@ export async function createAppointment(data: {
             console.error("Failed to create Google Calendar event:", googleError);
         }
     }
+
+    // Create notification for appointment creation
+    if (patient) {
+        try {
+            const { notifyAppointmentCreated } = await import("@/lib/notifications/appointment-notifications");
+            await notifyAppointmentCreated(professional.id, {
+                patientName: patient.full_name,
+                appointmentDate: scheduledAt.toISOString(),
+                appointmentTime: data.time,
+                appointmentId: appointment.id,
+            });
+        } catch (notificationError) {
+            // Log but don't fail the appointment creation
+            console.error("Failed to create appointment notification:", notificationError);
+        }
+    }
     
     revalidatePath("/dashboard/appointments");
     revalidatePath("/dashboard/calendar");
@@ -346,7 +362,50 @@ export async function updateAppointmentStatus(
 }
 
 export async function confirmAppointment(appointmentId: string) {
-    return updateAppointmentStatus(appointmentId, "confirmed");
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) throw new Error("Professional not found");
+
+    // Get appointment with patient info
+    const { data: appointment } = await supabase
+        .from("appointments")
+        .select(`
+            *,
+            patients (
+                full_name
+            )
+        `)
+        .eq("id", appointmentId)
+        .single();
+
+    const result = await updateAppointmentStatus(appointmentId, "confirmed");
+
+    // Create notification for appointment confirmation
+    if (appointment && appointment.patients) {
+        try {
+            const { notifyAppointmentConfirmed } = await import("@/lib/notifications/appointment-notifications");
+            const appointmentDate = new Date(appointment.scheduled_at);
+            await notifyAppointmentConfirmed(professional.id, {
+                patientName: (appointment.patients as any).full_name,
+                appointmentDate: appointmentDate.toISOString(),
+                appointmentTime: format(appointmentDate, "HH:mm"),
+                appointmentId: appointment.id,
+            });
+        } catch (notificationError) {
+            console.error("Failed to create confirmation notification:", notificationError);
+        }
+    }
+
+    return result;
 }
 
 export async function completeAppointment(appointmentId: string) {
@@ -354,11 +413,97 @@ export async function completeAppointment(appointmentId: string) {
 }
 
 export async function cancelAppointment(appointmentId: string, reason?: string) {
-    return updateAppointmentStatus(appointmentId, "cancelled", reason);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) throw new Error("Professional not found");
+
+    // Get appointment with patient info
+    const { data: appointment } = await supabase
+        .from("appointments")
+        .select(`
+            *,
+            patients (
+                full_name
+            )
+        `)
+        .eq("id", appointmentId)
+        .single();
+
+    const result = await updateAppointmentStatus(appointmentId, "cancelled", reason);
+
+    // Create notification for appointment cancellation
+    if (appointment && appointment.patients) {
+        try {
+            const { notifyAppointmentCancelled } = await import("@/lib/notifications/appointment-notifications");
+            const appointmentDate = new Date(appointment.scheduled_at);
+            await notifyAppointmentCancelled(professional.id, {
+                patientName: (appointment.patients as any).full_name,
+                appointmentDate: appointmentDate.toISOString(),
+                appointmentTime: format(appointmentDate, "HH:mm"),
+                appointmentId: appointment.id,
+            });
+        } catch (notificationError) {
+            console.error("Failed to create cancellation notification:", notificationError);
+        }
+    }
+
+    return result;
 }
 
 export async function markAsNoShow(appointmentId: string) {
-    return updateAppointmentStatus(appointmentId, "no_show");
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) throw new Error("Professional not found");
+
+    // Get appointment with patient info
+    const { data: appointment } = await supabase
+        .from("appointments")
+        .select(`
+            *,
+            patients (
+                full_name
+            )
+        `)
+        .eq("id", appointmentId)
+        .single();
+
+    const result = await updateAppointmentStatus(appointmentId, "no_show");
+
+    // Create notification for no-show
+    if (appointment && appointment.patients) {
+        try {
+            const { notifyAppointmentNoShow } = await import("@/lib/notifications/appointment-notifications");
+            const appointmentDate = new Date(appointment.scheduled_at);
+            await notifyAppointmentNoShow(professional.id, {
+                patientName: (appointment.patients as any).full_name,
+                appointmentDate: appointmentDate.toISOString(),
+                appointmentTime: format(appointmentDate, "HH:mm"),
+                appointmentId: appointment.id,
+            });
+        } catch (notificationError) {
+            console.error("Failed to create no-show notification:", notificationError);
+        }
+    }
+
+    return result;
 }
 
 export async function getAppointment(appointmentId: string) {

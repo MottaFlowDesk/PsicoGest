@@ -203,6 +203,21 @@ export async function sendReminders(reminderType: "24h" | "2h"): Promise<{
                     .eq("id", appointment.id);
 
                 results.sent++;
+
+                // Create notification for upcoming appointment (2h before)
+                if (reminderType === "2h") {
+                    try {
+                        const { notifyAppointmentUpcoming } = await import("./appointment-notifications");
+                        await notifyAppointmentUpcoming(professional.id, {
+                            patientName: patient.full_name,
+                            appointmentDate: appointment.scheduled_at,
+                            appointmentTime: formattedTime,
+                            appointmentId: appointment.id,
+                        });
+                    } catch (notificationError) {
+                        console.error("Failed to create upcoming appointment notification:", notificationError);
+                    }
+                }
             } else {
                 results.failed++;
                 results.errors.push(`Failed to send reminder for appointment ${appointment.id}`);
