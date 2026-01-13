@@ -221,8 +221,8 @@ async function handleAccountUpdated(db: SupabaseAdminClient, account: Stripe.Acc
 
 // Subscription handlers
 async function handleSubscriptionCheckoutCompleted(db: SupabaseAdminClient, session: Stripe.Checkout.Session) {
-    const planId = session.metadata?.plan_id || session.subscription_data?.metadata?.plan_id;
-    const createAccount = session.metadata?.create_account === "true" || session.subscription_data?.metadata?.create_account === "true";
+    const planId = session.metadata?.plan_id;
+    const createAccount = session.metadata?.create_account === "true";
     const customerEmail = session.customer_email || (session.customer_details?.email);
 
     // If this is a new account creation (payment before signup)
