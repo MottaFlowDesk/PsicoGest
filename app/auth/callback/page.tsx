@@ -56,48 +56,42 @@ function AuthCallbackContent() {
                 return;
             }
 
-            // Create account - Supabase will send confirmation email
             // Generate a secure temporary password
             const tempPassword = `Temp${Math.random().toString(36).slice(2)}${Date.now()}${Math.random().toString(36).slice(2)}!A1`;
 
-            // Use NEXT_PUBLIC_APP_URL if available, otherwise use window.location.origin
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-            const redirectUrl = `${appUrl}/auth/confirm`;
-
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: customerEmail,
-                password: tempPassword,
-                options: {
-                    emailRedirectTo: redirectUrl,
-                    data: {
+            // Try to create account via server API (auto-confirms email, no link needed)
+            const createAccountResponse = await fetch('/api/auth/create-account', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: customerEmail,
+                    password: tempPassword,
+                    metadata: {
                         from_checkout: "true",
                         subscription_id: subscriptionId || "",
                         plan_id: planId || "",
                         billing_period: billingPeriod || "monthly",
                     }
-                }
+                }),
             });
 
-            if (authError) {
-                console.error("Supabase signup error:", authError);
-                
-                // If user already exists, try to sign in or send password reset
-                if (authError.message.includes("already registered") || 
-                    authError.message.includes("User already registered") ||
-                    authError.message.includes("already exists")) {
-                    // Try to sign in with magic link
-                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-                    const redirectUrl = `${appUrl}/auth/confirm`;
-                    
+            const accountData = await createAccountResponse.json();
+
+            if (!createAccountResponse.ok) {
+                // If server-side creation fails, user already exists or other error
+                if (accountData.error?.includes("already") || accountData.error?.includes("exists")) {
+                    // User already exists, try to sign in
                     const { error: signInError } = await supabase.auth.signInWithOtp({
                         email: customerEmail,
                         options: {
-                            emailRedirectTo: redirectUrl,
+                            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/confirm`,
                         }
                     });
 
                     if (signInError) {
-                        toast.info("Conta já existe. Verifique seu email para continuar.");
+                        toast.info("Conta já existe. Faça login para continuar.");
                         router.push(`/login?email=${encodeURIComponent(customerEmail)}`);
                         return;
                     }
@@ -107,61 +101,57 @@ function AuthCallbackContent() {
                     return;
                 }
                 
-                // Show the actual error message from Supabase
-                const errorMessage = authError.message || "Erro ao criar conta";
-                console.error("Signup error details:", {
-                    message: errorMessage,
-                    status: authError.status,
-                    email: customerEmail
-                });
-                
-                throw new Error(`Erro ao criar conta: ${errorMessage}`);
+                throw new Error(accountData.error || "Erro ao criar conta");
             }
 
-            if (authData.user) {
-                // Account created successfully
-                // The professional profile will be created by the trigger
-                
-                // Link subscription to professional if it exists
-                if (subscriptionId) {
-                    try {
-                        // Wait a bit for trigger to create professional
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        
-                        // Try to link subscription
-                        const linkResponse = await fetch('/api/stripe/link-subscription', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                subscriptionId,
-                                userId: authData.user.id,
-                            }),
-                        });
+            // Account created successfully via server API (email already confirmed)
+            // Now sign in with the password
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                email: customerEmail,
+                password: tempPassword,
+            });
 
-                        if (linkResponse.ok) {
-                            console.log("Subscription linked successfully");
-                        }
-                    } catch (error) {
-                        console.error("Error linking subscription:", error);
-                        // Non-critical, continue anyway
+            if (signInError) {
+                console.error("Sign-in error after account creation:", signInError);
+                throw new Error("Conta criada, mas erro ao fazer login. Tente fazer login manualmente.");
+            }
+
+            if (!signInData.user || !signInData.session) {
+                throw new Error("Erro ao fazer login após criar conta");
+            }
+
+            // Link subscription to professional if it exists
+            if (subscriptionId) {
+                try {
+                    // Wait a bit for trigger to create professional
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Try to link subscription
+                    const linkResponse = await fetch('/api/stripe/link-subscription', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            subscriptionId,
+                            userId: signInData.user.id,
+                        }),
+                    });
+
+                    if (linkResponse.ok) {
+                        console.log("Subscription linked successfully");
                     }
+                } catch (error) {
+                    console.error("Error linking subscription:", error);
+                    // Non-critical, continue anyway
                 }
-
-                // Check if email confirmation is required
-                if (authData.user.email_confirmed_at || !authData.user.confirmation_sent_at) {
-                    // Email already confirmed or auto-confirmed, go to onboarding
-                    toast.success("Conta criada com sucesso! Complete seu perfil.");
-                    router.push("/onboarding");
-                } else {
-                    // Email confirmation required
-                    toast.info("Verifique seu email para confirmar a conta e continuar.");
-                    router.push(`/login?email=${encodeURIComponent(customerEmail)}&check_email=true`);
-                }
-            } else {
-                throw new Error("Erro ao criar conta");
             }
+
+            // Success! Redirect to onboarding (no email confirmation needed)
+            toast.success("Conta criada com sucesso! Complete seu perfil.");
+            router.push("/onboarding");
+            router.refresh();
+
         } catch (error: any) {
             console.error("Error creating account:", error);
             setStatus("error");
@@ -228,4 +218,3 @@ export default function AuthCallbackPage() {
         </Suspense>
     );
 }
-
