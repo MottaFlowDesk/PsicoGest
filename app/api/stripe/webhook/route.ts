@@ -221,8 +221,20 @@ async function handleAccountUpdated(db: SupabaseAdminClient, account: Stripe.Acc
 
 // Subscription handlers
 async function handleSubscriptionCheckoutCompleted(db: SupabaseAdminClient, session: Stripe.Checkout.Session) {
+    const planId = session.metadata?.plan_id || session.subscription_data?.metadata?.plan_id;
+    const createAccount = session.metadata?.create_account === "true" || session.subscription_data?.metadata?.create_account === "true";
+    const customerEmail = session.customer_email || (session.customer_details?.email);
+
+    // If this is a new account creation (payment before signup)
+    if (createAccount && customerEmail && !session.metadata?.professional_id) {
+        // Create user account in Supabase
+        // Note: We'll create the account in the callback page, not here
+        // This handler just marks that the checkout was completed
+        console.log(`Subscription checkout completed for new account: ${customerEmail}, plan: ${planId}`);
+        return;
+    }
+
     const professionalId = session.metadata?.professional_id;
-    const planId = session.metadata?.plan_id;
 
     if (!professionalId || !planId) {
         console.error("Missing metadata in subscription checkout session");
@@ -236,18 +248,52 @@ async function handleSubscriptionCheckoutCompleted(db: SupabaseAdminClient, sess
 
 async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: Stripe.Subscription) {
     const professionalId = subscription.metadata?.professional_id;
-    const planId = subscription.metadata?.plan_id;
+    const planId = subscription.metadata?.plan_id || subscription.items.data[0]?.price.metadata?.plan_id;
 
     if (!professionalId) {
         // Try to find by customer_id
-        const { data: professional } = await db
+        let professional = null;
+        
+        // First try by stripe_customer_id
+        const { data: profByCustomer } = await db
             .from("professionals")
             .select("id")
             .eq("stripe_customer_id", subscription.customer as string)
             .single();
 
+        if (profByCustomer) {
+            professional = profByCustomer;
+        } else {
+            // Try to find by customer email (for new accounts created after payment)
+            const customer = typeof subscription.customer === 'string'
+                ? await stripe.customers.retrieve(subscription.customer)
+                : subscription.customer;
+            
+            const customerEmail = (customer as any).email;
+            
+            if (customerEmail) {
+                const { data: profByEmail } = await db
+                    .from("professionals")
+                    .select("id")
+                    .eq("email", customerEmail)
+                    .single();
+
+                if (profByEmail) {
+                    professional = profByEmail;
+                    // Update professional with customer_id
+                    await db
+                        .from("professionals")
+                        .update({ stripe_customer_id: subscription.customer as string })
+                        .eq("id", profByEmail.id);
+                }
+            }
+        }
+
         if (!professional) {
-            console.error("Professional not found for subscription:", subscription.id);
+            // Professional not found yet - account might not be created
+            // Store subscription info to be linked later
+            console.log(`Professional not found for subscription ${subscription.id}. Will be linked when account is created.`);
+            // We'll handle this in the callback page
             return;
         }
 
@@ -279,6 +325,7 @@ async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: 
                 subscription_status: subscription.status,
                 subscription_trial_ends_at: (subscription as any).trial_end ? new Date((subscription as any).trial_end * 1000).toISOString() : null,
                 subscription_current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+                stripe_customer_id: subscription.customer as string,
             })
             .eq("id", professional.id);
 

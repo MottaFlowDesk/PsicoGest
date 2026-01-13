@@ -102,19 +102,18 @@ function SignupForm() {
             }
 
             if (authData.user) {
-                // Success! Save plan info to localStorage and redirect to onboarding
-                // The checkout will be created after onboarding is completed
+                // Success! Redirect to onboarding
+                // Note: If user came from plan selection, they should pay first
+                // But if they're accessing signup directly, allow free account
                 if (planId) {
-                    const billingPeriod = searchParams.get("billingPeriod") || "monthly";
-                    localStorage.setItem('pendingSubscription', JSON.stringify({
-                        planId,
-                        billingPeriod,
-                    }));
+                    // User tried to signup with plan - redirect to pricing
+                    toast.info("Para escolher um plano, faça o pagamento primeiro.");
+                    router.push('/#pricing');
+                } else {
+                    // Free signup - go to onboarding
+                    router.push('/onboarding');
+                    router.refresh();
                 }
-                
-                // Redirect to onboarding (user will be redirected to checkout after completing it)
-                router.push('/onboarding');
-                router.refresh();
             }
 
         } catch (error) {

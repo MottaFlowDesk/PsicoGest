@@ -13,12 +13,24 @@ export function StepSuccess() {
     const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
 
     useEffect(() => {
-        // Check if there's a pending subscription
+        // Check if there's a pending subscription to link
         const pendingSubscription = localStorage.getItem('pendingSubscription');
         
         if (pendingSubscription) {
-            const { planId, billingPeriod } = JSON.parse(pendingSubscription);
-            handleCreateCheckout(planId, billingPeriod);
+            const { subscriptionId, planId, billingPeriod } = JSON.parse(pendingSubscription);
+            
+            // If we have subscriptionId, it means subscription was already created
+            // Just remove from localStorage and continue to dashboard
+            if (subscriptionId) {
+                localStorage.removeItem('pendingSubscription');
+                // Subscription will be linked by webhook or callback
+                return;
+            }
+            
+            // If we only have planId, create checkout (legacy flow)
+            if (planId) {
+                handleCreateCheckout(planId, billingPeriod);
+            }
         }
     }, []);
 

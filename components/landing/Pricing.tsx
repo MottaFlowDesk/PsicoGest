@@ -1,14 +1,11 @@
 "use client";
 import React, { useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
 
 const Pricing: React.FC = () => {
   const [isAnnual, setIsAnnual] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const router = useRouter();
 
   const plans = [
     {
@@ -63,18 +60,9 @@ const Pricing: React.FC = () => {
   const handleSelectPlan = async (planId: string) => {
     setLoadingPlan(planId);
     try {
-      // Check if user is logged in
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        // User not logged in - redirect to signup with plan parameter
-        router.push(`/signup?plan=${planId}&billingPeriod=${isAnnual ? 'annual' : 'monthly'}`);
-        setLoadingPlan(null);
-        return;
-      }
-
-      const response = await fetch('/api/stripe/subscribe', {
+      // Redirect directly to Stripe Checkout (public endpoint)
+      // User will create account after payment
+      const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,12 +76,6 @@ const Pricing: React.FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        if (response.status === 401) {
-          // User not authenticated - redirect to signup
-          router.push(`/signup?plan=${planId}&billingPeriod=${isAnnual ? 'annual' : 'monthly'}`);
-          setLoadingPlan(null);
-          return;
-        }
         throw new Error(data.error || 'Erro ao processar assinatura');
       }
 

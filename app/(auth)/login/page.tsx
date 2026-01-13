@@ -19,6 +19,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 const loginSchema = z.object({
     email: z.string().email("Email inválido"),
@@ -31,8 +32,8 @@ function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const registered = searchParams.get("registered");
-    const planId = searchParams.get("plan");
-    const billingPeriod = searchParams.get("billingPeriod") || "monthly";
+    const planId = searchParams.get("plan"); // Legacy - not used in new flow
+    const fromCheckout = searchParams.get("from_checkout") === "true";
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -68,30 +69,10 @@ function LoginForm() {
                 return;
             }
 
-            // If user came from plan selection, redirect to checkout
-            if (planId) {
-                try {
-                    const response = await fetch('/api/stripe/subscribe', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            planId,
-                            billingPeriod,
-                        }),
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok && data.url) {
-                        window.location.href = data.url;
-                        return;
-                    }
-                } catch (error) {
-                    console.error("Error creating checkout:", error);
-                    // Fall through to dashboard redirect
-                }
+            // If user came from checkout, they should already have subscription
+            // Just redirect to dashboard
+            if (fromCheckout) {
+                toast.success("Login realizado com sucesso!");
             }
 
             router.push("/dashboard");
@@ -186,15 +167,9 @@ function LoginForm() {
 
             <div className="text-center text-sm">
                 <span className="text-slate-500">Não tem uma conta? </span>
-                {planId ? (
-                    <Link href={`/signup?plan=${planId}&billingPeriod=${billingPeriod}`} className="text-brand-600 font-semibold hover:underline">
-                        Criar conta
-                    </Link>
-                ) : (
-                    <Link href="/#pricing" className="text-brand-600 font-semibold hover:underline">
-                        Ver planos
-                    </Link>
-                )}
+                <Link href="/#pricing" className="text-brand-600 font-semibold hover:underline">
+                    Ver planos
+                </Link>
             </div>
         </div>
     );
