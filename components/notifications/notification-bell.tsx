@@ -12,6 +12,7 @@ import { NotificationItem } from "./notification-item";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { createClient } from "@/lib/supabase/client";
 
 interface Notification {
   id: string;
@@ -28,7 +29,9 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [professionalId, setProfessionalId] = useState<string | null>(null);
   const router = useRouter();
+  const supabase = createClient();
 
   // Get professional ID on mount
   useEffect(() => {
