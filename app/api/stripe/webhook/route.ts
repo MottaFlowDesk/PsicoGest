@@ -261,11 +261,11 @@ async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: 
             stripe_customer_id: subscription.customer as string,
             plan_name: planName,
             status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-            trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-            cancel_at_period_end: subscription.cancel_at_period_end,
+            current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+            trial_start: (subscription as any).trial_start ? new Date((subscription as any).trial_start * 1000).toISOString() : null,
+            trial_end: (subscription as any).trial_end ? new Date((subscription as any).trial_end * 1000).toISOString() : null,
+            cancel_at_period_end: (subscription as any).cancel_at_period_end,
             metadata: subscription.metadata,
         }, {
             onConflict: 'stripe_subscription_id',
@@ -277,8 +277,8 @@ async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: 
             .update({
                 subscription_plan: planName,
                 subscription_status: subscription.status,
-                subscription_trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-                subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                subscription_trial_ends_at: (subscription as any).trial_end ? new Date((subscription as any).trial_end * 1000).toISOString() : null,
+                subscription_current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
             })
             .eq("id", professional.id);
 
@@ -293,11 +293,11 @@ async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: 
             stripe_customer_id: subscription.customer as string,
             plan_name: planName,
             status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-            trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-            cancel_at_period_end: subscription.cancel_at_period_end,
+            current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+            trial_start: (subscription as any).trial_start ? new Date((subscription as any).trial_start * 1000).toISOString() : null,
+            trial_end: (subscription as any).trial_end ? new Date((subscription as any).trial_end * 1000).toISOString() : null,
+            cancel_at_period_end: (subscription as any).cancel_at_period_end,
             metadata: subscription.metadata,
         }, {
             onConflict: 'stripe_subscription_id',
@@ -309,8 +309,8 @@ async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: 
             .update({
                 subscription_plan: planName,
                 subscription_status: subscription.status,
-                subscription_trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-                subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                subscription_trial_ends_at: (subscription as any).trial_end ? new Date((subscription as any).trial_end * 1000).toISOString() : null,
+                subscription_current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
             })
             .eq("id", professionalId);
 
@@ -344,12 +344,12 @@ async function handleSubscriptionUpdated(db: SupabaseAdminClient, subscription: 
         .from("subscriptions")
         .update({
             status: subscription.status,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-            trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-            cancel_at_period_end: subscription.cancel_at_period_end,
-            canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
+            current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+            trial_start: (subscription as any).trial_start ? new Date((subscription as any).trial_start * 1000).toISOString() : null,
+            trial_end: (subscription as any).trial_end ? new Date((subscription as any).trial_end * 1000).toISOString() : null,
+            cancel_at_period_end: (subscription as any).cancel_at_period_end,
+            canceled_at: (subscription as any).canceled_at ? new Date((subscription as any).canceled_at * 1000).toISOString() : null,
             plan_name: planName,
             metadata: subscription.metadata,
         })
@@ -361,8 +361,8 @@ async function handleSubscriptionUpdated(db: SupabaseAdminClient, subscription: 
         .update({
             subscription_plan: planName,
             subscription_status: subscription.status,
-            subscription_trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-            subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            subscription_trial_ends_at: (subscription as any).trial_end ? new Date((subscription as any).trial_end * 1000).toISOString() : null,
+            subscription_current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
         })
         .eq("id", professionalId);
 
