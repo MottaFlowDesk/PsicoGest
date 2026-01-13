@@ -24,13 +24,14 @@ export default async function DashboardLayout({
     }
 
     // Check if user has completed onboarding
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
         .from("professionals")
-        .select("full_name, avatar_url")
+        .select("full_name, avatar_url, registration_number")
         .eq("user_id", user.id)
         .single();
 
-    if (!profile) {
+    // If profile doesn't exist or is missing required fields, redirect to onboarding
+    if (!profile || !profile.registration_number) {
         redirect("/onboarding");
     }
 

@@ -40,8 +40,23 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
+    // If user is logged in and trying to access login, check if they have profile
     if (user && request.nextUrl.pathname.startsWith('/login')) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+        // Check if user has completed onboarding
+        const { data: profile, error } = await supabase
+            .from("professionals")
+            .select("id, registration_number")
+            .eq("user_id", user.id)
+            .single()
+
+        // If profile exists and has registration_number, redirect to dashboard
+        // Otherwise, redirect to onboarding (user needs to complete it)
+        if (profile && profile.registration_number) {
+            return NextResponse.redirect(new URL('/dashboard', request.url))
+        } else {
+            // Profile doesn't exist or is incomplete - redirect to onboarding
+            return NextResponse.redirect(new URL('/onboarding', request.url))
+        }
     }
 
     return response

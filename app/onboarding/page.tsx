@@ -1,37 +1,30 @@
-"use client";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { OnboardingContent } from "./onboarding-content";
 
-import { OnboardingHeader } from "@/components/onboarding/header";
-import { StepPersonal } from "@/components/onboarding/steps/StepPersonal";
-import { StepAddress } from "@/components/onboarding/steps/StepAddress";
-import { StepClinical } from "@/components/onboarding/steps/StepClinical";
-import { StepSuccess } from "@/components/onboarding/steps/StepSuccess";
-import { useOnboardingStore } from "@/hooks/use-onboarding-store";
+export default async function OnboardingPage() {
+    const supabase = await createClient();
 
-export default function OnboardingPage() {
-    const { currentStep } = useOnboardingStore();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
-    const renderStep = () => {
-        switch (currentStep) {
-            case 1:
-                return <StepPersonal />;
-            case 2:
-                return <StepAddress />;
-            case 3:
-                return <StepClinical />;
-            case 4:
-                return <StepSuccess />;
-            default:
-                return <StepPersonal />;
-        }
-    };
+    if (!user) {
+        redirect("/login");
+    }
 
-    return (
-        <div className="w-full flex-1 flex flex-col items-center justify-start pt-8 md:pt-12">
-            <OnboardingHeader />
+    // Check if user has already completed onboarding
+    const { data: profile } = await supabase
+        .from("professionals")
+        .select("id, registration_number")
+        .eq("user_id", user.id)
+        .single();
 
-            <div className="w-full flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {renderStep()}
-            </div>
-        </div>
-    );
+    // If profile exists and has registration_number, user already completed onboarding
+    if (profile && profile.registration_number) {
+        redirect("/dashboard");
+    }
+
+    return <OnboardingContent />;
 }
+
