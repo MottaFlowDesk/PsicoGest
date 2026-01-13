@@ -319,7 +319,7 @@ async function handleSubscriptionCreated(db: SupabaseAdminClient, subscription: 
 }
 
 async function handleSubscriptionUpdated(db: SupabaseAdminClient, subscription: Stripe.Subscription) {
-    const professionalId = subscription.metadata?.professional_id;
+    let professionalId = subscription.metadata?.professional_id;
 
     if (!professionalId) {
         // Find by subscription ID
@@ -370,7 +370,7 @@ async function handleSubscriptionUpdated(db: SupabaseAdminClient, subscription: 
 }
 
 async function handleSubscriptionDeleted(db: SupabaseAdminClient, subscription: Stripe.Subscription) {
-    const professionalId = subscription.metadata?.professional_id;
+    let professionalId = subscription.metadata?.professional_id;
 
     if (!professionalId) {
         // Find by subscription ID
