@@ -51,11 +51,7 @@ export function PerformanceReportsSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Relatório de Performance</h2>
-          <p className="text-slate-500 text-sm">Visão consolidada de todas as métricas do negócio</p>
-        </div>
+      <div className="flex justify-end">
         <ExportButton reportType="performance" filters={filters} disabled={loading} />
       </div>
 
