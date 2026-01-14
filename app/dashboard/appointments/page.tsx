@@ -223,7 +223,7 @@ export default function AppointmentsPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Atendimentos</h1>
@@ -233,14 +233,7 @@ export default function AppointmentsPage() {
             </div>
 
             {/* Relatórios e Gráficos */}
-            <div className="space-y-6">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-900">Análise de Atendimentos</h2>
-                        <p className="text-slate-500 text-sm">Gráficos e insights sobre volume, produtividade e performance</p>
-                    </div>
-                </div>
-
+            <div className="space-y-4">
                 <ReportFiltersComponent
                     filters={reportFilters}
                     onFiltersChange={setReportFilters}
@@ -248,7 +241,7 @@ export default function AppointmentsPage() {
                 />
 
                 {reportLoading && !reportData ? (
-                    <div className="flex items-center justify-center h-96">
+                    <div className="flex items-center justify-center h-64">
                         <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
                     </div>
                 ) : reportData ? (
