@@ -129,7 +129,7 @@ export async function getPerformanceReportData(filters: ReportFilters): Promise<
       },
     },
     trends: trendsData,
-    healthScore: calculateHealthScore(currentRevenue, currentAppointments, noShowRate, currentPatients),
+    health: calculateHealthScore(currentRevenue, currentAppointments, noShowRate, currentPatients),
   };
 }
 
