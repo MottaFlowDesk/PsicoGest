@@ -164,11 +164,7 @@ export default function PatientsPage() {
 
             {/* Relatórios e Gráficos */}
             <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-900">Análise de Pacientes</h2>
-                        <p className="text-slate-500 text-sm">Gráficos e insights sobre crescimento e atividade</p>
-                    </div>
+                <div className="flex justify-end">
                     {reportData && <ExportButton reportType="patients" filters={reportFilters} disabled={reportLoading} />}
                 </div>
 
