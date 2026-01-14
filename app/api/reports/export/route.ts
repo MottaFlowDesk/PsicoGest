@@ -3,10 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { ExportOptions, FinancialReportData, AppointmentReportData, PatientReportData, PerformanceReportData } from "@/lib/reports/types";
 import { exportToPDF } from "@/lib/reports/export-pdf";
 import { exportToExcel } from "@/lib/reports/export-excel";
-import { getFinancialReportData } from "@/app/dashboard/reports/financial/actions";
-import { getAppointmentReportData } from "@/app/dashboard/reports/appointments/actions";
-import { getPatientReportData } from "@/app/dashboard/reports/patients/actions";
-import { getPerformanceReportData } from "@/app/dashboard/reports/performance/actions";
+import { getFinancialReportData } from "@/lib/reports/actions-financial";
+import { getAppointmentReportData } from "@/lib/reports/actions-appointments";
+import { getPatientReportData } from "@/lib/reports/actions-patients";
+import { getPerformanceReportData } from "@/lib/reports/actions-performance";
 
 export async function POST(request: NextRequest) {
   try {

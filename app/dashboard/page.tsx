@@ -14,6 +14,7 @@ import { getDashboardStats, getUpcomingSessions } from "./actions";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TelehealthEnterButton } from "@/components/appointments/telehealth-enter-button";
+import { PerformanceReportsToggle } from "@/components/dashboard/performance-reports-toggle";
 
 export default async function DashboardPage() {
     const supabase = await createClient();
@@ -206,6 +207,8 @@ export default async function DashboardPage() {
                     </div>
                 </div>
             </div>
+
+            <PerformanceReportsToggle />
         </div>
     );
 }

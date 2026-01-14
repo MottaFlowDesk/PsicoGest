@@ -1,18 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ReportFilters } from "@/lib/reports/types";
-import { getPerformanceReportData } from "./actions";
-import { PerformanceReportData } from "@/lib/reports/types";
+import { getPerformanceReportData } from "@/lib/reports/actions-performance";
+import { PerformanceReportData, ReportFilters } from "@/lib/reports/types";
 import { ReportFiltersComponent } from "@/components/reports/report-filters";
-import { ReportHeader } from "@/components/reports/report-header";
 import { ChartContainer } from "@/components/reports/chart-container";
 import { ExportButton } from "@/components/reports/export-button";
 import { PerformanceOverview } from "@/components/reports/performance-overview";
 import { KPICards } from "@/components/reports/kpi-cards";
 import { Loader2 } from "lucide-react";
 
-export default function PerformanceReportsPage() {
+export function PerformanceReportsSection() {
   const [filters, setFilters] = useState<ReportFilters>({
     period: "month",
   });
@@ -54,11 +52,10 @@ export default function PerformanceReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
-        <ReportHeader
-          title="Relatório de Performance"
-          subtitle="Visão consolidada de todas as métricas do negócio"
-          filters={filters}
-        />
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Relatório de Performance</h2>
+          <p className="text-slate-500 text-sm">Visão consolidada de todas as métricas do negócio</p>
+        </div>
         <ExportButton reportType="performance" filters={filters} disabled={loading} />
       </div>
 

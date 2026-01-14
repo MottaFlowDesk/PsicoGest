@@ -7,7 +7,7 @@ import { InvoiceList } from "@/components/financial/invoice-list";
 import { Button } from "@/components/ui/button";
 import { NewInvoiceDialog } from "@/components/financial/new-invoice-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Download, CreditCard, AlertCircle, Loader2, X, Search } from "lucide-react";
+import { Download, CreditCard, AlertCircle, Loader2, X, Search, BarChart3 } from "lucide-react";
 import { StripeConnectButton } from "@/components/financial/stripe-connect-button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +20,15 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format, startOfMonth, endOfMonth } from "date-fns";
+import { getFinancialReportData } from "@/lib/reports/actions-financial";
+import { FinancialReportData, ReportFilters } from "@/lib/reports/types";
+import { ReportFiltersComponent } from "@/components/reports/report-filters";
+import { ChartContainer } from "@/components/reports/chart-container";
+import { ExportButton } from "@/components/reports/export-button";
+import { FinancialRevenueChart } from "@/components/reports/financial-revenue-chart";
+import { FinancialStatusChart } from "@/components/reports/financial-status-chart";
+import { FinancialTrends } from "@/components/reports/financial-trends";
+import { FinancialSummary } from "@/components/reports/financial-summary";
 
 type StatusFilter = "all" | "pending" | "paid" | "overdue" | "cancelled";
 type PeriodFilter = "all" | "month" | "quarter" | "year";
@@ -52,10 +61,20 @@ export default function FinancialPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
+    const [showReports, setShowReports] = useState(false);
+    const [reportData, setReportData] = useState<FinancialReportData | null>(null);
+    const [reportLoading, setReportLoading] = useState(false);
+    const [reportFilters, setReportFilters] = useState<ReportFilters>({ period: "month" });
 
     useEffect(() => {
         fetchData();
     }, [statusFilter, periodFilter]);
+
+    useEffect(() => {
+        if (showReports) {
+            loadReportData();
+        }
+    }, [showReports, reportFilters]);
 
     async function fetchData() {
         setLoading(true);
@@ -203,6 +222,18 @@ export default function FinancialPage() {
         return labels[type]?.[value] || value;
     };
 
+    async function loadReportData() {
+        setReportLoading(true);
+        try {
+            const data = await getFinancialReportData(reportFilters);
+            setReportData(data);
+        } catch (error) {
+            console.error("Error loading financial report:", error);
+        } finally {
+            setReportLoading(false);
+        }
+    }
+
     if (loading && invoices.length === 0) {
         return (
             <div className="flex items-center justify-center h-96">
@@ -213,17 +244,78 @@ export default function FinancialPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Financeiro</h1>
+                    <p className="text-slate-500 text-sm">Gerencie suas faturas e receitas</p>
+                </div>
                 <div className="flex gap-3">
-                    <button className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg font-medium transition-colors shadow-sm">
-                        <Download size={18} />
-                        <span className="hidden sm:inline">Exportar Relatório</span>
-                    </button>
+                    <Button
+                        variant="outline"
+                        onClick={() => setShowReports(!showReports)}
+                        className="flex items-center gap-2"
+                    >
+                        <BarChart3 size={18} />
+                        <span className="hidden sm:inline">{showReports ? "Ocultar" : "Ver"} Relatórios</span>
+                    </Button>
                     <NewInvoiceDialog />
                 </div>
             </div>
 
-            <FinancialSummaryCards summary={summary} />
+            {!showReports && <FinancialSummaryCards summary={summary} />}
+
+            {showReports && (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-900">Relatórios Financeiros</h2>
+                            <p className="text-slate-500 text-sm">Análise detalhada de receitas, faturas e pagamentos</p>
+                        </div>
+                        {reportData && <ExportButton reportType="financial" filters={reportFilters} disabled={reportLoading} />}
+                    </div>
+
+                    <ReportFiltersComponent
+                        filters={reportFilters}
+                        onFiltersChange={setReportFilters}
+                    />
+
+                    {reportLoading && !reportData ? (
+                        <div className="flex items-center justify-center h-96">
+                            <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+                        </div>
+                    ) : reportData ? (
+                        <>
+                            <FinancialSummary data={reportData} />
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <ChartContainer
+                                    title="Receita ao Longo do Tempo"
+                                    description="Evolução da receita no período selecionado"
+                                >
+                                    <FinancialRevenueChart data={reportData.revenue} />
+                                </ChartContainer>
+
+                                <ChartContainer
+                                    title="Distribuição por Status"
+                                    description="Distribuição de faturas por status"
+                                >
+                                    <FinancialStatusChart data={reportData.statusDistribution} />
+                                </ChartContainer>
+                            </div>
+
+                            <ChartContainer
+                                title="Tendências e Comparações"
+                                description="Comparação com período anterior"
+                            >
+                                <FinancialTrends trends={reportData.trends} />
+                            </ChartContainer>
+                        </>
+                    ) : null}
+                </div>
+            )}
+
+            {!showReports && (
+                <>
 
             {/* Filters */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
@@ -381,6 +473,8 @@ export default function FinancialPage() {
                     </div>
                 </div>
             </div>
+                </>
+            )}
         </div>
     );
 }

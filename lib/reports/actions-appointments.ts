@@ -229,7 +229,6 @@ function calculateOccupancy(
   end: Date
 ): { period: string; available: number; booked: number; percentage: number }[] {
   // Simplified occupancy calculation
-  // In a real scenario, this would consider availability settings
   const grouped = groupByPeriod(appointments, (apt) => new Date(apt.scheduled_at), period);
 
   let periods: Date[];
@@ -255,7 +254,7 @@ function calculateOccupancy(
     const percentage = available > 0 ? (booked / available) * 100 : 0;
 
     return {
-      period: format(periodDate, period === "quarter" || period === "year" ? "MMM/yyyy" : "dd/MM", { locale: require("date-fns/locale/pt-BR") }),
+      period: format(periodDate, period === "quarter" || period === "year" ? "MMM/yyyy" : "dd/MM", { locale: ptBR }),
       available,
       booked,
       percentage: Math.round(percentage * 100) / 100,
@@ -293,7 +292,7 @@ function calculateNoShowAnalysis(
     const rate = total > 0 ? (noShows / total) * 100 : 0;
 
     return {
-      period: format(periodDate, period === "quarter" || period === "year" ? "MMM/yyyy" : "dd/MM", { locale: require("date-fns/locale/pt-BR") }),
+      period: format(periodDate, period === "quarter" || period === "year" ? "MMM/yyyy" : "dd/MM", { locale: ptBR }),
       total,
       noShows,
       rate: Math.round(rate * 100) / 100,
@@ -345,7 +344,7 @@ function calculateCancellationAnalysis(
     });
 
     return {
-      period: format(periodDate, period === "quarter" || period === "year" ? "MMM/yyyy" : "dd/MM", { locale: require("date-fns/locale/pt-BR") }),
+      period: format(periodDate, period === "quarter" || period === "year" ? "MMM/yyyy" : "dd/MM", { locale: ptBR }),
       total,
       cancelled: cancelled.length,
       rate: Math.round(rate * 100) / 100,
