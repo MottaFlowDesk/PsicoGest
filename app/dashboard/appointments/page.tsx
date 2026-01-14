@@ -14,7 +14,6 @@ import {
     CheckCircle,
     Loader2,
     X,
-    BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,20 +59,18 @@ export default function AppointmentsPage() {
     const [editingAppointment, setEditingAppointment] = useState<any | null>(null);
     const [confirmingId, setConfirmingId] = useState<string | null>(null);
     const router = useRouter();
-    const [showReports, setShowReports] = useState(false);
     const [reportData, setReportData] = useState<AppointmentReportData | null>(null);
     const [reportLoading, setReportLoading] = useState(false);
     const [reportFilters, setReportFilters] = useState<ReportFilters>({ period: "month" });
 
     useEffect(() => {
         fetchAppointments();
+        loadReportData();
     }, [statusFilter, typeFilter, periodFilter]);
 
     useEffect(() => {
-        if (showReports) {
-            loadReportData();
-        }
-    }, [showReports, reportFilters]);
+        loadReportData();
+    }, [reportFilters]);
 
     async function fetchAppointments() {
         setLoading(true);
@@ -232,109 +229,99 @@ export default function AppointmentsPage() {
                     <h1 className="text-2xl font-bold text-slate-900">Atendimentos</h1>
                     <p className="text-slate-500 text-sm">Gerencie seus agendamentos e sessões</p>
                 </div>
-                <Button
-                    variant="outline"
-                    onClick={() => setShowReports(!showReports)}
-                    className="flex items-center gap-2"
-                >
-                    <BarChart3 size={18} />
-                    <span className="hidden sm:inline">{showReports ? "Ocultar" : "Ver"} Relatórios</span>
-                </Button>
+                {reportData && <ExportButton reportType="appointments" filters={reportFilters} disabled={reportLoading} />}
             </div>
 
-            {showReports && (
-                <div className="space-y-6">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-900">Relatórios de Atendimentos</h2>
-                            <p className="text-slate-500 text-sm">Análise de volume, produtividade e performance</p>
-                        </div>
-                        {reportData && <ExportButton reportType="appointments" filters={reportFilters} disabled={reportLoading} />}
+            {/* Relatórios e Gráficos */}
+            <div className="space-y-6">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-900">Análise de Atendimentos</h2>
+                        <p className="text-slate-500 text-sm">Gráficos e insights sobre volume, produtividade e performance</p>
                     </div>
-
-                    <ReportFiltersComponent
-                        filters={reportFilters}
-                        onFiltersChange={setReportFilters}
-                        showAppointmentFilters={true}
-                    />
-
-                    {reportLoading && !reportData ? (
-                        <div className="flex items-center justify-center h-96">
-                            <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
-                        </div>
-                    ) : reportData ? (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Total de Atendimentos</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">{reportData.summary.totalAppointments}</div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Completos</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-green-600">{reportData.summary.completed}</div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Total de Horas</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">{reportData.summary.totalHours}h</div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Duração Média</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">{formatDuration(reportData.summary.averageDuration)}</div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <ChartContainer
-                                    title="Volume de Atendimentos"
-                                    description="Distribuição de atendimentos ao longo do período"
-                                >
-                                    <AppointmentsVolumeChart data={reportData.volume} />
-                                </ChartContainer>
-
-                                <ChartContainer
-                                    title="Distribuição por Status"
-                                    description="Proporção de atendimentos por status"
-                                >
-                                    <AppointmentsStatusChart data={reportData.statusDistribution} />
-                                </ChartContainer>
-                            </div>
-
-                            <ChartContainer
-                                title="Produtividade"
-                                description="Sessões e horas trabalhadas"
-                            >
-                                <AppointmentsProductivity data={reportData.productivity} />
-                            </ChartContainer>
-
-                            <ChartContainer
-                                title="Análise de No-Show"
-                                description="Taxa de faltas ao longo do período"
-                            >
-                                <AppointmentsNoShowAnalysis data={reportData.noShowAnalysis} />
-                            </ChartContainer>
-                        </>
-                    ) : null}
                 </div>
-            )}
 
-            {!showReports && (
-                <>
+                <ReportFiltersComponent
+                    filters={reportFilters}
+                    onFiltersChange={setReportFilters}
+                    showAppointmentFilters={true}
+                />
+
+                {reportLoading && !reportData ? (
+                    <div className="flex items-center justify-center h-96">
+                        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+                    </div>
+                ) : reportData ? (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total de Atendimentos</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{reportData.summary.totalAppointments}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Completos</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-green-600">{reportData.summary.completed}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total de Horas</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{reportData.summary.totalHours}h</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Duração Média</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{formatDuration(reportData.summary.averageDuration)}</div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <ChartContainer
+                                title="Volume de Atendimentos"
+                                description="Distribuição de atendimentos ao longo do período"
+                            >
+                                <AppointmentsVolumeChart data={reportData.volume} />
+                            </ChartContainer>
+
+                            <ChartContainer
+                                title="Distribuição por Status"
+                                description="Proporção de atendimentos por status"
+                            >
+                                <AppointmentsStatusChart data={reportData.statusDistribution} />
+                            </ChartContainer>
+                        </div>
+
+                        <ChartContainer
+                            title="Produtividade"
+                            description="Sessões e horas trabalhadas"
+                        >
+                            <AppointmentsProductivity data={reportData.productivity} />
+                        </ChartContainer>
+
+                        <ChartContainer
+                            title="Análise de No-Show"
+                            description="Taxa de faltas ao longo do período"
+                        >
+                            <AppointmentsNoShowAnalysis data={reportData.noShowAnalysis} />
+                        </ChartContainer>
+                    </>
+                ) : null}
+            </div>
+
+            <>
             {/* Filters & Search */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
                 <div className="relative w-full sm:max-w-md">
@@ -594,8 +581,7 @@ export default function AppointmentsPage() {
                     }}
                 />
             )}
-                </>
-            )}
+            </>
         </div>
     );
 }
