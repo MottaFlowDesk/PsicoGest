@@ -145,14 +145,13 @@ export default function PatientsPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Pacientes</h1>
                     <p className="text-slate-500 text-sm">Gerencie sua base de pacientes</p>
                 </div>
                 <div className="flex gap-2">
-                    {reportData && <ExportButton reportType="patients" filters={reportFilters} disabled={reportLoading} />}
                     <ImportPatientDialog />
                     <Link href="/dashboard/patients/new">
                         <Button className="bg-brand-600 hover:bg-brand-700 shadow-sm">
@@ -164,12 +163,13 @@ export default function PatientsPage() {
             </div>
 
             {/* Relatórios e Gráficos */}
-            <div className="space-y-6">
-                <div className="flex justify-between items-start">
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
                     <div>
                         <h2 className="text-xl font-bold text-slate-900">Análise de Pacientes</h2>
                         <p className="text-slate-500 text-sm">Gráficos e insights sobre crescimento e atividade</p>
                     </div>
+                    {reportData && <ExportButton reportType="patients" filters={reportFilters} disabled={reportLoading} />}
                 </div>
 
                 <ReportFiltersComponent
@@ -178,7 +178,7 @@ export default function PatientsPage() {
                 />
 
                 {reportLoading && !reportData ? (
-                    <div className="flex items-center justify-center h-96">
+                    <div className="flex items-center justify-center h-64">
                         <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
                     </div>
                 ) : reportData ? (
