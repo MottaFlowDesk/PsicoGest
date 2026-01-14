@@ -13,7 +13,7 @@ export function KPICards({ data }: KPICardsProps) {
   const { kpis, health } = data;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>

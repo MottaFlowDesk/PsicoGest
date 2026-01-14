@@ -70,7 +70,7 @@ export function PerformanceReportsSection({ userName, currentDate }: Performance
       />
 
       {loading ? (
-        <div className="flex items-center justify-center h-96">
+        <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
         </div>
       ) : (
