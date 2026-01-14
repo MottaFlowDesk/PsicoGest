@@ -32,7 +32,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                     <Input
                         type="text"
                         placeholder="Buscar pacientes, prontuários..."
-                        className="pl-10 bg-slate-50 border-slate-200 focus-visible:ring-brand-500"
+                        className="pl-10 pr-3 py-2 bg-slate-50 border-slate-200 focus-visible:ring-brand-500 focus-visible:ring-2"
                     />
                 </div>
             </div>
