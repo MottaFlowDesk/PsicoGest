@@ -10,7 +10,12 @@ import { PerformanceOverview } from "@/components/reports/performance-overview";
 import { KPICards } from "@/components/reports/kpi-cards";
 import { Loader2 } from "lucide-react";
 
-export function PerformanceReportsSection() {
+interface PerformanceReportsSectionProps {
+  userName: string;
+  currentDate: string;
+}
+
+export function PerformanceReportsSection({ userName, currentDate }: PerformanceReportsSectionProps) {
   const [filters, setFilters] = useState<ReportFilters>({
     period: "month",
   });
@@ -50,8 +55,12 @@ export function PerformanceReportsSection() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Olá, {userName} 👋</h1>
+          <p className="text-slate-500 text-sm capitalize">{currentDate}</p>
+        </div>
         <ExportButton reportType="performance" filters={filters} disabled={loading} />
       </div>
 

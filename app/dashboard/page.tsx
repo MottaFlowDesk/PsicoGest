@@ -27,14 +27,7 @@ export default async function DashboardPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Olá, {profile.full_name?.split(' ')[0] || 'Doutor(a)'} 👋</h1>
-                    <p className="text-slate-500 text-sm capitalize">{currentDate}</p>
-                </div>
-            </div>
-
-            <PerformanceReportsSection />
+            <PerformanceReportsSection userName={profile.full_name?.split(' ')[0] || 'Doutor(a)'} currentDate={currentDate} />
         </div>
     );
 }
