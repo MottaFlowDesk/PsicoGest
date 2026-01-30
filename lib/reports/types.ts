@@ -29,12 +29,6 @@ export interface FinancialReportData {
     previous: number;
     change: number;
   }[];
-  topPatients: {
-    patientId: string;
-    patientName: string;
-    totalRevenue: number;
-    invoiceCount: number;
-  }[];
   conversionRate: {
     issued: number;
     paid: number;

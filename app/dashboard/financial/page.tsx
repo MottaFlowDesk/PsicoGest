@@ -20,7 +20,6 @@ import {
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { getFinancialReportData } from "@/lib/reports/actions-financial";
 import { FinancialReportData, ReportFilters } from "@/lib/reports/types";
-import { ReportFiltersComponent } from "@/components/reports/report-filters";
 import { ChartContainer } from "@/components/reports/chart-container";
 import { ExportButton } from "@/components/reports/export-button";
 import { FinancialRevenueChart } from "@/components/reports/financial-revenue-chart";
@@ -245,54 +244,6 @@ export default function FinancialPage() {
                 </div>
             </div>
 
-            {/* Relatórios e Gráficos */}
-            <div className="space-y-6">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-900">Análise Financeira</h2>
-                        <p className="text-slate-500 text-sm">Gráficos e insights sobre receitas e faturas</p>
-                    </div>
-                </div>
-
-                <ReportFiltersComponent
-                    filters={reportFilters}
-                    onFiltersChange={setReportFilters}
-                />
-
-                {reportLoading && !reportData ? (
-                    <div className="flex items-center justify-center h-96">
-                        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
-                    </div>
-                ) : reportData ? (
-                    <>
-                        <FinancialSummary data={reportData} />
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <ChartContainer
-                                title="Receita ao Longo do Tempo"
-                                description="Evolução da receita no período selecionado"
-                            >
-                                <FinancialRevenueChart data={reportData.revenue} />
-                            </ChartContainer>
-
-                            <ChartContainer
-                                title="Distribuição por Status"
-                                description="Distribuição de faturas por status"
-                            >
-                                <FinancialStatusChart data={reportData.statusDistribution} />
-                            </ChartContainer>
-                        </div>
-
-                        <ChartContainer
-                            title="Tendências e Comparações"
-                            description="Comparação com período anterior"
-                        >
-                            <FinancialTrends trends={reportData.trends} />
-                        </ChartContainer>
-                    </>
-                ) : null}
-            </div>
-
             {/* Filters */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
                 <div className="relative w-full sm:max-w-md">
@@ -388,6 +339,42 @@ export default function FinancialPage() {
                     )}
                 </div>
             )}
+
+            {/* Relatórios e Gráficos */}
+            <div className="space-y-6">
+                {reportLoading && !reportData ? (
+                    <div className="flex items-center justify-center h-96">
+                        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+                    </div>
+                ) : reportData ? (
+                    <>
+                        <FinancialSummary data={reportData} />
+
+                        <ChartContainer
+                            title="Tendências e Comparações"
+                            description="Comparação com período anterior"
+                        >
+                            <FinancialTrends trends={reportData.trends} />
+                        </ChartContainer>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <ChartContainer
+                                title="Receita ao Longo do Tempo"
+                                description="Evolução da receita no período selecionado"
+                            >
+                                <FinancialRevenueChart data={reportData.revenue} />
+                            </ChartContainer>
+
+                            <ChartContainer
+                                title="Distribuição por Status"
+                                description="Distribuição de faturas por status"
+                            >
+                                <FinancialStatusChart data={reportData.statusDistribution} />
+                            </ChartContainer>
+                        </div>
+                    </>
+                ) : null}
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Invoices List */}

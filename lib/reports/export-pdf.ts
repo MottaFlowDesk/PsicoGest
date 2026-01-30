@@ -87,28 +87,6 @@ function addFinancialContent(
   doc.text(`Taxa de Conversão: ${formatPercentage(data.conversionRate.rate)}`, 14, y);
   y += 7;
   doc.text(`Tempo Médio de Recebimento: ${data.averagePaymentTime.toFixed(1)} dias`, 14, y);
-  y += 15;
-
-  // Top Patients
-  if (data.topPatients.length > 0) {
-    if (y > pageHeight - 40) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.setFontSize(14);
-    doc.text("Top Pacientes por Receita", 14, y);
-    y += 10;
-
-    doc.setFontSize(10);
-    data.topPatients.slice(0, 10).forEach((patient, index) => {
-      if (y > pageHeight - 20) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.text(`${index + 1}. ${patient.patientName} - ${formatCurrency(patient.totalRevenue)} (${patient.invoiceCount} faturas)`, 14, y);
-      y += 7;
-    });
-  }
 }
 
 function addAppointmentsContent(

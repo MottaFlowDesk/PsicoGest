@@ -67,9 +67,6 @@ export async function getFinancialReportData(filters: ReportFilters): Promise<Fi
   // Trends (comparison with previous period)
   const trends = calculateTrends(invoices || [], prevInvoices || [], filters.period, start, end, prevStart, prevEnd);
 
-  // Top patients
-  const topPatients = calculateTopPatients(invoices || []);
-
   // Conversion rate
   const conversionRate = calculateConversionRate(invoices || []);
 
@@ -83,7 +80,6 @@ export async function getFinancialReportData(filters: ReportFilters): Promise<Fi
     revenue,
     statusDistribution,
     trends,
-    topPatients,
     conversionRate,
     averagePaymentTime,
     summary,
@@ -181,40 +177,6 @@ function calculateTrends(
     previous: previousPaid,
     change,
   }];
-}
-
-function calculateTopPatients(invoices: any[]): { patientId: string; patientName: string; totalRevenue: number; invoiceCount: number }[] {
-  const patientMap = new Map<string, { name: string; revenue: number; count: number }>();
-
-  invoices
-    .filter(inv => inv.status === "paid")
-    .forEach(inv => {
-      const patientId = inv.patient_id;
-      if (!patientId) return;
-
-      const patient = inv.patients;
-      if (!patientMap.has(patientId)) {
-        patientMap.set(patientId, {
-          name: patient?.full_name || "Desconhecido",
-          revenue: 0,
-          count: 0,
-        });
-      }
-
-      const data = patientMap.get(patientId)!;
-      data.revenue += (inv.amount_cents || 0) / 100;
-      data.count++;
-    });
-
-  return Array.from(patientMap.entries())
-    .map(([patientId, data]) => ({
-      patientId,
-      patientName: data.name,
-      totalRevenue: data.revenue,
-      invoiceCount: data.count,
-    }))
-    .sort((a, b) => b.totalRevenue - a.totalRevenue)
-    .slice(0, 10);
 }
 
 function calculateConversionRate(invoices: any[]): { issued: number; paid: number; rate: number } {

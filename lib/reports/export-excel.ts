@@ -101,14 +101,6 @@ function addFinancialSheets(workbook: XLSX.WorkBook, data: FinancialReportData) 
   });
   const statusSheet = XLSX.utils.aoa_to_sheet(statusData);
   XLSX.utils.book_append_sheet(workbook, statusSheet, "Status");
-
-  // Top patients
-  const topPatientsData: any[][] = [["Paciente", "Receita Total (R$)", "Número de Faturas"]];
-  data.topPatients.forEach(patient => {
-    topPatientsData.push([patient.patientName, patient.totalRevenue, patient.invoiceCount]);
-  });
-  const topPatientsSheet = XLSX.utils.aoa_to_sheet(topPatientsData);
-  XLSX.utils.book_append_sheet(workbook, topPatientsSheet, "Top Pacientes");
 }
 
 function addAppointmentsSheets(workbook: XLSX.WorkBook, data: AppointmentReportData) {
