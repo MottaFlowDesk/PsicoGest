@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -9,33 +10,46 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, Archive } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { EditPatientDialog } from "@/components/patients/edit-patient-dialog";
 
 interface PatientActionsMenuProps {
-    patientId: string;
-    patientName: string;
+    patient: {
+        id: string;
+        full_name: string;
+        date_of_birth: string;
+        phone: string;
+        email?: string | null;
+        cpf?: string | null;
+        occupation?: string | null;
+        notes?: string | null;
+        address?: {
+            zip?: string;
+            street?: string;
+            number?: string;
+            complement?: string;
+            neighborhood?: string;
+            city?: string;
+            state?: string;
+        } | null;
+    };
     onUpdate?: () => void;
 }
 
-export function PatientActionsMenu({ patientId, patientName, onUpdate }: PatientActionsMenuProps) {
-    const router = useRouter();
+export function PatientActionsMenu({ patient, onUpdate }: PatientActionsMenuProps) {
+    const [editOpen, setEditOpen] = useState(false);
     const supabase = createClient();
 
-    const handleEdit = () => {
-        router.push(`/dashboard/patients/${patientId}/edit`);
-    };
-
     const handleArchive = async () => {
-        if (!confirm(`Tem certeza que deseja arquivar ${patientName}?`)) {
+        if (!confirm(`Tem certeza que deseja arquivar ${patient.full_name}?`)) {
             return;
         }
 
         const { error } = await supabase
             .from("patients")
             .update({ archived: true })
-            .eq("id", patientId);
+            .eq("id", patient.id);
 
         if (error) {
             toast.error("Erro ao arquivar paciente");
@@ -47,14 +61,14 @@ export function PatientActionsMenu({ patientId, patientName, onUpdate }: Patient
     };
 
     const handleDelete = async () => {
-        if (!confirm(`ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente ${patientName}? Esta ação não pode ser desfeita.`)) {
+        if (!confirm(`ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente ${patient.full_name}? Esta ação não pode ser desfeita.`)) {
             return;
         }
 
         const { error } = await supabase
             .from("patients")
             .delete()
-            .eq("id", patientId);
+            .eq("id", patient.id);
 
         if (error) {
             toast.error("Erro ao excluir paciente");
@@ -66,6 +80,7 @@ export function PatientActionsMenu({ patientId, patientName, onUpdate }: Patient
     };
 
     return (
+        <>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <button className="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded hover:bg-slate-100">
@@ -75,7 +90,13 @@ export function PatientActionsMenu({ patientId, patientName, onUpdate }: Patient
             <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuLabel>Ações</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">
+                <DropdownMenuItem
+                    onSelect={(e) => {
+                        e.preventDefault();
+                        setEditOpen(true);
+                    }}
+                    className="cursor-pointer"
+                >
                     <Edit className="mr-2 h-4 w-4" />
                     Editar
                 </DropdownMenuItem>
@@ -93,5 +114,13 @@ export function PatientActionsMenu({ patientId, patientName, onUpdate }: Patient
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
+        <EditPatientDialog
+            patient={patient}
+            trigger={null}
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            onSuccess={onUpdate}
+        />
+        </>
     );
 }

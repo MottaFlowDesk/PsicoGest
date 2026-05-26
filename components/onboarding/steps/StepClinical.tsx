@@ -82,6 +82,8 @@ export function StepClinical() {
                     // New fields
                     cpf: cleanCpf || null,
                     target_audience: fullData.targetAudience && fullData.targetAudience.length > 0 ? fullData.targetAudience : null,
+                    subscription_plan: 'free',
+                    subscription_status: 'free',
                 })
                 .eq('user_id', user.id);
 

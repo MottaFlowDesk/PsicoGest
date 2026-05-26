@@ -178,7 +178,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                 {/* Avatar Section */}
                 <div className="flex items-center gap-6 p-6 bg-slate-50 rounded-xl border border-slate-200">
                     <Avatar className="h-24 w-24 ring-4 ring-white shadow-lg">
-                        <AvatarImage src={form.watch("avatarUrl")} className="object-cover" />
+                        <AvatarImage src={form.watch("avatarUrl") || undefined} className="object-cover" />
                         <AvatarFallback className="text-2xl bg-brand-100 text-brand-700 font-bold">
                             {initialData?.full_name?.[0]?.toUpperCase() || <User className="h-10 w-10" />}
                         </AvatarFallback>

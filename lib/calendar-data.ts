@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { Event } from "@/types";
-import { addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, format, parse, addMinutes } from "date-fns";
+import { addDays, format, parse, addMinutes } from "date-fns";
+import { getCalendarViewBoundsISO } from "@/lib/datetime/local-date";
 
 // Fetch professional availability (weekly schedule)
 export async function fetchProfessionalAvailability(professionalId: string) {
@@ -56,6 +57,7 @@ export async function fetchAppointments(
         .from("appointments")
         .select("*")
         .eq("professional_id", professionalId)
+        .neq("status", "cancelled")
         .gte("scheduled_at", startDate.toISOString())
         .lte("scheduled_at", endDate.toISOString())
         .order("scheduled_at", { ascending: true });
@@ -97,10 +99,10 @@ export async function fetchAppointments(
 }
 
 // Get variant (color) based on appointment status
-function getVariantByStatus(status: string): string {
+export function getVariantByStatus(status: string): string {
     switch (status) {
         case "confirmed":
-            return "green";
+            return "success";
         case "cancelled":
             return "red";
         case "in_progress":
@@ -126,9 +128,14 @@ export function transformAppointmentsToEvents(appointments: any[]): Event[] {
             variant: getVariantByStatus(appointment.status) as any,
             metadata: {
                 type: "appointment",
+                appointmentId: appointment.id,
                 patientId: appointment.patient_id,
                 status: appointment.status,
                 appointmentType: appointment.type,
+                meetLink:
+                    appointment.meet_link ??
+                    appointment.meeting_link ??
+                    undefined,
             },
         };
     });
@@ -259,26 +266,10 @@ export async function fetchAllCalendarData(
     viewDate: Date,
     viewType: "day" | "week" | "month"
 ) {
-    // Determine date range based on view type
-    let startDate: Date;
-    let endDate: Date;
-
-    switch (viewType) {
-        case "day":
-            startDate = new Date(viewDate);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(viewDate);
-            endDate.setHours(23, 59, 59, 999);
-            break;
-        case "week":
-            startDate = startOfWeek(viewDate, { weekStartsOn: 1 }); // Monday
-            endDate = endOfWeek(viewDate, { weekStartsOn: 1 });
-            break;
-        case "month":
-            startDate = startOfMonth(viewDate);
-            endDate = endOfMonth(viewDate);
-            break;
-    }
+    // Limites sempre em America/Sao_Paulo (alinha com scheduled_at no banco)
+    const { start: startISO, end: endISO } = getCalendarViewBoundsISO(viewDate, viewType);
+    const startDate = new Date(startISO);
+    const endDate = new Date(endISO);
 
     // Fetch all data in parallel
     const [availability, overrides, appointments] = await Promise.all([

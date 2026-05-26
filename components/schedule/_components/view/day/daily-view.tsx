@@ -15,31 +15,34 @@ import { Badge } from "@/components/ui/badge";
 import CustomModal, { CustomModalContent, CustomModalHeader, CustomModalTitle } from "../../../../ui/custom-modal";
 
 // Helper function to generate hours based on availability
-function generateHoursFromAvailability(availability: any[], currentDate: Date): string[] {
+function generateHoursFromAvailability(
+  availability: any[],
+  currentDate: Date
+): { hours: string[]; startHour: number } {
   if (!availability || availability.length === 0) {
-    // Default to 24 hours if no availability
-    return Array.from({ length: 24 }, (_, i) => {
-      const hour = i % 12 || 12;
-      const ampm = i < 12 ? "AM" : "PM";
-      return `${hour}:00 ${ampm}`;
-    });
+    return {
+      hours: Array.from({ length: 24 }, (_, i) => {
+        const hour = i % 12 || 12;
+        const ampm = i < 12 ? "AM" : "PM";
+        return `${hour}:00 ${ampm}`;
+      }),
+      startHour: 0,
+    };
   }
 
   const dayOfWeek = currentDate.getDay();
-  const dayAvailability = availability.find(a => a.day_of_week === dayOfWeek);
+  const dayAvailability = availability.find((a) => a.day_of_week === dayOfWeek);
 
   if (!dayAvailability) {
-    // Professional doesn't work this day
-    return [];
+    return { hours: [], startHour: 0 };
   }
 
-  // Parse start and end times
-  const startParts = dayAvailability.start_time.split(':');
-  const endParts = dayAvailability.end_time.split(':');
-  const startHour = parseInt(startParts[0]);
-  const endHour = parseInt(endParts[0]);
+  const startParts = dayAvailability.start_time.split(":");
+  const endParts = dayAvailability.end_time.split(":");
+  const startHour = parseInt(startParts[0], 10);
+  let endHour = parseInt(endParts[0], 10);
+  if (parseInt(endParts[1], 10) > 0) endHour++;
 
-  // Generate hours for work period
   const workHours: string[] = [];
   for (let i = startHour; i <= endHour; i++) {
     const hour = i % 12 || 12;
@@ -47,7 +50,7 @@ function generateHoursFromAvailability(availability: any[], currentDate: Date): 
     workHours.push(`${hour}:00 ${ampm}`);
   }
 
-  return workHours;
+  return { hours: workHours, startHour };
 }
 
 // Animation variants
@@ -254,7 +257,10 @@ export default function DailyView({
   );
 
   // Generate hours based on availability
-  const hours = generateHoursFromAvailability(availability || [], currentDate);
+  const { hours, startHour } = generateHoursFromAvailability(
+    availability || [],
+    currentDate
+  );
 
   // Calculate time groups once for all events
   const timeGroups = groupEventsByTimePeriod(dayEvents);
@@ -501,12 +507,17 @@ export default function DailyView({
                             adjustForPeriod: true
                           }
                         );
+
+                        // Ajusta posição relativa ao início do expediente (não meia-noite)
+                        const topVal = parseInt(String(top), 10);
+                        const adjustedTop = `${Math.max(0, topVal - startHour * 64)}px`;
+
                         return (
                           <motion.div
                             key={event.id}
                             style={{
                               minHeight: height,
-                              top: top,
+                              top: adjustedTop,
                               left: left,
                               minWidth: minWidth,
                               maxWidth: maxWidth,

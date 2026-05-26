@@ -23,6 +23,7 @@ interface EditPatientDialogProps {
         cpf?: string | null;
         occupation?: string | null;
         notes?: string | null;
+        avatar_url?: string | null;
         address?: {
             zip?: string;
             street?: string;
@@ -34,21 +35,40 @@ interface EditPatientDialogProps {
         } | null;
     };
     trigger?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    onSuccess?: () => void;
 }
 
-export function EditPatientDialog({ patient, trigger }: EditPatientDialogProps) {
-    const [open, setOpen] = useState(false);
+export function EditPatientDialog({
+    patient,
+    trigger,
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
+    onSuccess,
+}: EditPatientDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    const isControlled = controlledOpen !== undefined;
+    const open = isControlled ? controlledOpen : internalOpen;
+    const setOpen = isControlled ? controlledOnOpenChange! : setInternalOpen;
+
+    const handleSuccess = () => {
+        setOpen(false);
+        onSuccess?.();
+    };
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {trigger || (
-                    <Button variant="outline" size="sm" className="hidden sm:flex">
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                    </Button>
-                )}
-            </DialogTrigger>
+            {trigger !== null && (
+                <DialogTrigger asChild>
+                    {trigger || (
+                        <Button variant="outline" size="sm" className="hidden sm:flex">
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                        </Button>
+                    )}
+                </DialogTrigger>
+            )}
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Editar Paciente</DialogTitle>
@@ -59,7 +79,7 @@ export function EditPatientDialog({ patient, trigger }: EditPatientDialogProps) 
                 <PatientForm 
                     mode="edit" 
                     initialData={patient} 
-                    onSuccess={() => setOpen(false)} 
+                    onSuccess={handleSuccess} 
                 />
             </DialogContent>
         </Dialog>

@@ -2,11 +2,13 @@
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.professionals (user_id, email, full_name)
+  INSERT INTO public.professionals (user_id, email, full_name, subscription_plan, subscription_status)
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', 'Novo Usuário')
+    COALESCE(NEW.raw_user_meta_data->>'full_name', 'Novo Usuário'),
+    'free',
+    'free'
   );
   RETURN NEW;
 END;

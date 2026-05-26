@@ -6,6 +6,7 @@ import { Check, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { normalizeNotificationActionUrl } from "@/lib/notifications/normalize-action-url";
 
 interface Notification {
   id: string;
@@ -71,8 +72,9 @@ export function NotificationItem({
       handleMarkAsRead();
     }
 
-    if (notification.action_url) {
-      router.push(notification.action_url);
+    const target = normalizeNotificationActionUrl(notification.action_url);
+    if (target) {
+      router.push(target);
     }
   }
 

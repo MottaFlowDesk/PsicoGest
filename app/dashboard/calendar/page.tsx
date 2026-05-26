@@ -4,7 +4,7 @@ import SchedulerWrapper from "@/components/schedule/_components/view/schedular-v
 import { SchedulerProvider } from "@/providers/schedular-provider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CalendarDays, Calendar as CalendarIcon, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import DailyView from "@/components/schedule/_components/view/day/daily-view";
 import WeeklyView from "@/components/schedule/_components/view/week/week-view";
 import MonthView from "@/components/schedule/_components/view/month/month-view";
@@ -14,6 +14,11 @@ import { fetchAllCalendarData } from "@/lib/calendar-data";
 import { Event } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import AppointmentEvent from "@/components/schedule/_components/view/event-component/appointment-event";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useAppointmentsRealtime } from "@/hooks/use-appointments-realtime";
+import { patchEventWithAppointmentStatus } from "@/lib/calendar/appointment-event-utils";
+import { CalendarEventsSync } from "@/components/calendar/calendar-events-sync";
 
 const animationConfig = {
     initial: { opacity: 0, y: 20 },
@@ -29,6 +34,73 @@ export default function CalendarPage() {
     const [availability, setAvailability] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [professionalId, setProfessionalId] = useState<string | null>(null);
+    const router = useRouter();
+
+    const loadCalendarData = useCallback(
+        async (options?: { silent?: boolean }) => {
+            if (!professionalId) return;
+
+            if (!options?.silent) setLoading(true);
+            try {
+                const calendarEvents = await fetchAllCalendarData(
+                    professionalId,
+                    currentDate,
+                    activeView as "day" | "week" | "month"
+                );
+                setEvents(calendarEvents);
+            } catch (error) {
+                console.error("Error loading calendar data:", error);
+            } finally {
+                if (!options?.silent) setLoading(false);
+            }
+        },
+        [professionalId, currentDate, activeView]
+    );
+
+    const handleDeleteAppointment = useCallback(
+        async (appointmentId: string) => {
+            try {
+                const response = await fetch(`/api/appointments/${appointmentId}/cancel`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({}),
+                });
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || "Erro ao cancelar agendamento");
+                }
+                setEvents((prev) => prev.filter((e) => e.id !== appointmentId));
+                toast.success("Agendamento excluído com sucesso");
+                router.refresh();
+            } catch (error) {
+                console.error("Error deleting appointment:", error);
+                toast.error(
+                    error instanceof Error ? error.message : "Erro ao excluir agendamento"
+                );
+                throw error;
+            }
+        },
+        [router]
+    );
+
+    const handleAppointmentStatusChange = useCallback(
+        (appointmentId: string, status: string) => {
+            setEvents((prev) =>
+                prev.map((event) =>
+                    event.id === appointmentId
+                        ? patchEventWithAppointmentStatus(event, status)
+                        : event
+                )
+            );
+            if (status === "confirmed") {
+                toast.success("Paciente confirmou o agendamento", {
+                    description: "O card foi atualizado no calendário.",
+                });
+            }
+            loadCalendarData({ silent: true });
+        },
+        [loadCalendarData]
+    );
 
     // Fetch professional ID on mount
     useEffect(() => {
@@ -72,28 +144,33 @@ export default function CalendarPage() {
         loadAvailability();
     }, [professionalId]);
 
-    // Fetch calendar data when professional ID, date, or view changes
     useEffect(() => {
-        async function loadCalendarData() {
-            if (!professionalId) return;
-
-            setLoading(true);
-            try {
-                const calendarEvents = await fetchAllCalendarData(
-                    professionalId,
-                    currentDate,
-                    activeView as "day" | "week" | "month"
-                );
-                setEvents(calendarEvents);
-            } catch (error) {
-                console.error("Error loading calendar data:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
         loadCalendarData();
-    }, [professionalId, currentDate, activeView]);
+    }, [loadCalendarData]);
+
+    useAppointmentsRealtime({
+        professionalId,
+        onStatusChange: handleAppointmentStatusChange,
+    });
+
+    // Recarrega ao voltar para a aba ou a cada 15s (fallback se Realtime falhar)
+    useEffect(() => {
+        const onFocus = () => {
+            if (professionalId) loadCalendarData({ silent: true });
+        };
+        window.addEventListener("focus", onFocus);
+
+        const interval = setInterval(() => {
+            if (professionalId && document.visibilityState === "visible") {
+                loadCalendarData({ silent: true });
+            }
+        }, 10000);
+
+        return () => {
+            window.removeEventListener("focus", onFocus);
+            clearInterval(interval);
+        };
+    }, [professionalId, loadCalendarData]);
 
     const handlePrev = () => {
         const newDate = new Date(currentDate);
@@ -189,13 +266,18 @@ export default function CalendarPage() {
                     <div className="text-slate-500">Carregando calendário...</div>
                 </div>
             ) : (
-                <SchedulerProvider weekStartsOn="monday" initialState={events}>
+                <SchedulerProvider
+                    weekStartsOn="monday"
+                    initialState={events}
+                    onDeleteEvent={handleDeleteAppointment}
+                >
+                    <CalendarEventsSync events={events} />
                     <Tabs value={activeView} className="w-full">
                         <TabsContent value="day" className="mt-0">
                             <AnimatePresence mode="wait">
                                 <motion.div key={currentDate.toISOString()} {...animationConfig}>
                                     <DailyView
-                                        stopDayEventSummary={false}
+                                        stopDayEventSummary={true}
                                         availability={availability}
                                         initialDate={currentDate}
                                         CustomEventComponent={AppointmentEvent}

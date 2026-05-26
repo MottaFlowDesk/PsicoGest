@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { getLocalDateFromISO, getLocalTimeFromISO } from "@/lib/datetime/local-date";
 import { updateAppointment } from "@/app/dashboard/appointments/actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -50,9 +50,8 @@ export function EditAppointmentDialog({
     const router = useRouter();
 
     // Form state
-    const scheduledDate = new Date(appointment.scheduled_at);
-    const [date, setDate] = useState(format(scheduledDate, "yyyy-MM-dd"));
-    const [time, setTime] = useState(format(scheduledDate, "HH:mm"));
+    const [date, setDate] = useState(getLocalDateFromISO(appointment.scheduled_at));
+    const [time, setTime] = useState(getLocalTimeFromISO(appointment.scheduled_at));
     const [duration, setDuration] = useState(appointment.duration_minutes.toString());
     const [type, setType] = useState(appointment.type);
     const [notes, setNotes] = useState(appointment.notes || "");
@@ -60,9 +59,8 @@ export function EditAppointmentDialog({
     // Reset form when appointment changes
     useEffect(() => {
         if (appointment) {
-            const scheduledDate = new Date(appointment.scheduled_at);
-            setDate(format(scheduledDate, "yyyy-MM-dd"));
-            setTime(format(scheduledDate, "HH:mm"));
+            setDate(getLocalDateFromISO(appointment.scheduled_at));
+            setTime(getLocalTimeFromISO(appointment.scheduled_at));
             setDuration(appointment.duration_minutes.toString());
             setType(appointment.type);
             setNotes(appointment.notes || "");

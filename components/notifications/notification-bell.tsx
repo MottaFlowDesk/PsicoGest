@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
+import { normalizeNotificationActionUrl } from "@/lib/notifications/normalize-action-url";
 
 interface Notification {
   id: string;
@@ -163,8 +164,9 @@ export function NotificationBell() {
       handleMarkAsRead(notification.id);
     }
 
-    if (notification.action_url) {
-      router.push(notification.action_url);
+    const target = normalizeNotificationActionUrl(notification.action_url);
+    if (target) {
+      router.push(target);
       setOpen(false);
     }
   }

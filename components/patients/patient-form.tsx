@@ -3,15 +3,22 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { patientSchema, PatientValues } from "@/lib/validations/patient";
-import { useState } from "react";
+import {
+    getPatientDbErrorMessage,
+    normalizeCpfForDb,
+    normalizePhoneForDb,
+} from "@/lib/patients/format-for-db";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Upload, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog";
 import {
     Form,
     FormControl,
@@ -34,6 +41,7 @@ interface PatientFormProps {
         cpf?: string | null;
         occupation?: string | null;
         notes?: string | null;
+        avatar_url?: string | null;
         address?: {
             zip?: string;
             street?: string;
@@ -49,8 +57,24 @@ interface PatientFormProps {
 
 export function PatientForm({ mode = "create", initialData, onSuccess }: PatientFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [cropOpen, setCropOpen] = useState(false);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const cropImageUrlRef = useRef<string | null>(null);
     const supabase = createClient();
     const router = useRouter();
+
+    const revokeCropImageUrl = () => {
+        if (cropImageUrlRef.current) {
+            URL.revokeObjectURL(cropImageUrlRef.current);
+            cropImageUrlRef.current = null;
+        }
+        setImageToCrop(null);
+    };
+
+    useEffect(() => {
+        return () => revokeCropImageUrl();
+    }, []);
 
     const form = useForm<PatientValues>({
         resolver: zodResolver(patientSchema),
@@ -62,6 +86,7 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
             email: initialData?.email || "",
             occupation: initialData?.occupation || "",
             notes: initialData?.notes || "",
+            avatarUrl: initialData?.avatar_url || "",
             address: {
                 cep: initialData?.address?.zip || "",
                 street: initialData?.address?.street || "",
@@ -74,6 +99,83 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
         },
     });
 
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            toast.error("Formato inválido", {
+                description: "Selecione uma imagem (JPG, PNG, etc.).",
+            });
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Arquivo muito grande", {
+                description: "O tamanho máximo é 5MB.",
+            });
+            return;
+        }
+
+        revokeCropImageUrl();
+        const objectUrl = URL.createObjectURL(file);
+        cropImageUrlRef.current = objectUrl;
+        setImageToCrop(objectUrl);
+        setCropOpen(true);
+    };
+
+    const openCropForExisting = () => {
+        if (!avatarUrl) return;
+        revokeCropImageUrl();
+        setImageToCrop(avatarUrl);
+        setCropOpen(true);
+    };
+
+    const uploadCroppedAvatar = async (blob: Blob) => {
+        setIsUploading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not authenticated");
+
+            const prefix = initialData?.id || `new-${user.id}`;
+            const fileName = `patients/${prefix}-${Date.now()}.jpg`;
+
+            const { error: uploadError } = await supabase.storage
+                .from("avatars")
+                .upload(fileName, blob, {
+                    upsert: true,
+                    contentType: "image/jpeg",
+                });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from("avatars")
+                .getPublicUrl(fileName);
+
+            form.setValue("avatarUrl", publicUrl);
+            toast.success("Foto aplicada!");
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro no upload", {
+                description: "Não foi possível enviar a imagem.",
+            });
+            throw error;
+        } finally {
+            setIsUploading(false);
+            revokeCropImageUrl();
+        }
+    };
+
+    const handleCropOpenChange = (open: boolean) => {
+        setCropOpen(open);
+        if (!open) revokeCropImageUrl();
+    };
+
+    const avatarUrl = form.watch("avatarUrl");
+    const fullName = form.watch("fullName");
+
     async function onSubmit(data: PatientValues) {
         setIsSubmitting(true);
         try {
@@ -83,11 +185,12 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                     patientId: initialData.id,
                     fullName: data.fullName,
                     dateOfBirth: data.dateOfBirth,
-                    phone: data.phone,
+                    phone: normalizePhoneForDb(data.phone),
                     email: data.email,
-                    cpf: data.cpf,
+                    cpf: normalizeCpfForDb(data.cpf) ?? undefined,
                     occupation: data.occupation,
                     notes: data.notes,
+                    avatarUrl: data.avatarUrl,
                     address: data.address,
                 });
 
@@ -111,10 +214,10 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                 try {
                     const limitsResponse = await fetch(`/api/subscription/limits?professionalId=${professional.id}`);
                     if (limitsResponse.ok) {
-                        const limits = await limitsResponse.json();
-                        if (!limits.canAddPatient) {
+                        const { patient: patientLimits } = await limitsResponse.json();
+                        if (patientLimits && !patientLimits.canAdd) {
                             toast.error(
-                                `Limite de pacientes atingido (${limits.currentCount}/${limits.maxAllowed}). ` +
+                                `Limite de pacientes atingido (${patientLimits.currentCount}/${patientLimits.maxAllowed}). ` +
                                 `Faça upgrade do seu plano para adicionar mais pacientes.`,
                                 {
                                     action: {
@@ -132,15 +235,19 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                     // Continue anyway - don't block patient creation if check fails
                 }
 
+                const phone = normalizePhoneForDb(data.phone);
+                const cpf = normalizeCpfForDb(data.cpf);
+
                 const { data: newPatient, error } = await supabase.from('patients').insert({
                     professional_id: professional.id,
                     full_name: data.fullName,
-                    cpf: data.cpf || null,
+                    cpf,
                     date_of_birth: data.dateOfBirth,
-                    phone: data.phone,
+                    phone,
                     email: data.email || null,
-                    occupation: data.occupation,
-                    notes: data.notes,
+                    occupation: data.occupation || null,
+                    notes: data.notes || null,
+                    avatar_url: data.avatarUrl || null,
                     address: {
                         zip: data.address.cep,
                         street: data.address.street,
@@ -174,7 +281,10 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
             }
         } catch (error) {
             console.error("Error saving patient:", error);
-            toast.error(mode === "edit" ? "Erro ao atualizar paciente" : "Erro ao cadastrar paciente");
+            const message = getPatientDbErrorMessage(error);
+            toast.error(
+                mode === "edit" ? message || "Erro ao atualizar paciente" : message || "Erro ao cadastrar paciente"
+            );
         } finally {
             setIsSubmitting(false);
         }
@@ -183,6 +293,77 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+
+                {/* Foto do Paciente */}
+                <div className="flex items-center gap-6 p-6 bg-slate-50 rounded-xl border border-slate-200">
+                    <Avatar className="h-24 w-24 ring-4 ring-white shadow-lg">
+                        <AvatarImage src={avatarUrl || undefined} className="object-cover" />
+                        <AvatarFallback className="text-2xl bg-brand-100 text-brand-700 font-bold">
+                            {fullName?.substring(0, 2).toUpperCase() || <User className="h-10 w-10" />}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-2">
+                        <h3 className="font-semibold text-slate-900">Foto do Paciente</h3>
+                        <p className="text-sm text-slate-500">
+                            Arraste e ajuste o zoom para posicionar a foto dentro do avatar.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                id="patient-avatar-upload"
+                                onChange={handleFileSelect}
+                                disabled={isUploading || isSubmitting || cropOpen}
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={isUploading || isSubmitting || cropOpen}
+                                onClick={() => document.getElementById("patient-avatar-upload")?.click()}
+                            >
+                                {isUploading ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Upload className="mr-2 h-4 w-4" />
+                                )}
+                                {isUploading ? "Enviando..." : avatarUrl ? "Alterar foto" : "Carregar foto"}
+                            </Button>
+                            {avatarUrl && (
+                                <>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={isUploading || isSubmitting || cropOpen}
+                                        onClick={openCropForExisting}
+                                    >
+                                        Ajustar enquadramento
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        disabled={isUploading || isSubmitting}
+                                        onClick={() => form.setValue("avatarUrl", "")}
+                                    >
+                                        Remover
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <AvatarCropDialog
+                    open={cropOpen}
+                    onOpenChange={handleCropOpenChange}
+                    imageSrc={imageToCrop}
+                    onConfirm={uploadCroppedAvatar}
+                />
+
+                <Separator />
 
                 {/* Dados Pessoais */}
                 <div className="space-y-4">

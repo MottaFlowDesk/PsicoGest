@@ -68,12 +68,33 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
                 <Alert className={error === "access_denied_test_user" ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200"}>
                     <AlertCircle className={`h-4 w-4 ${error === "access_denied_test_user" ? "text-orange-600" : "text-red-600"}`} />
                     <AlertTitle className={error === "access_denied_test_user" ? "text-orange-900" : "text-red-900"}>
-                        {error === "access_denied_test_user" 
-                            ? "App em Modo de Teste" 
-                            : "Erro ao Conectar"}
+                        {error === "access_denied_test_user"
+                            ? "App em Modo de Teste"
+                            : error === "gmail_scope_missing"
+                              ? "Permissão de e-mail não concedida"
+                              : "Erro ao Conectar"}
                     </AlertTitle>
                     <AlertDescription className={error === "access_denied_test_user" ? "text-orange-700" : "text-red-700"}>
-                        {error === "access_denied_test_user" ? (
+                        {error === "gmail_scope_missing" ? (
+                            <div className="space-y-2">
+                                <p>
+                                    A conexão não incluiu permissão para enviar e-mails. Use{" "}
+                                    <strong>Reconectar</strong> e marque a opção de enviar e-mails pelo Gmail.
+                                </p>
+                                <p className="text-sm">
+                                    No{" "}
+                                    <a
+                                        href="https://console.cloud.google.com/apis/library/gmail.googleapis.com"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="underline font-medium"
+                                    >
+                                        Google Cloud Console
+                                    </a>
+                                    , verifique se a <strong>Gmail API</strong> está ativada para este projeto.
+                                </p>
+                            </div>
+                        ) : error === "access_denied_test_user" ? (
                             <div className="space-y-2">
                                 <p>O app Google OAuth está em modo de teste e seu email precisa ser adicionado como testador.</p>
                                 <ol className="list-decimal list-inside space-y-1 text-sm">

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { addMinutes, format, setHours, setMinutes } from "date-fns";
+import { endOfLocalDay, getTodayDateString, startOfLocalDay, toDateInputValue } from "@/lib/datetime/local-date";
 
 export interface TimeSlot {
     start: string; // HH:mm
@@ -72,11 +73,9 @@ export async function getAvailableSlots(
         ? exception.end_time 
         : availability.end_time;
 
-    // 3. Get existing appointments for this date
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
+    // 3. Get existing appointments for this date (limites no fuso local)
+    const dayStart = startOfLocalDay(date);
+    const dayEnd = endOfLocalDay(date);
 
     const { data: appointments } = await supabase
         .from("appointments")
@@ -104,11 +103,11 @@ export async function getAvailableSlots(
     let currentTime = setMinutes(setHours(date, startTimeParsed.hour), startTimeParsed.minute);
     const dayEndTime = setMinutes(setHours(date, endTimeParsed.hour), endTimeParsed.minute);
 
-    // Get current time to filter out past slots
+    // Ocultar horários já passados (hoje: mínimo 15 min de antecedência para agendar)
     const now = new Date();
-    const isToday = format(date, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
-    // For today, only show slots that start at least 1 hour from now
-    const minTimeForToday = isToday ? addMinutes(now, 60) : null;
+    const dateStrLocal = toDateInputValue(date);
+    const isToday = dateStrLocal === getTodayDateString();
+    const minTimeForToday = isToday ? addMinutes(now, 15) : null;
 
     while (currentTime < dayEndTime) {
         const slotEnd = addMinutes(currentTime, duration);
@@ -116,19 +115,10 @@ export async function getAvailableSlots(
         // Check if slot fits within working hours
         if (slotEnd > dayEndTime) break;
 
-        // Always skip slots that are in the past
-        // For today, require at least 1 hour buffer; for future dates, just check if time has passed
-        if (isToday) {
-            if (minTimeForToday && currentTime < minTimeForToday) {
-                currentTime = addMinutes(currentTime, duration);
-                continue;
-            }
-        } else {
-            // For future dates, still check if the time has passed (edge case: date selected but time already passed)
-            if (currentTime <= now) {
-                currentTime = addMinutes(currentTime, duration);
-                continue;
-            }
+        // Hoje: não mostrar slot que já começou ou começa em menos de 15 min
+        if (isToday && minTimeForToday && currentTime < minTimeForToday) {
+            currentTime = addMinutes(currentTime, duration);
+            continue;
         }
 
         // Check if slot conflicts with existing appointments
@@ -234,10 +224,8 @@ export async function isTimeSlotAvailable(
     requestedStart.setHours(hours, minutes, 0, 0);
     const requestedEnd = addMinutes(requestedStart, duration);
 
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
+    const dayStart = startOfLocalDay(date);
+    const dayEnd = endOfLocalDay(date);
 
     const { data: appointments } = await supabase
         .from("appointments")

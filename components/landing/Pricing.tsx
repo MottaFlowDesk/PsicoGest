@@ -183,10 +183,16 @@ const Pricing: React.FC = () => {
           })}
         </div>
 
-        <div className="text-center mt-12">
+        <div className="text-center mt-12 space-y-4">
           <p className="text-slate-500 text-sm">
-            Experimente por 14 dias grátis.
+            Planos pagos incluem 14 dias de trial. Ou comece sem cartão:
           </p>
+          <a
+            href="/signup"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-brand-700 bg-white border-2 border-brand-200 hover:border-brand-400 hover:bg-brand-50 transition-colors"
+          >
+            Criar conta grátis (até 5 pacientes)
+          </a>
         </div>
       </div>
     </section>

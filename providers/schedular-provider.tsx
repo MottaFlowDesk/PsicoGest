@@ -85,7 +85,7 @@ export const SchedulerProvider = ({
 }: {
   onAddEvent?: (event: Event) => void;
   onUpdateEvent?: (event: Event) => void;
-  onDeleteEvent?: (id: string) => void;
+  onDeleteEvent?: (id: string) => void | Promise<void>;
   weekStartsOn?: startOfWeek;
   children: ReactNode;
   initialState?: Event[];
@@ -320,11 +320,11 @@ export const SchedulerProvider = ({
     }
   }
 
-  function handleDeleteEvent(id: string) {
-    dispatch({ type: "REMOVE_EVENT", payload: { id } });
+  async function handleDeleteEvent(id: string) {
     if (onDeleteEvent) {
-      onDeleteEvent(id);
+      await onDeleteEvent(id);
     }
+    dispatch({ type: "REMOVE_EVENT", payload: { id } });
   }
 
   const handlers: Handlers = {

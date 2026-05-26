@@ -135,7 +135,19 @@ export function SessionHistory({ patientId, professionalId }: SessionHistoryProp
                                             {format(new Date(session.scheduled_at), 'HH:mm')}
                                         </div>
                                         <span>•</span>
-                                        <span>{session.status === 'completed' ? 'Realizada' : session.status === 'scheduled' ? 'Agendada' : session.status}</span>
+                                        <span className={
+                                            session.status === 'confirmed'
+                                                ? 'text-green-700 font-medium'
+                                                : ''
+                                        }>
+                                            {session.status === 'completed'
+                                                ? 'Realizada'
+                                                : session.status === 'confirmed'
+                                                  ? 'Confirmada'
+                                                  : session.status === 'scheduled'
+                                                    ? 'Agendada'
+                                                    : session.status}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ImportPatientDialog } from "@/components/patients/import-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type StatusFilter = "active" | "archived" | "all";
 
@@ -226,9 +227,12 @@ export default function PatientsListPage() {
                                     <tr key={patient.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
-                                                <div className="flex-shrink-0 h-10 w-10 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">
-                                                    {patient.full_name?.substring(0, 2).toUpperCase()}
-                                                </div>
+                                                <Avatar className="h-10 w-10">
+                                                    <AvatarImage src={patient.avatar_url || undefined} className="object-cover" />
+                                                    <AvatarFallback className="bg-brand-100 text-brand-700 font-bold text-sm">
+                                                        {patient.full_name?.substring(0, 2).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-slate-900">{patient.full_name}</div>
                                                     <div className="text-sm text-slate-500">{patient.email || '-'}</div>
@@ -260,8 +264,7 @@ export default function PatientsListPage() {
                                                     />
                                                 )}
                                                 <PatientActionsMenu
-                                                    patientId={patient.id}
-                                                    patientName={patient.full_name}
+                                                    patient={patient}
                                                     onUpdate={fetchPatients}
                                                 />
                                             </div>

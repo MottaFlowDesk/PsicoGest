@@ -12,8 +12,11 @@ import AppointmentDetailsModal from "@/components/schedule/_modals/appointment-d
 
 export default function AppointmentEvent(props: Event) {
     const { setOpen } = useModal();
-    const isOnline = props.metadata?.appointmentType === "online";
+    const isOnline =
+        props.metadata?.appointmentType === "telehealth" ||
+        props.metadata?.appointmentType === "online";
     const status = props.metadata?.status;
+    const isConfirmed = status === "confirmed";
 
     // Determine colors based on status (priority) or variant (fallback)
     const getColorClasses = () => {
@@ -64,10 +67,15 @@ export default function AppointmentEvent(props: Event) {
             )}
         >
             <div className="flex flex-col h-full gap-1">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                     <span className="font-semibold truncate">
                         {props.title}
                     </span>
+                    {isConfirmed && (
+                        <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide bg-green-600 text-white px-1.5 py-0.5 rounded">
+                            Confirmado
+                        </span>
+                    )}
                     {isOnline ? (
                         <Video className="w-3 h-3 flex-shrink-0 opacity-70" />
                     ) : (

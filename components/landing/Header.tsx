@@ -65,6 +65,12 @@ const Header: React.FC = () => {
             >
               Entrar
             </Link>
+            <Link
+              href="/signup"
+              className="text-brand-600 hover:text-brand-700 font-medium text-sm"
+            >
+              Criar conta
+            </Link>
             <a
               href="#pricing"
               onClick={(e) => handleScroll(e, 'pricing')}
@@ -107,6 +113,13 @@ const Header: React.FC = () => {
                 onClick={() => setIsOpen(false)}
               >
                 Entrar
+              </Link>
+              <Link
+                href="/signup"
+                className="w-full text-center text-brand-600 font-medium py-2"
+                onClick={() => setIsOpen(false)}
+              >
+                Criar conta grátis
               </Link>
               <a
                 href="#pricing"

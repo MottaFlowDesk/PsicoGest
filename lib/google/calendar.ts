@@ -9,6 +9,8 @@ export async function createCalendarEvent(
         startTime: Date;
         endTime: Date;
         attendeeEmail?: string;
+        /** Se true, envia convite por e-mail ao participante (padrão: false). */
+        sendInvitation?: boolean;
         location?: string;
         createMeet?: boolean;
     }
@@ -30,8 +32,8 @@ export async function createCalendarEvent(
         location: event.location,
     };
 
-    // Add attendee if provided
-    if (event.attendeeEmail) {
+    const shouldInvite = event.sendInvitation === true && !!event.attendeeEmail;
+    if (shouldInvite && event.attendeeEmail) {
         eventData.attendees = [{ email: event.attendeeEmail }];
     }
 
@@ -49,7 +51,7 @@ export async function createCalendarEvent(
         calendarId: "primary",
         requestBody: eventData,
         conferenceDataVersion: event.createMeet ? 1 : 0,
-        sendUpdates: event.attendeeEmail ? "all" : "none",
+        sendUpdates: shouldInvite ? "all" : "none",
     });
 
     const meetLinkEntry = response.data.conferenceData?.entryPoints?.find(
@@ -60,6 +62,68 @@ export async function createCalendarEvent(
         eventId: response.data.id || "",
         meetLink: meetLinkEntry?.uri || undefined,
     };
+}
+
+/** Adiciona Google Meet a um evento já existente no Calendar */
+export async function addGoogleMeetToCalendarEvent(
+    refreshToken: string,
+    eventId: string
+): Promise<{ meetLink?: string }> {
+    const auth = getAuthenticatedClient(refreshToken);
+    const calendar = google.calendar({ version: "v3", auth });
+
+    const response = await calendar.events.patch({
+        calendarId: "primary",
+        eventId,
+        requestBody: {
+            conferenceData: {
+                createRequest: {
+                    requestId: `psicogest-meet-${Date.now()}`,
+                    conferenceSolutionKey: { type: "hangoutsMeet" },
+                },
+            },
+        },
+        conferenceDataVersion: 1,
+    });
+
+    const meetLinkEntry = response.data.conferenceData?.entryPoints?.find(
+        (ep) => ep.entryPointType === "video"
+    );
+
+    return {
+        meetLink: meetLinkEntry?.uri || response.data.hangoutLink || undefined,
+    };
+}
+
+/** Adiciona o paciente ao evento e envia convite do Google Calendar. */
+export async function invitePatientToCalendarEvent(
+    refreshToken: string,
+    eventId: string,
+    attendeeEmail: string
+): Promise<void> {
+    const auth = getAuthenticatedClient(refreshToken);
+    const calendar = google.calendar({ version: "v3", auth });
+
+    const existing = await calendar.events.get({
+        calendarId: "primary",
+        eventId,
+    });
+
+    const attendees = existing.data.attendees ?? [];
+    const alreadyInvited = attendees.some(
+        (a) => a.email?.toLowerCase() === attendeeEmail.toLowerCase()
+    );
+
+    if (!alreadyInvited) {
+        attendees.push({ email: attendeeEmail });
+    }
+
+    await calendar.events.patch({
+        calendarId: "primary",
+        eventId,
+        requestBody: { attendees },
+        sendUpdates: "all",
+    });
 }
 
 export async function updateCalendarEvent(

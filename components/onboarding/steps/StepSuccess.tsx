@@ -27,9 +27,12 @@ export function StepSuccess() {
                 return;
             }
             
-            // If we only have planId, create checkout (legacy flow)
+            // Plano escolhido antes do cadastro: não forçar Stripe aqui (pode não estar configurado)
             if (planId) {
-                handleCreateCheckout(planId, billingPeriod);
+                localStorage.setItem(
+                    "pendingSubscription",
+                    JSON.stringify({ planId, billingPeriod: billingPeriod || "monthly" })
+                );
             }
         }
     }, []);

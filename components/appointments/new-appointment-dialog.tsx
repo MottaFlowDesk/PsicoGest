@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createAppointment } from "@/app/dashboard/appointments/actions";
 import { getAvailableSlots, TimeSlot } from "@/lib/availability-utils";
+import { parseLocalDate, toDateInputValue } from "@/lib/datetime/local-date";
 
 interface PatientOption {
     id: string;
@@ -173,11 +174,12 @@ export function NewAppointmentDialog(props: NewAppointmentDialogProps) {
 
             let created = 0;
             let failed = 0;
+            let confirmationWarning: string | undefined;
 
             for (const appointmentDate of datesToCreate) {
                 try {
                     const dateStr = format(appointmentDate, "yyyy-MM-dd");
-                    await createAppointment({
+                    const result = await createAppointment({
                         patientId,
                         date: dateStr,
                         time,
@@ -185,6 +187,9 @@ export function NewAppointmentDialog(props: NewAppointmentDialogProps) {
                         type: type as "in_person" | "telehealth"
                     });
                     created++;
+                    if (result.confirmationSent === false && result.confirmationError) {
+                        confirmationWarning = result.confirmationError;
+                    }
                 } catch (err) {
                     failed++;
                     console.error("Failed to create appointment:", err);
@@ -196,6 +201,11 @@ export function NewAppointmentDialog(props: NewAppointmentDialogProps) {
                     ? `${created} agendamento(s) criado(s)!${failed > 0 ? ` (${failed} falharam)` : ''}`
                     : "Agendamento criado com sucesso!";
                 toast.success(message);
+                if (confirmationWarning) {
+                    toast.warning("E-mail de confirmação não enviado", {
+                        description: confirmationWarning,
+                    });
+                }
             } else {
                 toast.error("Não foi possível criar os agendamentos");
             }
@@ -289,8 +299,12 @@ export function NewAppointmentDialog(props: NewAppointmentDialogProps) {
                             <Input
                                 type="date"
                                 id="date"
-                                min={format(new Date(), "yyyy-MM-dd")}
-                                onChange={(e) => setDate(e.target.valueAsDate || undefined)}
+                                min={toDateInputValue(new Date())}
+                                onChange={(e) =>
+                                    setDate(
+                                        e.target.value ? parseLocalDate(e.target.value) : undefined
+                                    )
+                                }
                                 className="block"
                             />
                         </div>

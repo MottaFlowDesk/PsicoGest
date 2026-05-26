@@ -3,7 +3,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { addMinutes, format } from "date-fns";
 import { revalidatePath } from "next/cache";
-import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, checkAvailability } from "@/lib/google/calendar";
+import {
+    createCalendarEvent,
+    updateCalendarEvent,
+    deleteCalendarEvent,
+    checkAvailability,
+} from "@/lib/google/calendar";
+import {
+    buildAppointmentTimestamp,
+    getDayBoundsISO,
+    getTodayDateString,
+} from "@/lib/datetime/local-date";
 
 export type AppointmentStatus = "scheduled" | "confirmed" | "completed" | "cancelled" | "no_show";
 
@@ -35,21 +45,15 @@ export async function createAppointment(data: {
         .eq("id", data.patientId)
         .single();
 
-    // Construct timestamps
-    // Parse date and time, ensuring we're working with the correct timezone
-    const [hours, minutes] = data.time.split(':').map(Number);
-    
-    // Create date string in ISO format to ensure correct timezone handling
-    // Format: YYYY-MM-DDTHH:mm:ss (local time, will be converted to UTC by toISOString())
-    const dateTimeString = `${data.date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-    const scheduledAt = new Date(dateTimeString);
+    // Horário em America/Sao_Paulo (evita deslocamento de 1 dia no servidor UTC)
+    const scheduledAt = buildAppointmentTimestamp(data.date, data.time);
     
     // Ensure the date is in the future
     // For today, require at least 1 hour from now
     // For future dates, just ensure it's not in the past
     const now = new Date();
-    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
-    const isToday = format(scheduledAt, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    const isToday = data.date === getTodayDateString();
     
     if (isToday && scheduledAt < oneHourFromNow) {
         throw new Error("Para agendamentos hoje, o horário deve ser pelo menos 1 hora a partir de agora.");
@@ -60,18 +64,15 @@ export async function createAppointment(data: {
     const scheduledEnd = addMinutes(scheduledAt, data.duration);
 
     // Fetch appointments for that day to check conflicts
-    const dayStart = new Date(data.date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(data.date);
-    dayEnd.setHours(23, 59, 59, 999);
+    const { start: dayStartISO, end: dayEndISO } = getDayBoundsISO(data.date);
 
     const { data: daysAppointments } = await supabase
         .from("appointments")
         .select("scheduled_at, duration_minutes")
         .eq("professional_id", professional.id)
         .neq("status", "cancelled")
-        .gte("scheduled_at", dayStart.toISOString())
-        .lte("scheduled_at", dayEnd.toISOString());
+        .gte("scheduled_at", dayStartISO)
+        .lte("scheduled_at", dayEndISO);
 
     const hasConflict = daysAppointments?.some(apt => {
         const aptStart = new Date(apt.scheduled_at);
@@ -104,6 +105,9 @@ export async function createAppointment(data: {
     // The validation above already ensures scheduled_at is in the future
     // The constraint requires scheduled_at > created_at, which is satisfied by the buffer check above
     
+    const { randomBytes } = await import("crypto");
+    const confirmationToken = randomBytes(32).toString("hex");
+
     const { data: appointment, error } = await supabase
         .from("appointments")
         .insert({
@@ -112,39 +116,79 @@ export async function createAppointment(data: {
             scheduled_at: scheduledAt.toISOString(),
             duration_minutes: data.duration,
             type: data.type,
-            telehealth_provider: data.type === 'telehealth' ? 'native' : null,
-            status: 'scheduled',
-            timezone: 'America/Sao_Paulo'
+            telehealth_provider: data.type === "telehealth" ? "google_meet" : null,
+            status: "scheduled",
+            timezone: "America/Sao_Paulo",
+            confirmation_token: confirmationToken,
         })
-        .select("id")
+        .select("id, confirmation_token")
         .single();
 
     if (error) throw error;
 
-    // Create Google Calendar event if connected
+    let confirmationSent = false;
+    let confirmationError: string | undefined;
+
+    try {
+        const { sendAppointmentConfirmation } = await import(
+            "@/lib/notifications/appointment-confirmation"
+        );
+        const confirmationResult = await sendAppointmentConfirmation(appointment.id);
+        confirmationSent = confirmationResult.sent;
+        confirmationError = confirmationResult.error;
+        if (!confirmationResult.sent) {
+            console.warn(
+                "Confirmação não enviada ao paciente:",
+                confirmationResult.error
+            );
+        }
+    } catch (err) {
+        console.error("Failed to send appointment confirmation:", err);
+        confirmationError =
+            err instanceof Error ? err.message : "Erro ao enviar confirmação";
+    }
+
+    // Google Calendar (+ Meet para teleconsulta)
     if (professional.google_calendar_connected && professional.google_refresh_token && patient) {
         try {
+            const isTelehealth = data.type === "telehealth";
+            const { buildAppointmentConfirmationUrl } = await import(
+                "@/lib/app/public-url"
+            );
+            const confirmUrl = buildAppointmentConfirmationUrl(confirmationToken);
+
             const result = await createCalendarEvent(
                 professional.google_refresh_token,
                 {
                     summary: `Sessão com ${patient.full_name}`,
-                    description: `Agendamento PsicoGest - ${data.type === 'telehealth' ? 'Online' : 'Presencial'}`,
+                    description: [
+                        `Agendamento PsicoGest - ${isTelehealth ? "Online (Google Meet)" : "Presencial"}`,
+                        "",
+                        `Confirme sua presença: ${confirmUrl}`,
+                    ].join("\n"),
                     startTime: scheduledAt,
                     endTime: scheduledEnd,
-                    attendeeEmail: patient.email || undefined,
-                    createMeet: false, // Meet is created on confirmation
+                    createMeet: isTelehealth,
+                    // Convite do Calendar só após o paciente confirmar (e-mail usa template PsicoGest)
+                    sendInvitation: false,
                 }
             );
 
-            // Save Google Calendar event ID
             if (result.eventId) {
+                const calendarUpdate: Record<string, string | null> = {
+                    google_calendar_event_id: result.eventId,
+                };
+                if (isTelehealth && result.meetLink) {
+                    calendarUpdate.meeting_link = result.meetLink;
+                    calendarUpdate.meet_created_at = new Date().toISOString();
+                }
+
                 await supabase
                     .from("appointments")
-                    .update({ google_calendar_event_id: result.eventId })
+                    .update(calendarUpdate)
                     .eq("id", appointment.id);
             }
         } catch (googleError) {
-            // Log but don't fail the appointment creation
             console.error("Failed to create Google Calendar event:", googleError);
         }
     }
@@ -169,7 +213,12 @@ export async function createAppointment(data: {
     revalidatePath("/dashboard/calendar");
     revalidatePath("/dashboard");
     
-    return { success: true };
+    return {
+        success: true,
+        appointmentId: appointment.id,
+        confirmationSent,
+        confirmationError,
+    };
 }
 
 export async function updateAppointment(data: {
@@ -213,17 +262,12 @@ export async function updateAppointment(data: {
     let newScheduledEnd: Date | null = null;
 
     if (data.date && data.time) {
-        const [hours, minutes] = data.time.split(':').map(Number);
-        newScheduledAt = new Date(data.date);
-        newScheduledAt.setHours(hours, minutes, 0, 0);
+        newScheduledAt = buildAppointmentTimestamp(data.date, data.time);
         const duration = data.duration || existing.duration_minutes;
         newScheduledEnd = addMinutes(newScheduledAt, duration);
 
         // Check conflicts (excluding this appointment)
-        const dayStart = new Date(data.date);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(data.date);
-        dayEnd.setHours(23, 59, 59, 999);
+        const { start: dayStartISO, end: dayEndISO } = getDayBoundsISO(data.date);
 
         const { data: daysAppointments } = await supabase
             .from("appointments")
@@ -231,8 +275,8 @@ export async function updateAppointment(data: {
             .eq("professional_id", professional.id)
             .neq("status", "cancelled")
             .neq("id", data.appointmentId)
-            .gte("scheduled_at", dayStart.toISOString())
-            .lte("scheduled_at", dayEnd.toISOString());
+            .gte("scheduled_at", dayStartISO)
+            .lte("scheduled_at", dayEndISO);
 
         const hasConflict = daysAppointments?.some(apt => {
             const aptStart = new Date(apt.scheduled_at);
@@ -347,12 +391,33 @@ export async function updateAppointmentStatus(
         updateData.completed_at = new Date().toISOString();
     }
 
-    const { error } = await supabase
+    if (status === "confirmed") {
+        updateData.confirmed_at = new Date().toISOString();
+    }
+
+    const { data: updated, error } = await supabase
         .from("appointments")
         .update(updateData)
-        .eq("id", appointmentId);
+        .eq("id", appointmentId)
+        .select("id, status, professional_id")
+        .single();
 
     if (error) throw error;
+
+    if (updated?.professional_id) {
+        try {
+            const { broadcastAppointmentStatus } = await import(
+                "@/lib/realtime/appointment-status-broadcast"
+            );
+            await broadcastAppointmentStatus(
+                updated.professional_id,
+                updated.id,
+                updated.status
+            );
+        } catch (broadcastError) {
+            console.error("Failed to broadcast appointment status:", broadcastError);
+        }
+    }
 
     revalidatePath("/dashboard/appointments");
     revalidatePath("/dashboard/calendar");

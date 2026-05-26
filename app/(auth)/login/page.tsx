@@ -19,6 +19,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthErrorMessage } from "@/lib/auth/messages";
 import { toast } from "sonner";
 
 const loginSchema = z.object({
@@ -35,6 +36,8 @@ function LoginForm() {
     const planId = searchParams.get("plan"); // Legacy - not used in new flow
     const fromCheckout = searchParams.get("from_checkout") === "true";
     const forceLogout = searchParams.get("logout") === "true";
+    const authError = searchParams.get("error");
+    const checkEmail = searchParams.get("check_email") === "true";
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -73,12 +76,7 @@ function LoginForm() {
 
             if (error) {
                 console.error("Login error:", error);
-
-                if (error.message.includes("Invalid login credentials")) {
-                    setErrorMessage("Email ou senha inválidos.");
-                } else {
-                    setErrorMessage("Erro ao fazer login. Verifique suas credenciais.");
-                }
+                setErrorMessage(getAuthErrorMessage(error));
                 return;
             }
 
@@ -119,6 +117,18 @@ function LoginForm() {
             {registered && (
                 <div className="p-3 rounded-lg bg-green-50 border border-green-100 text-sm text-green-600 text-center">
                     Conta criada com sucesso! Faça login para continuar.
+                </div>
+            )}
+
+            {checkEmail && (
+                <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 text-sm text-blue-800 text-center">
+                    Confirme seu e-mail pelo link enviado antes de entrar com sua senha.
+                </div>
+            )}
+
+            {authError === "confirm" && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600 text-center">
+                    Link de confirmação inválido ou expirado. Tente cadastrar-se novamente ou recupere a senha.
                 </div>
             )}
 
@@ -180,8 +190,8 @@ function LoginForm() {
 
             <div className="text-center text-sm">
                 <span className="text-slate-500">Não tem uma conta? </span>
-                <Link href="/#pricing" className="text-brand-600 font-semibold hover:underline">
-                    Ver planos
+                <Link href="/signup" className="text-brand-600 font-semibold hover:underline">
+                    Criar conta grátis
                 </Link>
             </div>
         </div>

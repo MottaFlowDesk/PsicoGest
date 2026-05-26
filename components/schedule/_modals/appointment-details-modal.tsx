@@ -1,20 +1,22 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
     Calendar,
     Clock,
     User,
     FileText,
     CheckCircle2,
-    AlertCircle,
     XCircle,
     Video,
     MapPin,
-    Play
+    Play,
+    Loader2,
+    ExternalLink,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,10 +29,10 @@ import {
     CustomModalTitle,
     CustomModalDescription,
     CustomModalFooter,
-    CustomModalClose
 } from "@/components/ui/custom-modal";
 import { Event } from "@/types";
 import { useModal } from "@/providers/modal-context";
+import { toast } from "sonner";
 
 interface AppointmentDetailsModalProps {
     event: Event;
@@ -38,6 +40,14 @@ interface AppointmentDetailsModalProps {
 
 export default function AppointmentDetailsModal({ event }: AppointmentDetailsModalProps) {
     const { setClose } = useModal();
+    const router = useRouter();
+    const [isStarting, setIsStarting] = useState(false);
+
+    const status = event.metadata?.status ?? "scheduled";
+    const appointmentId =
+        (event.metadata?.appointmentId as string | undefined) || event.id;
+    const canStartSession = !["cancelled", "completed", "no_show"].includes(status);
+    const meetLink = event.metadata?.meetLink as string | undefined;
 
     // Helper to get status configuration
     const getStatusConfig = (status: string = "scheduled") => {
@@ -55,9 +65,63 @@ export default function AppointmentDetailsModal({ event }: AppointmentDetailsMod
         }
     };
 
-    const statusConfig = getStatusConfig(event.metadata?.status);
+    const statusConfig = getStatusConfig(status);
     const StatusIcon = statusConfig.icon;
-    const isOnline = event.metadata?.appointmentType === "online";
+    const isOnline =
+        event.metadata?.appointmentType === "telehealth" ||
+        event.metadata?.appointmentType === "online";
+
+    const handleStartSession = async () => {
+        if (!event.metadata?.patientId) {
+            toast.error("Paciente não identificado para esta sessão");
+            return;
+        }
+
+        if (!canStartSession) {
+            toast.error("Esta sessão não pode ser iniciada no status atual");
+            return;
+        }
+
+        setIsStarting(true);
+        try {
+            const response = await fetch(
+                `/api/appointments/${appointmentId}/start-session`,
+                {
+                    method: "POST",
+                    credentials: "include",
+                }
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Erro ao iniciar sessão");
+            }
+
+            const sessionMeetLink = result.meetLink || meetLink;
+            if (isOnline && sessionMeetLink) {
+                window.open(sessionMeetLink, "_blank", "noopener,noreferrer");
+            } else if (isOnline && !sessionMeetLink) {
+                toast.info("Consulta online sem link do Meet", {
+                    description:
+                        "O link pode ser gerado após a confirmação do paciente. Abrindo o prontuário.",
+                });
+            }
+
+            setClose();
+            router.push(`/dashboard/patients/${result.patientId}`);
+            router.refresh();
+            toast.success("Sessão iniciada", {
+                description: "Prontuário do paciente aberto.",
+            });
+        } catch (error) {
+            console.error(error);
+            toast.error(
+                error instanceof Error ? error.message : "Erro ao iniciar sessão"
+            );
+        } finally {
+            setIsStarting(false);
+        }
+    };
 
     return (
         <CustomModal open={true} onOpenChange={(open) => !open && setClose()}>
@@ -149,6 +213,17 @@ export default function AppointmentDetailsModal({ event }: AppointmentDetailsMod
                                 <p className="text-sm text-slate-600 mt-0.5">
                                     {isOnline ? "Consulta Online" : "Consultório Presencial"}
                                 </p>
+                                {isOnline && meetLink && (
+                                    <a
+                                        href={meetLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 mt-1"
+                                    >
+                                        <ExternalLink className="w-3 h-3" />
+                                        Abrir Google Meet
+                                    </a>
+                                )}
                             </div>
                         </div>
 
@@ -176,11 +251,17 @@ export default function AppointmentDetailsModal({ event }: AppointmentDetailsMod
                             Fechar
                         </Button>
                         <Button
+                            type="button"
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white gap-2"
-                            disabled={event.metadata?.status === "completed"}
+                            disabled={!canStartSession || isStarting}
+                            onClick={handleStartSession}
                         >
-                            <Play className="w-4 h-4" />
-                            Iniciar Sessão
+                            {isStarting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Play className="w-4 h-4" />
+                            )}
+                            {isStarting ? "Iniciando..." : "Iniciar Sessão"}
                         </Button>
                     </div>
                 </CustomModalFooter>

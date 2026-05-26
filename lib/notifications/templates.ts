@@ -20,8 +20,7 @@ export function getAppointmentNotificationTemplate(
     appointmentId: string;
   }
 ): NotificationTemplate {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const actionUrl = `${baseUrl}/dashboard/appointments/${data.appointmentId}`;
+  const actionUrl = "/dashboard/calendar";
 
   switch (event) {
     case "created":
@@ -80,8 +79,7 @@ export function getPaymentNotificationTemplate(
     invoiceId: string;
   }
 ): NotificationTemplate {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const actionUrl = `${baseUrl}/dashboard/financial`;
+  const actionUrl = "/dashboard/financial";
   const formattedAmount = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -135,8 +133,7 @@ export function getPatientNotificationTemplate(
     patientId: string;
   }
 ): NotificationTemplate {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const actionUrl = `${baseUrl}/dashboard/patients/${data.patientId}`;
+  const actionUrl = `/dashboard/patients/${data.patientId}`;
 
   switch (event) {
     case "created":
@@ -176,21 +173,19 @@ export function getSystemNotificationTemplate(
     maxValue?: number;
   }
 ): NotificationTemplate {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-
   switch (event) {
     case "subscription_expiring":
       return {
         title: "Assinatura Expirando",
         message: `Sua assinatura ${data.subscriptionPlan || ""} expira em ${data.daysUntilExpiry} dia(s). Renove para continuar usando todos os recursos.`,
-        actionUrl: `${baseUrl}/dashboard/settings/subscription`,
+        actionUrl: "/dashboard/settings/subscription",
       };
 
     case "subscription_cancelled":
       return {
         title: "Assinatura Cancelada",
         message: `Sua assinatura ${data.subscriptionPlan || ""} foi cancelada. Você continuará com acesso até o fim do período pago.`,
-        actionUrl: `${baseUrl}/dashboard/settings/subscription`,
+        actionUrl: "/dashboard/settings/subscription",
       };
 
     case "integration_disconnected":
@@ -198,21 +193,21 @@ export function getSystemNotificationTemplate(
       return {
         title: "Integração Desconectada",
         message: `Sua integração com ${integrationName} foi desconectada. Reconecte para continuar usando os recursos.`,
-        actionUrl: `${baseUrl}/dashboard/settings`,
+        actionUrl: "/dashboard/settings/integrations",
       };
 
     case "limit_reached":
       return {
         title: "Limite Atingido",
         message: `Você atingiu o limite de ${data.limitType || "recursos"} do seu plano (${data.currentValue}/${data.maxValue}). Considere fazer upgrade.`,
-        actionUrl: `${baseUrl}/dashboard/settings/subscription`,
+        actionUrl: "/dashboard/settings/subscription",
       };
 
     default:
       return {
         title: "Notificação do Sistema",
         message: "Você recebeu uma notificação do sistema.",
-        actionUrl: `${baseUrl}/dashboard`,
+        actionUrl: "/dashboard",
       };
   }
 }
@@ -227,8 +222,7 @@ export function getSubscriptionNotificationTemplate(
     status?: string;
   }
 ): NotificationTemplate {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const actionUrl = `${baseUrl}/dashboard/settings/subscription`;
+  const actionUrl = "/dashboard/settings/subscription";
 
   switch (event) {
     case "created":

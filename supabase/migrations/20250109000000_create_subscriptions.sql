@@ -102,7 +102,15 @@ BEGIN
       );
     ELSE
       -- Free plan (default)
-      NULL;
+      limits := jsonb_build_object(
+        'max_patients', 5,
+        'max_ai_hours_per_month', 0,
+        'whatsapp_reminders', false,
+        'ai_transcription', false,
+        'priority_support', false,
+        'unlimited_patients', false,
+        'unlimited_ai', false
+      );
   END CASE;
 
   RETURN limits;

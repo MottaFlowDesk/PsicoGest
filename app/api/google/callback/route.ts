@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTokensFromCode, getUserEmail, isGoogleConfigured } from "@/lib/google/auth";
+import {
+    getTokensFromCode,
+    getUserEmail,
+    isGoogleConfigured,
+    tokenScopeIncludesGmailSend,
+} from "@/lib/google/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -35,12 +40,21 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Get tokens from Google
         const tokens = await getTokensFromCode(code);
 
         if (!tokens.refresh_token) {
             return NextResponse.redirect(
                 new URL("/dashboard/settings/integrations?error=no_refresh_token", request.url)
+            );
+        }
+
+        if (!tokenScopeIncludesGmailSend(tokens.scope)) {
+            console.error("OAuth concluído sem gmail.send. scope:", tokens.scope);
+            return NextResponse.redirect(
+                new URL(
+                    "/dashboard/settings/integrations?error=gmail_scope_missing",
+                    request.url
+                )
             );
         }
 
@@ -61,10 +75,8 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Get user's Google email
-        const googleEmail = await getUserEmail(tokens.refresh_token);
+        await getUserEmail(tokens.refresh_token);
 
-        // Update professional with Google credentials
         const { error: updateError } = await supabase
             .from("professionals")
             .update({

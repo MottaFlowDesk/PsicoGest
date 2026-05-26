@@ -10,7 +10,7 @@ interface KPICardsProps {
 }
 
 export function KPICards({ data }: KPICardsProps) {
-  const { kpis, health } = data;
+  const { kpis } = data;
 
   return (
     <div className="space-y-4">
@@ -117,60 +117,6 @@ export function KPICards({ data }: KPICardsProps) {
           </CardContent>
         </Card>
       </div>
-
-      {/* Health Score */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Saúde do Negócio
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Score Geral</span>
-                <span className="text-2xl font-bold">{health.score}%</span>
-              </div>
-              <div className="w-full bg-slate-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full ${
-                    health.score >= 75 ? "bg-green-600" : health.score >= 50 ? "bg-yellow-600" : "bg-red-600"
-                  }`}
-                  style={{ width: `${health.score}%` }}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {health.indicators.map((indicator, index) => (
-                <div key={index} className="p-3 bg-slate-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-slate-700">{indicator.name}</span>
-                    <span
-                      className={`text-xs px-2 py-1 rounded ${
-                        indicator.status === "good"
-                          ? "bg-green-100 text-green-700"
-                          : indicator.status === "warning"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {indicator.status === "good" ? "Bom" : indicator.status === "warning" ? "Atenção" : "Crítico"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold">
-                      {indicator.name.includes("Taxa") ? formatPercentage(indicator.value) : indicator.value.toFixed(0)}
-                    </span>
-                    <span className="text-xs text-slate-500">Meta: {indicator.target}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

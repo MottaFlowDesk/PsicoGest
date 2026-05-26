@@ -48,7 +48,7 @@ export default function ConfirmAppointmentPage() {
             
             if (data.status === "confirmed") {
                 setConfirmed(true);
-                setMeetLink(data.meeting_link);
+                setMeetLink(data.meeting_link || data.meet_link || null);
             }
         } catch (err) {
             setError("Erro ao carregar agendamento");
@@ -70,7 +70,11 @@ export default function ConfirmAppointmentPage() {
             }
 
             setConfirmed(true);
-            setMeetLink(data.meeting_link);
+            const link = data.meeting_link || data.meet_link || null;
+            setMeetLink(link);
+            setAppointment((prev) =>
+                prev ? { ...prev, status: "confirmed", meeting_link: link } : prev
+            );
         } catch (err: any) {
             setError(err.message);
         } finally {

@@ -6,7 +6,7 @@ import { useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,9 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthErrorMessage } from "@/lib/auth/messages";
 import { toast } from "sonner";
+import { Mail } from "lucide-react";
 
 const signupSchema = z.object({
     fullName: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
@@ -39,34 +41,9 @@ function SignupForm() {
     const planId = searchParams.get("plan");
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+    const [awaitingEmailConfirmation, setAwaitingEmailConfirmation] = useState(false);
+    const [registeredEmail, setRegisteredEmail] = useState("");
     // supabase client initialized in onSubmit to avoid build errors if env vars missing
-
-    // Redirect if no plan selected
-    if (!planId) {
-        return (
-            <div className="space-y-6">
-                <div className="text-center">
-                    <AlertCircle className="mx-auto h-12 w-12 text-orange-500 mb-4" />
-                    <h2 className="text-lg font-semibold text-slate-900">Escolha um Plano</h2>
-                    <p className="text-sm text-slate-500 mt-2">
-                        Para criar sua conta, você precisa escolher um plano primeiro.
-                    </p>
-                </div>
-                <Link
-                    href="/#pricing"
-                    className="block w-full text-center bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 rounded-lg font-semibold shadow-md"
-                >
-                    Ver Planos e Preços
-                </Link>
-                <div className="text-center text-sm">
-                    <span className="text-slate-500">Já tem uma conta? </span>
-                    <Link href="/login" className="text-brand-600 font-semibold hover:underline">
-                        Fazer Login
-                    </Link>
-                </div>
-            </div>
-        );
-    }
 
     const form = useForm<SignupFormValues>({
         resolver: zodResolver(signupSchema),
@@ -87,35 +64,48 @@ function SignupForm() {
 
         try {
             // 1. Create Auth User
+            const redirectTo = `${window.location.origin}/auth/confirm?next=/onboarding`;
+
             const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: data.email,
+                email: data.email.trim(),
                 password: data.password,
                 options: {
+                    emailRedirectTo: redirectTo,
                     data: {
                         full_name: data.fullName,
-                    }
-                }
+                    },
+                },
             });
 
             if (authError) {
-                setErrorMessage(authError.message);
+                setErrorMessage(getAuthErrorMessage(authError));
                 return;
             }
 
-            if (authData.user) {
-                // Success! Redirect to onboarding
-                // Note: If user came from plan selection, they should pay first
-                // But if they're accessing signup directly, allow free account
-                if (planId) {
-                    // User tried to signup with plan - redirect to pricing
-                    toast.info("Para escolher um plano, faça o pagamento primeiro.");
-                    router.push('/#pricing');
-                } else {
-                    // Free signup - go to onboarding
-                    router.push('/onboarding');
-                    router.refresh();
-                }
+            if (!authData.user) {
+                setErrorMessage("Não foi possível criar a conta. Tente novamente.");
+                return;
             }
+
+            if (planId) {
+                localStorage.setItem(
+                    "pendingSubscription",
+                    JSON.stringify({ planId, billingPeriod: "monthly" })
+                );
+            }
+
+            // Sessão ativa = e-mail já confirmado ou confirmação desligada no Supabase
+            if (authData.session) {
+                toast.success("Conta criada! Complete seu perfil para começar.");
+                router.push("/onboarding");
+                router.refresh();
+                return;
+            }
+
+            // Sem sessão: Supabase exige confirmação de e-mail antes do login
+            setRegisteredEmail(data.email.trim());
+            setAwaitingEmailConfirmation(true);
+            toast.info("Enviamos um link de confirmação para seu e-mail.");
 
         } catch (error) {
             setErrorMessage("Ocorreu um erro ao criar a conta.");
@@ -124,12 +114,42 @@ function SignupForm() {
         }
     }
 
+    if (awaitingEmailConfirmation) {
+        return (
+            <div className="space-y-6 text-center">
+                <div className="flex justify-center">
+                    <div className="h-14 w-14 rounded-full bg-brand-50 flex items-center justify-center">
+                        <Mail className="h-7 w-7 text-brand-600" />
+                    </div>
+                </div>
+                <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Confirme seu e-mail</h2>
+                    <p className="text-sm text-slate-500 mt-2">
+                        Enviamos um link para <strong className="text-slate-700">{registeredEmail}</strong>.
+                        Clique no link e depois faça login com a <strong>mesma senha</strong> que você cadastrou.
+                    </p>
+                </div>
+                <p className="text-xs text-slate-400">
+                    Não recebeu? Verifique a pasta de spam ou cadastre-se de novo com outro e-mail.
+                </p>
+                <Link
+                    href="/login"
+                    className="inline-block w-full text-center bg-brand-600 hover:bg-brand-700 text-white px-4 py-3 rounded-lg font-semibold"
+                >
+                    Já confirmei — ir para o login
+                </Link>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <div className="text-center">
                 <h2 className="text-lg font-semibold text-slate-900">Crie sua conta</h2>
                 <p className="text-sm text-slate-500">
-                    Complete seu cadastro para começar seu teste grátis de 14 dias
+                    {planId
+                        ? "Cadastro gratuito — você pode assinar um plano depois nas configurações"
+                        : "Comece no plano gratuito (até 5 pacientes). Assine quando quiser."}
                 </p>
             </div>
 
@@ -213,7 +233,7 @@ function SignupForm() {
 
             <div className="text-center text-sm">
                 <span className="text-slate-500">Já tem uma conta? </span>
-                <Link href={`/login?plan=${planId}`} className="text-brand-600 font-semibold hover:underline">
+                <Link href="/login" className="text-brand-600 font-semibold hover:underline">
                     Fazer Login
                 </Link>
             </div>

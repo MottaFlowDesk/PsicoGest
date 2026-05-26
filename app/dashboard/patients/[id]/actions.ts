@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { normalizeCpfForDb, normalizePhoneForDb } from "@/lib/patients/format-for-db";
 
 export type PatientData = {
     id: string;
@@ -58,6 +59,7 @@ export async function updatePatient(data: {
     cpf?: string;
     occupation?: string;
     notes?: string;
+    avatarUrl?: string;
     address?: {
         cep?: string;
         street?: string;
@@ -101,11 +103,12 @@ export async function updatePatient(data: {
         .update({
             full_name: data.fullName,
             date_of_birth: data.dateOfBirth,
-            phone: data.phone,
+            phone: normalizePhoneForDb(data.phone),
             email: data.email || null,
-            cpf: data.cpf || null,
+            cpf: normalizeCpfForDb(data.cpf),
             occupation: data.occupation || null,
             notes: data.notes || null,
+            avatar_url: data.avatarUrl || null,
             address: data.address ? {
                 zip: data.address.cep,
                 street: data.address.street,

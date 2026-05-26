@@ -16,27 +16,46 @@ export function GoogleConnectCard({ isConnected, professionalId }: GoogleConnect
     const [loading, setLoading] = useState(false);
     const [connected, setConnected] = useState(isConnected);
 
+    const startGoogleOAuth = async () => {
+        const response = await fetch("/api/google/connect");
+        const data = await response.json();
+
+        if (data.url) {
+            window.location.href = data.url;
+            return;
+        }
+        throw new Error(data.error || "Erro ao conectar");
+    };
+
     const handleConnect = async () => {
         setLoading(true);
         try {
-            const response = await fetch("/api/google/connect");
-            const data = await response.json();
-            
-            if (data.url) {
-                window.location.href = data.url;
-            } else {
-                throw new Error(data.error || "Erro ao conectar");
-            }
+            await startGoogleOAuth();
         } catch (error: any) {
             let errorMessage = error.message || "Tente novamente mais tarde.";
-            
-            // Check if it's an OAuth access denied error
+
             if (errorMessage.includes("access_denied") || errorMessage.includes("403")) {
-                errorMessage = "O app está em modo de teste. Adicione seu email como testador no Google Cloud Console.";
+                errorMessage =
+                    "O app está em modo de teste. Adicione seu email como testador no Google Cloud Console.";
             }
-            
+
             toast.error("Erro ao conectar com Google", {
                 description: errorMessage,
+                duration: 6000,
+            });
+            setLoading(false);
+        }
+    };
+
+    const handleReconnect = async () => {
+        setLoading(true);
+        try {
+            await fetch("/api/google/disconnect", { method: "POST" });
+            setConnected(false);
+            await startGoogleOAuth();
+        } catch (error: any) {
+            toast.error("Erro ao reconectar com Google", {
+                description: error.message || "Tente novamente mais tarde.",
                 duration: 6000,
             });
             setLoading(false);
@@ -124,8 +143,36 @@ export function GoogleConnectCard({ isConnected, professionalId }: GoogleConnect
                     </li>
                 </ul>
 
-                <div className="pt-2">
+                {connected && (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                        Se os e-mails falharem: ative a{" "}
+                        <a
+                            href="https://console.cloud.google.com/apis/library/gmail.googleapis.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline font-medium"
+                        >
+                            Gmail API
+                        </a>{" "}
+                        no Google Cloud e use <strong>Reconectar</strong> abaixo.
+                    </p>
+                )}
+
+                <div className="pt-2 flex flex-wrap gap-2">
                     {connected ? (
+                        <>
+                        <Button
+                            variant="outline"
+                            onClick={handleReconnect}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                            )}
+                            Reconectar
+                        </Button>
                         <Button 
                             variant="outline" 
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -137,6 +184,7 @@ export function GoogleConnectCard({ isConnected, professionalId }: GoogleConnect
                             ) : null}
                             Desconectar
                         </Button>
+                        </>
                     ) : (
                         <Button 
                             className="bg-blue-600 hover:bg-blue-700"

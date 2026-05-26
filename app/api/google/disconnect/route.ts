@@ -10,7 +10,17 @@ export async function POST() {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Remove Google credentials
+        const { data: professional } = await supabase
+            .from("professionals")
+            .select("id, google_refresh_token")
+            .eq("user_id", user.id)
+            .single();
+
+        if (professional?.google_refresh_token) {
+            const { revokeGoogleRefreshToken } = await import("@/lib/google/auth");
+            await revokeGoogleRefreshToken(professional.google_refresh_token);
+        }
+
         const { error } = await supabase
             .from("professionals")
             .update({
@@ -26,12 +36,6 @@ export async function POST() {
 
         // Create notification for integration disconnection
         try {
-            const { data: professional } = await supabase
-                .from("professionals")
-                .select("id")
-                .eq("user_id", user.id)
-                .single();
-
             if (professional) {
                 const { notifyIntegrationDisconnected } = await import("@/lib/notifications/system-notifications");
                 await notifyIntegrationDisconnected(professional.id, {

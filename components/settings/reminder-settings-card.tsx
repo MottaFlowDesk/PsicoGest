@@ -37,15 +37,25 @@ export function ReminderSettingsCard({
                 body: JSON.stringify(settings),
             });
 
+            const data = await response.json().catch(() => ({}));
+
             if (response.ok) {
                 toast.success("Configurações salvas!", {
                     description: "Os lembretes serão enviados conforme configurado.",
                 });
             } else {
-                throw new Error("Erro ao salvar");
+                const msg =
+                    (data as { details?: string; error?: string }).details ||
+                    (data as { error?: string }).error ||
+                    "Erro ao salvar";
+                throw new Error(msg);
             }
         } catch (error) {
-            toast.error("Erro ao salvar configurações");
+            const message =
+                error instanceof Error ? error.message : "Erro ao salvar configurações";
+            toast.error("Erro ao salvar configurações", {
+                description: message,
+            });
         } finally {
             setLoading(false);
         }
