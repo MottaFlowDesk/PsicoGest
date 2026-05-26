@@ -1,265 +1,275 @@
-import { BrainCircuit, ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { LegalPageLayout } from "@/components/legal/legal-page-layout";
+import { LEGAL } from "@/lib/legal/site";
+
+export const metadata: Metadata = {
+    title: "Política de Privacidade | PsicoGest",
+    description:
+        "Política de Privacidade do PsicoGest. Saiba como tratamos dados pessoais, integrações Google, WhatsApp e Stripe em conformidade com a LGPD.",
+};
 
 export default function PrivacyPage() {
     return (
-        <div className="min-h-screen bg-slate-50">
-            {/* Header */}
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 text-brand-600">
-                        <BrainCircuit size={28} />
-                        <span className="font-bold text-xl text-slate-800">PsicoGest</span>
-                    </Link>
-                    <Link href="/">
-                        <Button variant="ghost" size="sm">
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Voltar
-                        </Button>
-                    </Link>
-                </div>
-            </header>
+        <LegalPageLayout title="Política de Privacidade">
+            <p className="lead text-lg text-slate-700">
+                O {LEGAL.appName} está comprometido com a proteção da privacidade e
+                dos dados pessoais de profissionais de saúde mental e dos pacientes
+                cadastrados na plataforma. Esta Política descreve como coletamos,
+                usamos, armazenamos, compartilhamos e protegemos informações.
+            </p>
 
-            {/* Content */}
-            <main className="max-w-4xl mx-auto px-4 py-12">
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 md:p-12">
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Política de Privacidade</h1>
-                    <p className="text-slate-500 mb-8">Última atualização: {new Date().toLocaleDateString('pt-BR')}</p>
+            <h2>1. Quem somos</h2>
+            <p>
+                O {LEGAL.appName} é uma plataforma de gestão para psicólogos e
+                profissionais de saúde mental, oferecendo recursos de agenda,
+                prontuário, comunicações com pacientes, integrações e gestão
+                financeira.
+            </p>
+            <p>
+                Para questões sobre privacidade e proteção de dados, entre em
+                contato: <strong>{LEGAL.supportEmail}</strong> ou{" "}
+                <strong>{LEGAL.dpoEmail}</strong> (Encarregado de Proteção de
+                Dados).
+            </p>
 
-                    <div className="prose prose-slate max-w-none">
-                        <p className="lead">
-                            O PsicoGest está comprometido com a proteção da privacidade e dos dados pessoais de nossos usuários. 
-                            Esta política descreve como coletamos, usamos, armazenamos e protegemos suas informações.
-                        </p>
+            <h2>2. Dados que coletamos</h2>
 
-                        <h2>1. Informações que Coletamos</h2>
-                        
-                        <h3>1.1 Dados do Profissional</h3>
-                        <p>Quando você cria uma conta no PsicoGest, coletamos:</p>
-                        <ul>
-                            <li>Nome completo</li>
-                            <li>Endereço de email</li>
-                            <li>Número de telefone</li>
-                            <li>Número de registro profissional (CRP/CRM)</li>
-                            <li>Endereço completo</li>
-                            <li>Especialidade profissional</li>
-                            <li>Foto de perfil (opcional)</li>
-                        </ul>
+            <h3>2.1 Dados do profissional (titular da conta)</h3>
+            <ul>
+                <li>Nome completo, e-mail e telefone</li>
+                <li>Número de registro profissional (ex.: CRP)</li>
+                <li>Endereço, especialidade e dados de perfil</li>
+                <li>Foto de perfil (opcional)</li>
+                <li>Dados de assinatura e faturamento</li>
+            </ul>
 
-                        <h3>1.2 Dados dos Pacientes</h3>
-                        <p>Como profissional, você pode cadastrar informações de seus pacientes:</p>
-                        <ul>
-                            <li>Nome completo</li>
-                            <li>Data de nascimento</li>
-                            <li>CPF</li>
-                            <li>Telefone e email</li>
-                            <li>Endereço</li>
-                            <li>Informações de contato de emergência</li>
-                            <li>Prontuários e anotações clínicas</li>
-                            <li>Documentos e exames</li>
-                        </ul>
-                        <p className="text-sm text-slate-600 italic">
-                            <strong>Importante:</strong> Você é o responsável pelo tratamento adequado dos dados de seus pacientes 
-                            conforme a LGPD e as normas éticas de sua profissão.
-                        </p>
+            <h3>2.2 Dados de pacientes (inseridos pelo profissional)</h3>
+            <ul>
+                <li>Identificação, contato e dados demográficos</li>
+                <li>Prontuários, anotações clínicas e histórico de sessões</li>
+                <li>Documentos e arquivos enviados</li>
+                <li>Informações de agendamentos e confirmações</li>
+            </ul>
+            <p>
+                <strong>Importante:</strong> o profissional é responsável pelo
+                tratamento lícito dos dados de seus pacientes, incluindo base
+                legal, consentimento quando aplicável e observância das normas
+                éticas e legais da profissão.
+            </p>
 
-                        <h3>1.3 Dados de Uso</h3>
-                        <p>Coletamos automaticamente:</p>
-                        <ul>
-                            <li>Logs de acesso e interações com o sistema</li>
-                            <li>Endereço IP</li>
-                            <li>Informações do dispositivo e navegador</li>
-                            <li>Data e hora das ações</li>
-                        </ul>
+            <h3>2.3 Dados de uso e técnicos</h3>
+            <ul>
+                <li>Logs de acesso, data/hora de ações e endereço IP</li>
+                <li>Tipo de navegador, dispositivo e sistema operacional</li>
+                <li>Cookies e tokens de sessão necessários ao funcionamento</li>
+            </ul>
 
-                        <h3>1.4 Dados de Integrações</h3>
-                        <p>Ao conectar serviços externos, armazenamos:</p>
-                        <ul>
-                            <li><strong>Google Calendar:</strong> Tokens de acesso OAuth para sincronizar agendamentos</li>
-                            <li><strong>Gmail:</strong> Tokens de acesso para envio de emails</li>
-                            <li><strong>WhatsApp:</strong> Informações de conexão (não armazenamos mensagens)</li>
-                            <li><strong>Stripe:</strong> ID da conta conectada (não armazenamos dados de cartão)</li>
-                        </ul>
+            <h3>2.4 Dados de integrações (com seu consentimento)</h3>
+            <ul>
+                <li>
+                    <strong>Google (Calendar e Gmail):</strong> tokens OAuth de
+                    acesso e refresh, e-mail da conta Google conectada, IDs de
+                    eventos do calendário e links de reunião (Google Meet)
+                </li>
+                <li>
+                    <strong>WhatsApp (Evolution API):</strong> status de
+                    conexão e identificação da instância; não armazenamos o
+                    conteúdo completo das conversas
+                </li>
+                <li>
+                    <strong>Stripe:</strong> identificadores de cliente,
+                    assinatura e pagamentos; dados de cartão são processados
+                    diretamente pelo Stripe
+                </li>
+            </ul>
 
-                        <h2>2. Como Usamos suas Informações</h2>
-                        <p>Utilizamos seus dados para:</p>
-                        <ul>
-                            <li><strong>Fornecer serviços:</strong> Gestão de pacientes, agendamentos, prontuários e financeiro</li>
-                            <li><strong>Enviar notificações:</strong> Lembretes de consultas, confirmações e atualizações do sistema</li>
-                            <li><strong>Processar pagamentos:</strong> Cobrança de assinaturas e processamento de pagamentos de pacientes</li>
-                            <li><strong>Melhorar o serviço:</strong> Análise de uso para melhorar funcionalidades</li>
-                            <li><strong>Garantir segurança:</strong> Detecção de fraudes e atividades suspeitas</li>
-                            <li><strong>Cumprir obrigações legais:</strong> Conformidade com leis e regulamentações</li>
-                        </ul>
+            <h2>3. Como usamos os dados</h2>
+            <ul>
+                <li>Fornecer e operar os serviços contratados</li>
+                <li>Gerenciar agendamentos, confirmações e lembretes</li>
+                <li>Sincronizar eventos com Google Calendar e enviar e-mails via Gmail</li>
+                <li>Enviar mensagens de lembrete via WhatsApp, quando conectado</li>
+                <li>Processar assinaturas e pagamentos</li>
+                <li>Garantir segurança, prevenir fraudes e cumprir obrigações legais</li>
+                <li>Melhorar a estabilidade e a experiência do produto</li>
+            </ul>
+            <p>
+                <strong>Não vendemos</strong> seus dados pessoais nem os dados
+                inseridos por você na plataforma.
+            </p>
 
-                        <h2>3. Compartilhamento de Informações</h2>
-                        <p>Não vendemos seus dados pessoais. Compartilhamos informações apenas nas seguintes situações:</p>
+            <h2>4. Uso dos dados do Google (Google API Services)</h2>
+            <p>
+                Quando você conecta sua conta Google, o {LEGAL.appName} acessa
+                apenas os escopos autorizados por você, incluindo:
+            </p>
+            <ul>
+                <li>Leitura e escrita no Google Calendar (criar e sincronizar eventos)</li>
+                <li>Envio de e-mails pelo Gmail em seu nome (confirmações e lembretes)</li>
+                <li>Identificação do e-mail da conta Google conectada</li>
+                <li>Criação de links do Google Meet para teleconsultas</li>
+            </ul>
+            <p>
+                O uso e a transferência de informações recebidas das APIs do
+                Google pelo {LEGAL.appName} obedecem à{" "}
+                <a
+                    href="https://developers.google.com/terms/api-services-user-data-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    Google API Services User Data Policy
+                </a>
+                , incluindo os requisitos de <strong>Limited Use</strong>.
+            </p>
+            <p>Em particular:</p>
+            <ul>
+                <li>
+                    Utilizamos dados do Google apenas para fornecer funcionalidades
+                    visíveis ao usuário descritas nesta política
+                </li>
+                <li>
+                    Não utilizamos dados do Google para publicidade, revenda ou
+                    perfilamento não relacionado ao serviço
+                </li>
+                <li>
+                    Não transferimos dados do Google a terceiros, exceto conforme
+                    necessário para operar o serviço (infraestrutura), cumprir a
+                    lei ou com seu consentimento explícito
+                </li>
+                <li>
+                    Você pode revogar o acesso a qualquer momento em{" "}
+                    <strong>Configurações → Integrações</strong> no {LEGAL.appName}{" "}
+                    ou na{" "}
+                    <a
+                        href="https://myaccount.google.com/permissions"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        página de permissões da sua Conta Google
+                    </a>
+                </li>
+            </ul>
 
-                        <h3>3.1 Provedores de Serviços</h3>
-                        <p>Compartilhamos dados com terceiros que nos ajudam a operar o serviço:</p>
-                        <ul>
-                            <li><strong>Supabase:</strong> Hospedagem de banco de dados e autenticação</li>
-                            <li><strong>Vercel:</strong> Hospedagem da aplicação</li>
-                            <li><strong>Stripe:</strong> Processamento de pagamentos</li>
-                            <li><strong>Google:</strong> Integração com Calendar e Gmail (apenas com sua autorização)</li>
-                            <li><strong>Evolution API (Railway):</strong> Serviço de WhatsApp</li>
-                        </ul>
+            <h2>5. Compartilhamento com terceiros</h2>
+            <p>Compartilhamos dados apenas com operadores necessários ao serviço:</p>
+            <ul>
+                <li>
+                    <strong>Supabase:</strong> banco de dados, autenticação e
+                    armazenamento
+                </li>
+                <li>
+                    <strong>Vercel:</strong> hospedagem da aplicação
+                </li>
+                <li>
+                    <strong>Google:</strong> Calendar, Gmail e Meet (mediante
+                    autorização OAuth)
+                </li>
+                <li>
+                    <strong>Stripe:</strong> processamento de pagamentos
+                </li>
+                <li>
+                    <strong>Evolution API / Railway:</strong> envio de mensagens
+                    WhatsApp
+                </li>
+            </ul>
+            <p>
+                Também podemos divulgar dados quando exigido por lei, ordem judicial
+                ou autoridade competente.
+            </p>
 
-                        <h3>3.2 Obrigações Legais</h3>
-                        <p>Podemos divulgar informações quando exigido por lei, ordem judicial ou processo legal.</p>
+            <h2>6. Segurança</h2>
+            <p>Adotamos medidas técnicas e organizacionais, incluindo:</p>
+            <ul>
+                <li>Criptografia em trânsito (HTTPS/TLS)</li>
+                <li>Controle de acesso por usuário (Row Level Security no banco)</li>
+                <li>Autenticação segura e tokens com escopo limitado</li>
+                <li>Backups e monitoramento de infraestrutura</li>
+            </ul>
+            <p>
+                Nenhum sistema é 100% seguro. Em caso de incidente relevante,
+                notificaremos conforme exigido pela LGPD.
+            </p>
 
-                        <h3>3.3 Com seu Consentimento</h3>
-                        <p>Compartilhamos informações quando você autoriza explicitamente.</p>
+            <h2>7. Retenção de dados</h2>
+            <p>Mantemos dados pelo tempo necessário para:</p>
+            <ul>
+                <li>Prestar o serviço enquanto a conta estiver ativa</li>
+                <li>Cumprir obrigações legais e regulatórias</li>
+                <li>Resolver disputas e fazer cumprir contratos</li>
+            </ul>
+            <p>
+                Prontuários e registros clínicos podem estar sujeitos a prazos
+                legais mínimos de guarda (ex.: 20 anos). Após encerramento da
+                conta, dados serão excluídos ou anonimizados quando permitido,
+                respeitando esses prazos.
+            </p>
 
-                        <h2>4. Integrações com Serviços de Terceiros</h2>
-                        
-                        <h3>4.1 Google Services</h3>
-                        <p>
-                            Ao conectar sua conta Google, você autoriza o PsicoGest a:
-                        </p>
-                        <ul>
-                            <li>Acessar seu Google Calendar para criar e sincronizar eventos</li>
-                            <li>Enviar emails através do Gmail em seu nome</li>
-                            <li>Criar links de Google Meet para teleconsultas</li>
-                        </ul>
-                        <p>
-                            Esses dados são gerenciados de acordo com a 
-                            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
-                                Política de Privacidade do Google
-                            </a>. 
-                            Você pode revogar o acesso a qualquer momento nas configurações do Google.
-                        </p>
+            <h2>8. Seus direitos (LGPD)</h2>
+            <p>Conforme a Lei nº 13.709/2018 (LGPD), você pode solicitar:</p>
+            <ul>
+                <li>Confirmação e acesso aos dados</li>
+                <li>Correção de dados incompletos ou desatualizados</li>
+                <li>Anonimização, bloqueio ou eliminação de dados desnecessários</li>
+                <li>Portabilidade dos dados</li>
+                <li>Revogação de consentimento</li>
+                <li>Informação sobre compartilhamentos</li>
+            </ul>
+            <p>
+                Envie solicitações para <strong>{LEGAL.supportEmail}</strong>.
+                Responderemos em até 15 dias úteis, salvo prorrogação legal.
+            </p>
 
-                        <h3>4.2 WhatsApp</h3>
-                        <p>
-                            Usamos o WhatsApp para enviar lembretes de consultas. Não armazenamos o conteúdo das mensagens, 
-                            apenas registramos que o lembrete foi enviado.
-                        </p>
+            <h2>9. Cookies</h2>
+            <p>
+                Utilizamos cookies e armazenamento local essenciais para manter sua
+                sessão autenticada e preferências básicas. Você pode gerenciar
+                cookies no navegador, mas partes do serviço podem deixar de
+                funcionar corretamente.
+            </p>
 
-                        <h3>4.3 Stripe</h3>
-                        <p>
-                            Para processar pagamentos, compartilhamos informações necessárias com o Stripe. 
-                            Dados de cartão de crédito são processados diretamente pelo Stripe e nunca são armazenados em nossos servidores.
-                        </p>
+            <h2>10. Transferência internacional</h2>
+            <p>
+                Alguns provedores podem processar dados fora do Brasil. Nesses
+                casos, adotamos salvaguardas compatíveis com a LGPD e contratos
+                com operadores que garantem proteção adequada.
+            </p>
 
-                        <h2>5. Segurança dos Dados</h2>
-                        <p>Implementamos medidas de segurança para proteger seus dados:</p>
-                        <ul>
-                            <li><strong>Criptografia:</strong> Dados em trânsito (HTTPS) e em repouso</li>
-                            <li><strong>Autenticação:</strong> Senhas criptografadas e autenticação de dois fatores (quando disponível)</li>
-                            <li><strong>Controle de acesso:</strong> Row Level Security (RLS) no banco de dados</li>
-                            <li><strong>Backups:</strong> Cópias de segurança regulares</li>
-                            <li><strong>Monitoramento:</strong> Sistemas de detecção de intrusão e atividades suspeitas</li>
-                            <li><strong>Atualizações:</strong> Manutenção regular de segurança</li>
-                        </ul>
+            <h2>11. Menores de idade</h2>
+            <p>
+                O {LEGAL.appName} destina-se a profissionais maiores de 18 anos.
+                Dados de menores inseridos em prontuários são tratados pelo
+                profissional responsável, conforme a legislação aplicável.
+            </p>
 
-                        <h2>6. Seus Direitos (LGPD)</h2>
-                        <p>Conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018), você tem direito a:</p>
-                        <ul>
-                            <li><strong>Acesso:</strong> Solicitar uma cópia dos dados que temos sobre você</li>
-                            <li><strong>Correção:</strong> Atualizar ou corrigir dados incorretos</li>
-                            <li><strong>Exclusão:</strong> Solicitar a exclusão de seus dados (respeitando prazos legais para prontuários)</li>
-                            <li><strong>Portabilidade:</strong> Exportar seus dados em formato estruturado</li>
-                            <li><strong>Revogação:</strong> Revogar consentimentos dados anteriormente</li>
-                            <li><strong>Oposição:</strong> Opor-se ao tratamento de dados em certas circunstâncias</li>
-                            <li><strong>Informação:</strong> Ser informado sobre como seus dados são tratados</li>
-                        </ul>
-                        <p>
-                            Para exercer seus direitos, entre em contato: <strong>suporte@psicogest.com.br</strong>
-                        </p>
+            <h2>12. Alterações desta Política</h2>
+            <p>
+                Podemos atualizar esta Política periodicamente. Mudanças
+                relevantes serão comunicadas por e-mail ou aviso no sistema. A
+                data no topo indica a versão vigente.
+            </p>
 
-                        <h2>7. Retenção de Dados</h2>
-                        <p>Mantemos seus dados pelo tempo necessário para:</p>
-                        <ul>
-                            <li>Fornecer os serviços contratados</li>
-                            <li>Cumprir obrigações legais (prontuários médicos: mínimo de 20 anos)</li>
-                            <li>Resolver disputas e fazer cumprir acordos</li>
-                        </ul>
-                        <p>
-                            Após o encerramento da conta, seus dados serão mantidos conforme exigências legais ou excluídos 
-                            conforme sua solicitação, respeitando os prazos legais.
-                        </p>
+            <h2>13. Contato</h2>
+            <ul>
+                <li>
+                    <strong>Suporte:</strong> {LEGAL.supportEmail}
+                </li>
+                <li>
+                    <strong>Encarregado (DPO):</strong> {LEGAL.dpoEmail}
+                </li>
+                <li>
+                    <strong>Termos de Serviço:</strong>{" "}
+                    <Link href="/terms">/terms</Link>
+                </li>
+            </ul>
 
-                        <h2>8. Cookies e Tecnologias Similares</h2>
-                        <p>
-                            Utilizamos cookies e tecnologias similares para:
-                        </p>
-                        <ul>
-                            <li>Manter sua sessão ativa</li>
-                            <li>Lembrar suas preferências</li>
-                            <li>Analisar o uso do serviço</li>
-                        </ul>
-                        <p>
-                            Você pode gerenciar cookies nas configurações do seu navegador, mas isso pode afetar 
-                            a funcionalidade do serviço.
-                        </p>
-
-                        <h2>9. Privacidade de Menores</h2>
-                        <p>
-                            O PsicoGest não é destinado a menores de 18 anos. Não coletamos intencionalmente dados de menores. 
-                            Se você é responsável por um menor e acredita que ele forneceu dados, entre em contato conosco.
-                        </p>
-
-                        <h2>10. Transferência Internacional de Dados</h2>
-                        <p>
-                            Seus dados podem ser processados e armazenados em servidores localizados fora do Brasil. 
-                            Garantimos que esses provedores adotam medidas de segurança adequadas e estão em conformidade 
-                            com a LGPD.
-                        </p>
-
-                        <h2>11. Alterações nesta Política</h2>
-                        <p>
-                            Podemos atualizar esta Política de Privacidade periodicamente. Notificaremos você sobre 
-                            mudanças significativas por email ou através de aviso no sistema. A data de "Última atualização" 
-                            no topo desta página indica quando a política foi revisada pela última vez.
-                        </p>
-
-                        <h2>12. Contato</h2>
-                        <p>
-                            Para questões sobre privacidade, proteção de dados ou para exercer seus direitos, entre em contato:
-                        </p>
-                        <ul>
-                            <li><strong>Email:</strong> suporte@psicogest.com.br</li>
-                            <li><strong>Assunto:</strong> Privacidade / LGPD</li>
-                        </ul>
-                        <p>
-                            Responderemos sua solicitação no prazo de até 15 dias úteis, conforme previsto na LGPD.
-                        </p>
-
-                        <hr className="my-8" />
-
-                        <h2>13. Encarregado de Proteção de Dados (DPO)</h2>
-                        <p>
-                            Para questões específicas sobre proteção de dados, você pode entrar em contato com nosso 
-                            Encarregado de Proteção de Dados através do email: <strong>dpo@psicogest.com.br</strong>
-                        </p>
-
-                        <div className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                            <p className="text-sm text-slate-600">
-                                <strong>Última atualização:</strong> {new Date().toLocaleDateString('pt-BR', { 
-                                    day: 'numeric', 
-                                    month: 'long', 
-                                    year: 'numeric' 
-                                })}
-                            </p>
-                            <p className="text-sm text-slate-600 mt-2">
-                                Esta política está em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018) 
-                                e outras legislações aplicáveis.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            {/* Footer */}
-            <footer className="bg-white border-t border-slate-200 mt-12">
-                <div className="max-w-4xl mx-auto px-4 py-6 text-center text-sm text-slate-500">
-                    © {new Date().getFullYear()} PsicoGest. Todos os direitos reservados.
-                </div>
-            </footer>
-        </div>
+            <div className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200 not-prose">
+                <p className="text-sm text-slate-600">
+                    Esta política está em conformidade com a LGPD (Lei
+                    13.709/2018) e com os requisitos de privacidade das
+                    integrações Google utilizadas pelo {LEGAL.appName}.
+                </p>
+            </div>
+        </LegalPageLayout>
     );
 }
-
-

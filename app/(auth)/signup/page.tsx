@@ -228,6 +228,17 @@ function SignupForm() {
                             "Criar Conta"
                         )}
                     </Button>
+                    <p className="text-xs text-center text-slate-500 leading-relaxed">
+                        Ao criar sua conta, você concorda com os{" "}
+                        <Link href="/terms" className="text-brand-600 hover:underline">
+                            Termos de Serviço
+                        </Link>{" "}
+                        e a{" "}
+                        <Link href="/privacy" className="text-brand-600 hover:underline">
+                            Política de Privacidade
+                        </Link>
+                        .
+                    </p>
                 </form>
             </Form>
 

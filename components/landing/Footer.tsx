@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import React from 'react';
 import { BrainCircuit, Instagram, Linkedin, Mail } from 'lucide-react';
 
@@ -54,10 +55,14 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500">
-          <p>© 2024 PsicoGest. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} PsicoGest. Todos os direitos reservados.</p>
           <div className="flex gap-6 mt-4 md:mt-0">
-            <a href="#" className="hover:text-slate-300">Termos de Uso</a>
-            <a href="#" className="hover:text-slate-300">Política de Privacidade</a>
+            <Link href="/terms" className="hover:text-slate-300">
+              Termos de Serviço
+            </Link>
+            <Link href="/privacy" className="hover:text-slate-300">
+              Política de Privacidade
+            </Link>
           </div>
         </div>
       </div>
