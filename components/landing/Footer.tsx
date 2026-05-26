@@ -14,7 +14,7 @@ const Footer: React.FC = () => {
               <span className="font-bold text-xl">PsicoGest</span>
             </div>
             <p className="text-sm text-slate-400 mb-6">
-              A plataforma completa para gestão de saúde mental. Segurança, praticidade e inteligência para o seu consultório.
+              A plataforma completa para gestão de saúde mental. Segurança, praticidade e organização para o seu consultório.
             </p>
             <div className="flex gap-4">
               <a href="#" className="hover:text-white transition-colors"><Instagram size={20} /></a>
@@ -29,7 +29,7 @@ const Footer: React.FC = () => {
               <li><a href="#" className="hover:text-white transition-colors">Funcionalidades</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Preços</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Segurança (LGPD)</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Inteligência Artificial</a></li>
+              <li><a href="#features" className="hover:text-white transition-colors">Integrações</a></li>
             </ul>
           </div>
 

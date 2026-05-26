@@ -34,7 +34,7 @@ const Pricing: React.FC = () => {
         "Tudo do Essencial",
         "Até 120 pacientes",
         "Lembretes por WhatsApp",
-        "IA: 10h de transcrições/mês",
+        "Integração Google Calendar e Gmail",
         "Suporte prioritário"
       ],
       highlight: true,
@@ -49,7 +49,7 @@ const Pricing: React.FC = () => {
       features: [
         "Tudo do Profissional",
         "Pacientes ilimitados",
-        "IA ilimitada",
+        "Relatórios e exportação avançados",
         "Suporte VIP 24h"
       ],
       highlight: false,

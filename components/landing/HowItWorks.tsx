@@ -16,7 +16,7 @@ const HowItWorks: React.FC = () => {
     {
       icon: <TrendingUp className="w-8 h-8 text-brand-600" />,
       title: "3. Atenda e Evolua",
-      desc: "Realize teleconsultas, use a IA para anotações e acompanhe o progresso financeiro e clínico."
+      desc: "Realize teleconsultas via Google Meet, registre sessões no prontuário e acompanhe o financeiro do consultório."
     }
   ];
 
