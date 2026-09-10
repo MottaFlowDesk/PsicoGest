@@ -8,8 +8,8 @@ export const maxDuration = 60;
  * Worker HTTP da fila de mensagens.
  *
  * Chamado por Vercel Cron (header x-vercel-cron) ou por um agendador externo
- * com `Authorization: Bearer $CRON_SECRET`. Deve rodar a cada minuto para que
- * o retry com backoff funcione como esperado.
+ * com `Authorization: Bearer $CRON_SECRET`. No Hobby o Vercel Cron roda 1x ao
+ * dia; um agendador externo pode chamar com mais frequência para o retry.
  */
 function isAuthorized(request: NextRequest): boolean {
     const cronSecret = process.env.CRON_SECRET;

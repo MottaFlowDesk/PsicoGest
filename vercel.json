@@ -6,11 +6,11 @@
     },
     {
       "path": "/api/cron/reminders",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 11 * * *"
     },
     {
       "path": "/api/cron/process-outbox",
-      "schedule": "*/5 * * * *"
+      "schedule": "15 11 * * *"
     }
   ]
 }
