@@ -1,233 +1,135 @@
-import { createClient } from "@supabase/supabase-js";
-import { sendEmail, generateReminderEmailHtml } from "@/lib/google/gmail";
-import { sendWhatsAppMessage, generateReminderMessage } from "@/lib/whatsapp/client";
-import { format, addHours } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { enqueueAppointmentMessage, processOutbox } from "@/lib/messaging/outbox";
+import { addHours, format } from "date-fns";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-interface AppointmentWithRelations {
+interface ReminderAppointment {
     id: string;
     scheduled_at: string;
-    duration_minutes: number;
-    type: "in_person" | "telehealth";
-    status: string;
-    confirmation_token: string;
-    reminder_sent_at: string | null;
-    patients: {
-        id: string;
-        full_name: string;
-        email: string | null;
-        phone: string | null;
-    } | null;
-    professionals: {
-        id: string;
-        full_name: string;
-        google_refresh_token: string | null;
-        google_calendar_connected: boolean | null;
-        whatsapp_connected_at: string | null;
-    } | null;
+    professional_id: string;
+    patients: { full_name: string } | { full_name: string }[] | null;
 }
 
-export async function sendReminders(reminderType: "24h" | "2h"): Promise<{
+export interface SendRemindersResult {
+    /** Jobs criados na fila nesta execução. */
+    queued: number;
+    /** Mensagens efetivamente entregues pelo worker. */
     sent: number;
     failed: number;
+    skipped: string[];
     errors: string[];
-}> {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const results = { sent: 0, failed: 0, errors: [] as string[] };
+}
 
-    // Calculate time window based on reminder type
+/**
+ * Enfileira lembretes da janela correspondente.
+ *
+ * A idempotência vem do índice único (appointment_id, channel, kind) da
+ * message_outbox — por isso não filtramos mais por reminder_sent_at, o que
+ * antes impedia o lembrete de 2h depois que o de 24h já tinha saído.
+ */
+export async function sendReminders(
+    reminderType: "24h" | "2h"
+): Promise<SendRemindersResult> {
+    const supabase = createAdminClient();
+    const result: SendRemindersResult = {
+        queued: 0,
+        sent: 0,
+        failed: 0,
+        skipped: [],
+        errors: [],
+    };
+
     const now = new Date();
-    let startTime: Date;
-    let endTime: Date;
+    const startTime = reminderType === "24h" ? addHours(now, 23) : addHours(now, 1.5);
+    const endTime = reminderType === "24h" ? addHours(now, 25) : addHours(now, 2.5);
 
-    if (reminderType === "24h") {
-        startTime = addHours(now, 23);
-        endTime = addHours(now, 25);
-    } else {
-        startTime = addHours(now, 1.5);
-        endTime = addHours(now, 2.5);
-    }
-
-    // Fetch appointments that need reminders
     const { data: appointments, error: fetchError } = await supabase
         .from("appointments")
-        .select(`
-            id,
-            scheduled_at,
-            duration_minutes,
-            type,
-            status,
-            confirmation_token,
-            reminder_sent_at,
-            patients (
-                id,
-                full_name,
-                email,
-                phone
-            ),
-            professionals (
-                id,
-                full_name,
-                google_refresh_token,
-                google_calendar_connected,
-                whatsapp_connected_at
-            )
-        `)
+        .select("id, scheduled_at, professional_id, patients ( full_name )")
         .gte("scheduled_at", startTime.toISOString())
         .lte("scheduled_at", endTime.toISOString())
-        .in("status", ["scheduled", "confirmed"])
-        .is("reminder_sent_at", null);
+        .in("status", ["scheduled", "confirmed"]);
 
     if (fetchError) {
-        console.error("Error fetching appointments for reminders:", fetchError);
-        return { ...results, errors: [fetchError.message] };
+        return { ...result, errors: [fetchError.message] };
     }
 
-    if (!appointments || appointments.length === 0) {
-        return results;
+    if (!appointments?.length) {
+        return result;
     }
 
-    // Cast appointments to typed array
-    const typedAppointments = appointments as unknown as AppointmentWithRelations[];
+    const rows = appointments as unknown as ReminderAppointment[];
+    const professionalIds = [...new Set(rows.map((a) => a.professional_id))];
 
-    // Get settings for each professional
-    const professionalIds = [...new Set(typedAppointments.map((a) => a.professionals?.id).filter(Boolean))];
-    
     const { data: settingsData } = await supabase
         .from("settings")
-        .select("professional_id, reminder_24h, reminder_2h, reminder_channel")
+        .select("professional_id, reminder_24h, reminder_2h")
         .in("professional_id", professionalIds);
 
     const settingsMap = new Map(
-        (settingsData || []).map((s: { professional_id: string; reminder_24h: boolean; reminder_2h: boolean; reminder_channel: string }) => [s.professional_id, s])
+        (settingsData ?? []).map((s) => [s.professional_id, s])
     );
 
-    // Process each appointment
-    for (const appointment of typedAppointments) {
+    const kind = reminderType === "24h" ? "reminder_24h" : "reminder_2h";
+
+    for (const appointment of rows) {
+        const settings = settingsMap.get(appointment.professional_id) ?? {
+            reminder_24h: true,
+            reminder_2h: false,
+        };
+
+        if (reminderType === "24h" && !settings.reminder_24h) continue;
+        if (reminderType === "2h" && !settings.reminder_2h) continue;
+
         try {
-            const professional = appointment.professionals;
-            const patient = appointment.patients;
+            const { queued, skipped } = await enqueueAppointmentMessage({
+                appointmentId: appointment.id,
+                kind,
+                supabase,
+            });
 
-            if (!professional || !patient) {
-                continue;
+            result.queued += queued.length;
+            result.skipped.push(...skipped);
+
+            // Aviso in-app do profissional só na primeira vez que o job é criado
+            if (queued.length > 0 && reminderType === "2h") {
+                await notifyProfessional(appointment);
             }
-
-            const settings = settingsMap.get(professional.id) || {
-                reminder_24h: true,
-                reminder_2h: false,
-                reminder_channel: "whatsapp_email",
-            };
-
-            // Check if this reminder type is enabled
-            if (reminderType === "24h" && !settings.reminder_24h) continue;
-            if (reminderType === "2h" && !settings.reminder_2h) continue;
-
-            const scheduledDate = new Date(appointment.scheduled_at);
-            const formattedDate = format(scheduledDate, "EEEE, d 'de' MMMM", { locale: ptBR });
-            const formattedTime = format(scheduledDate, "HH:mm");
-
-            const confirmationLink = `${process.env.NEXT_PUBLIC_APP_URL}/confirm/${appointment.confirmation_token}`;
-
-            let sent = false;
-
-            // Try WhatsApp first if enabled
-            if (
-                (settings.reminder_channel === "whatsapp_email" || 
-                 settings.reminder_channel === "whatsapp_only") &&
-                professional.whatsapp_connected_at &&
-                patient.phone
-            ) {
-                try {
-                    const result = await sendWhatsAppMessage(
-                        professional.id,
-                        patient.phone,
-                        generateReminderMessage({
-                            patientName: patient.full_name,
-                            professionalName: professional.full_name,
-                            date: formattedDate,
-                            time: formattedTime,
-                            type: appointment.type,
-                            confirmationLink,
-                        })
-                    );
-
-                    if (result.success) {
-                        sent = true;
-                    }
-                } catch (whatsappError: any) {
-                    console.error(`WhatsApp error for appointment ${appointment.id}:`, whatsappError);
-                }
-            }
-
-            // Try email if WhatsApp failed or email_only
-            if (
-                !sent &&
-                (settings.reminder_channel === "whatsapp_email" || 
-                 settings.reminder_channel === "email_only") &&
-                professional.google_refresh_token &&
-                patient.email
-            ) {
-                try {
-                    const result = await sendEmail(
-                        professional.google_refresh_token,
-                        {
-                            to: patient.email,
-                            subject: `Lembrete: Sessão ${reminderType === "24h" ? "amanhã" : "em 2 horas"} - ${formattedTime}`,
-                            html: generateReminderEmailHtml({
-                                patientName: patient.full_name,
-                                professionalName: professional.full_name,
-                                date: formattedDate,
-                                time: formattedTime,
-                                type: appointment.type,
-                                confirmationLink,
-                            }),
-                        }
-                    );
-
-                    if (result.success) {
-                        sent = true;
-                    }
-                } catch (emailError: any) {
-                    console.error(`Email error for appointment ${appointment.id}:`, emailError);
-                }
-            }
-
-            if (sent) {
-                // Mark as sent
-                await supabase
-                    .from("appointments")
-                    .update({ reminder_sent_at: new Date().toISOString() })
-                    .eq("id", appointment.id);
-
-                results.sent++;
-
-                // Create notification for upcoming appointment (2h before)
-                if (reminderType === "2h") {
-                    try {
-                        const { notifyAppointmentUpcoming } = await import("./appointment-notifications");
-                        await notifyAppointmentUpcoming(professional.id, {
-                            patientName: patient.full_name,
-                            appointmentDate: appointment.scheduled_at,
-                            appointmentTime: formattedTime,
-                            appointmentId: appointment.id,
-                        });
-                    } catch (notificationError) {
-                        console.error("Failed to create upcoming appointment notification:", notificationError);
-                    }
-                }
-            } else {
-                results.failed++;
-                results.errors.push(`Failed to send reminder for appointment ${appointment.id}`);
-            }
-        } catch (appointmentError: any) {
-            results.failed++;
-            results.errors.push(`Error processing appointment ${appointment.id}: ${appointmentError.message}`);
+        } catch (error) {
+            result.failed++;
+            result.errors.push(
+                `Agendamento ${appointment.id}: ${
+                    error instanceof Error ? error.message : "erro ao enfileirar"
+                }`
+            );
         }
     }
 
-    return results;
+    if (result.queued > 0) {
+        const worker = await processOutbox({ batchSize: Math.min(result.queued, 50) });
+        result.sent = worker.sent;
+        result.failed += worker.failed;
+        result.errors.push(...worker.errors);
+    }
+
+    return result;
 }
 
+async function notifyProfessional(appointment: ReminderAppointment): Promise<void> {
+    const patient = Array.isArray(appointment.patients)
+        ? appointment.patients[0]
+        : appointment.patients;
+
+    if (!patient) return;
+
+    try {
+        const { notifyAppointmentUpcoming } = await import("./appointment-notifications");
+        await notifyAppointmentUpcoming(appointment.professional_id, {
+            patientName: patient.full_name,
+            appointmentDate: appointment.scheduled_at,
+            appointmentTime: format(new Date(appointment.scheduled_at), "HH:mm"),
+            appointmentId: appointment.id,
+        });
+    } catch (error) {
+        console.error("Falha ao notificar profissional sobre sessão próxima:", error);
+    }
+}

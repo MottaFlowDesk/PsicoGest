@@ -152,8 +152,13 @@ export default function EventStyled({
       <div
         key={event?.id}
         className={cn(
-          "w-full z-50 relative cursor-pointer border-2 group rounded-lg flex flex-col flex-grow shadow-sm hover:shadow-md transition-all duration-300",
-          event?.minmized ? "border-transparent" : getStatusWrapperClasses(appointmentStatus)
+          "w-full relative cursor-pointer border-2 group rounded-lg flex flex-col",
+          event?.minmized
+            ? "h-full min-h-0 overflow-hidden border-transparent shadow-none"
+            : cn(
+                "z-50 flex-grow shadow-sm hover:shadow-md transition-all duration-300",
+                getStatusWrapperClasses(appointmentStatus)
+              )
         )}
       >
         {canDelete && (
@@ -165,8 +170,10 @@ export default function EventStyled({
             variant="destructive"
             size="icon"
             className={cn(
-              "absolute z-[100] right-1 top-[-8px] h-6 w-6 p-0 shadow-md hover:bg-destructive/90 transition-all duration-200",
-              event?.minmized ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+              "absolute z-[100] p-0 shadow-md hover:bg-destructive/90 transition-all duration-200",
+              event?.minmized
+                ? "right-0.5 top-0.5 h-5 w-5 opacity-0 group-hover:opacity-100"
+                : "right-1 top-[-8px] h-6 w-6 opacity-100"
             )}
           >
             <TrashIcon size={14} className="text-destructive-foreground" />
@@ -175,6 +182,7 @@ export default function EventStyled({
 
         {event.CustomEventComponent ? (
           <div
+            className={cn(event?.minmized && "h-full min-h-0 overflow-hidden")}
             onClick={(e: React.MouseEvent<HTMLDivElement>) => {
               e.stopPropagation();
               handleEditEvent({

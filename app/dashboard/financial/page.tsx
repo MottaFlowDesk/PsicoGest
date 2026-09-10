@@ -6,7 +6,8 @@ import { InvoiceList } from "@/components/financial/invoice-list";
 import { Button } from "@/components/ui/button";
 import { NewInvoiceDialog } from "@/components/financial/new-invoice-dialog";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, AlertCircle, Loader2, X, Search } from "lucide-react";
+import { CreditCard, AlertCircle, Loader2, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { StripeConnectButton } from "@/components/financial/stripe-connect-button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,6 +30,64 @@ import { FinancialSummary } from "@/components/reports/financial-summary";
 
 type StatusFilter = "all" | "pending" | "paid" | "overdue" | "cancelled";
 type PeriodFilter = "all" | "month" | "quarter" | "year";
+
+const PAGE_SIZE = 10;
+
+const STATUS_TABS: { value: StatusFilter; label: string; active: string; dot: string }[] = [
+    { value: "all", label: "Todas", active: "bg-slate-900 text-white", dot: "bg-slate-400" },
+    { value: "pending", label: "Pendentes", active: "bg-blue-600 text-white", dot: "bg-blue-600" },
+    { value: "paid", label: "Pagas", active: "bg-green-600 text-white", dot: "bg-green-600" },
+    { value: "overdue", label: "Vencidas", active: "bg-orange-500 text-white", dot: "bg-orange-500" },
+    { value: "cancelled", label: "Canceladas", active: "bg-red-600 text-white", dot: "bg-red-600" },
+];
+
+function paginationItems(current: number, total: number): (number | "ellipsis")[] {
+    if (total <= 7) {
+        return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    const items: (number | "ellipsis")[] = [1];
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+
+    if (start > 2) items.push("ellipsis");
+    for (let page = start; page <= end; page++) items.push(page);
+    if (end < total - 1) items.push("ellipsis");
+    items.push(total);
+
+    return items;
+}
+
+// Builder do supabase-js; tipar com precisão aqui exigiria os genéricos do PostgREST
+type InvoiceQuery = any;
+
+/**
+ * "Vencida" não é só o status gravado: uma fatura pendente com vencimento
+ * no passado também conta. Os dois casos precisam ser resolvidos no banco,
+ * senão a paginação devolveria páginas incompletas.
+ */
+function applyStatusFilter(query: InvoiceQuery, status: StatusFilter, today: string): InvoiceQuery {
+    if (status === "paid") return query.eq("status", "paid");
+    if (status === "cancelled") return query.eq("status", "cancelled");
+    if (status === "pending") return query.eq("status", "pending").gte("due_date", today);
+    if (status === "overdue") {
+        return query.or(`status.eq.overdue,and(status.eq.pending,due_date.lt.${today})`);
+    }
+    return query;
+}
+
+function applySearchFilter(query: InvoiceQuery, search: string, patientIds: string[]): InvoiceQuery {
+    if (!search) return query;
+
+    // Vírgula e parênteses são separadores na sintaxe de or() do PostgREST
+    const termo = search.replace(/[,()]/g, " ").trim();
+    if (!termo) return query;
+
+    const condicoes = [`invoice_number.ilike.%${termo}%`];
+    if (patientIds.length > 0) condicoes.push(`patient_id.in.(${patientIds.join(",")})`);
+
+    return query.or(condicoes.join(","));
+}
 
 interface Invoice {
     id: string;
@@ -56,8 +115,14 @@ export default function FinancialPage() {
     const [summary, setSummary] = useState<Summary>({ revenue: 0, pending: 0, overdue: 0, overdueCount: 0 });
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("year");
+    const [page, setPage] = useState(1);
+    const [totalInvoices, setTotalInvoices] = useState(0);
+    const [statusCounts, setStatusCounts] = useState<Record<StatusFilter, number>>({
+        all: 0, pending: 0, paid: 0, overdue: 0, cancelled: 0,
+    });
     const [reportData, setReportData] = useState<FinancialReportData | null>(null);
     const [reportLoading, setReportLoading] = useState(false);
     const [reportFilters, setReportFilters] = useState<ReportFilters>({ period: "year" });
@@ -70,11 +135,20 @@ export default function FinancialPage() {
             prev.period === reportPeriod ? prev : { ...prev, period: reportPeriod }
         );
         fetchData();
-    }, [statusFilter, periodFilter]);
+    }, [statusFilter, periodFilter, debouncedSearch, page]);
 
     useEffect(() => {
         loadReportData();
     }, [reportFilters]);
+
+    // Busca agora vai ao banco, então espera o usuário parar de digitar
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery.trim());
+            setPage(1);
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     function getPeriodBounds(period: PeriodFilter, now = new Date()) {
         if (period === "month") {
@@ -123,10 +197,42 @@ export default function FinancialPage() {
         const today = format(now, "yyyy-MM-dd");
         const periodBounds = getPeriodBounds(periodFilter, now);
 
-        // Build invoice query
-        let invoiceQuery = supabase
-            .from("invoices")
-            .select(`
+        // Busca por nome de paciente exige resolver os ids antes: o or() do
+        // PostgREST não combina coluna própria com coluna de tabela relacionada
+        let patientIds: string[] = [];
+        if (debouncedSearch) {
+            const { data: matched } = await supabase
+                .from("patients")
+                .select("id")
+                .eq("professional_id", professional.id)
+                .ilike("full_name", `%${debouncedSearch}%`)
+                .limit(200);
+            patientIds = (matched || []).map((p) => p.id);
+        }
+
+        const applyPeriod = (query: InvoiceQuery): InvoiceQuery =>
+            periodBounds
+                ? query.gte("issue_date", periodBounds.start).lte("issue_date", periodBounds.end)
+                : query;
+
+        const baseQuery = (select: string, options?: { count: "exact"; head?: boolean }) => {
+            let q = supabase
+                .from("invoices")
+                .select(select, options)
+                .eq("professional_id", professional.id);
+            q = applyPeriod(q);
+            return applySearchFilter(q, debouncedSearch, patientIds);
+        };
+
+        // Contadores das abas: uma contagem por status, sem trazer as linhas
+        const countPromises = STATUS_TABS.map((tab) =>
+            applyStatusFilter(baseQuery("id", { count: "exact", head: true }), tab.value, today)
+        );
+
+        const from = (page - 1) * PAGE_SIZE;
+        const listQuery = applyStatusFilter(
+            baseQuery(
+                `
                 id,
                 invoice_number,
                 amount_cents,
@@ -135,39 +241,32 @@ export default function FinancialPage() {
                 issue_date,
                 paid_at,
                 description,
+                payment_method,
+                notes,
                 patient:patients ( full_name )
-            `)
-            .eq("professional_id", professional.id)
+            `,
+                { count: "exact" }
+            ),
+            statusFilter,
+            today
+        )
             .order("due_date", { ascending: false })
-            .limit(500);
+            .range(from, from + PAGE_SIZE - 1);
 
-        // Apply status filter — inclui status 'overdue' e pending vencidos
-        if (statusFilter !== "all") {
-            if (statusFilter === "overdue") {
-                // Busca ambos e filtra no client (pending passado + status overdue)
-                invoiceQuery = invoiceQuery.in("status", ["overdue", "pending"]);
-            } else {
-                invoiceQuery = invoiceQuery.eq("status", statusFilter);
-            }
-        }
+        const [listResult, ...countResults] = await Promise.all([listQuery, ...countPromises]);
 
-        // Apply period filter
-        if (periodBounds) {
-            invoiceQuery = invoiceQuery
-                .gte("issue_date", periodBounds.start)
-                .lte("issue_date", periodBounds.end);
-        }
-
-        const { data: invoiceData } = await invoiceQuery;
+        const novosContadores = { all: 0, pending: 0, paid: 0, overdue: 0, cancelled: 0 };
+        STATUS_TABS.forEach((tab, i) => {
+            novosContadores[tab.value] = countResults[i]?.count ?? 0;
+        });
+        setStatusCounts(novosContadores);
+        setTotalInvoices(listResult.count ?? 0);
 
         const isOverdueRow = (inv: { status: string; due_date: string | null }) =>
             inv.status === "overdue" ||
             (inv.status === "pending" && !!inv.due_date && inv.due_date < today);
 
-        const normalizedInvoices = ((invoiceData as unknown as Invoice[]) || []).filter((inv) => {
-            if (statusFilter !== "overdue") return true;
-            return isOverdueRow(inv);
-        });
+        const pageInvoices = (listResult.data as unknown as Invoice[]) || [];
 
         // Summary cards laterais / pendências — respeitam o período selecionado
         let summaryQuery = supabase
@@ -204,7 +303,7 @@ export default function FinancialPage() {
             overdueCount: overdueRows.length,
         });
 
-        setInvoices(normalizedInvoices);
+        setInvoices(pageInvoices);
         setLoading(false);
     }
 
@@ -220,31 +319,31 @@ export default function FinancialPage() {
         }
     }
 
-    // Filter invoices based on search query
-    const filteredInvoices = invoices.filter(invoice => {
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        const patientName = invoice.patient?.full_name?.toLowerCase() || "";
-        const invoiceNumber = invoice.invoice_number?.toLowerCase() || "";
-        return patientName.includes(query) || invoiceNumber.includes(query);
-    });
+    const totalPages = Math.max(1, Math.ceil(totalInvoices / PAGE_SIZE));
+    const primeiroDaPagina = totalInvoices === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+    const ultimoDaPagina = Math.min(page * PAGE_SIZE, totalInvoices);
+
+    const changeStatus = (value: StatusFilter) => {
+        setStatusFilter(value);
+        setPage(1);
+    };
+
+    const changePeriod = (value: PeriodFilter) => {
+        setPeriodFilter(value);
+        setPage(1);
+    };
 
     const clearFilters = () => {
         setStatusFilter("all");
         setPeriodFilter("all");
         setSearchQuery("");
+        setPage(1);
     };
 
     const hasActiveFilters = (statusFilter !== "all" || periodFilter !== "all") || searchQuery !== "";
 
     const getFilterLabel = (type: string, value: string): string => {
         const labels: Record<string, Record<string, string>> = {
-            status: {
-                pending: "Pendente",
-                paid: "Pago",
-                overdue: "Vencido",
-                cancelled: "Cancelado",
-            },
             period: {
                 month: "Este Mês",
                 quarter: "Este Trimestre",
@@ -271,7 +370,7 @@ export default function FinancialPage() {
                 </div>
                 <div className="flex gap-3">
                     {reportData && <ExportButton reportType="financial" filters={reportFilters} disabled={reportLoading} />}
-                    <NewInvoiceDialog />
+                    <NewInvoiceDialog onSuccess={fetchData} />
                 </div>
             </div>
 
@@ -297,14 +396,14 @@ export default function FinancialPage() {
                                 {statusFilter !== "all" && <Badge variant="secondary" className="ml-1 h-5 px-1.5">1</Badge>}
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuRadioGroup value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-                                <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuRadioItem value="pending">Pendente</DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="paid">Pago</DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="overdue">Vencido</DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="cancelled">Cancelado</DropdownMenuRadioItem>
+                        <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuRadioGroup value={statusFilter} onValueChange={(v) => changeStatus(v as StatusFilter)}>
+                                {STATUS_TABS.map((tab) => (
+                                    <DropdownMenuRadioItem key={tab.value} value={tab.value}>
+                                        <span className={cn("mr-2 inline-block h-2 w-2 rounded-full", tab.dot)} />
+                                        {tab.label}
+                                    </DropdownMenuRadioItem>
+                                ))}
                             </DropdownMenuRadioGroup>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -317,7 +416,7 @@ export default function FinancialPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuRadioGroup value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+                            <DropdownMenuRadioGroup value={periodFilter} onValueChange={(v) => changePeriod(v as PeriodFilter)}>
                                 <DropdownMenuRadioItem value="all">Todos</DropdownMenuRadioItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuRadioItem value="month">Este Mês</DropdownMenuRadioItem>
@@ -346,8 +445,8 @@ export default function FinancialPage() {
                 <div className="flex flex-wrap gap-2">
                     {statusFilter !== "all" && (
                         <Badge variant="secondary" className="gap-1">
-                            Status: {getFilterLabel("status", statusFilter)}
-                            <button onClick={() => setStatusFilter("all")} className="ml-1 hover:text-red-500">
+                            Status: {STATUS_TABS.find((tab) => tab.value === statusFilter)?.label}
+                            <button onClick={() => changeStatus("all")} className="ml-1 hover:text-red-500">
                                 <X size={12} />
                             </button>
                         </Badge>
@@ -355,7 +454,7 @@ export default function FinancialPage() {
                     {periodFilter !== "all" && (
                         <Badge variant="secondary" className="gap-1">
                             Período: {getFilterLabel("period", periodFilter)}
-                            <button onClick={() => setPeriodFilter("all")} className="ml-1 hover:text-red-500">
+                            <button onClick={() => changePeriod("all")} className="ml-1 hover:text-red-500">
                                 <X size={12} />
                             </button>
                         </Badge>
@@ -410,13 +509,95 @@ export default function FinancialPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Invoices List */}
                 <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <div className="px-6 pt-6 pb-3 flex justify-between items-center gap-4">
                         <h2 className="text-lg font-bold text-slate-900">
-                            Faturas {filteredInvoices.length > 0 && `(${filteredInvoices.length})`}
+                            Faturas {totalInvoices > 0 && `(${totalInvoices})`}
                         </h2>
+                        {loading && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
                     </div>
+
+                    <div className="flex flex-wrap gap-1.5 px-6 pb-3 border-b border-slate-100">
+                        {STATUS_TABS.map((tab) => {
+                            const ativa = statusFilter === tab.value;
+                            return (
+                                <button
+                                    key={tab.value}
+                                    onClick={() => changeStatus(tab.value)}
+                                    aria-pressed={ativa}
+                                    className={cn(
+                                        "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                                        ativa
+                                            ? tab.active
+                                            : "text-slate-600 hover:bg-slate-50"
+                                    )}
+                                >
+                                    {!ativa && <span className={cn("h-2 w-2 rounded-full", tab.dot)} />}
+                                    {tab.label}
+                                    <span
+                                        className={cn(
+                                            "rounded-full px-1.5 py-0.5 text-xs font-semibold",
+                                            ativa ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                                        )}
+                                    >
+                                        {statusCounts[tab.value]}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     <div className="overflow-x-auto">
-                        <InvoiceList invoices={filteredInvoices} />
+                        <InvoiceList invoices={invoices} onUpdate={fetchData} />
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
+                        <p className="text-sm text-slate-500">
+                            {totalInvoices === 0
+                                ? "Nenhuma fatura"
+                                : `Mostrando ${primeiroDaPagina}–${ultimoDaPagina} de ${totalInvoices}`}
+                        </p>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page <= 1 || loading}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                                <span className="hidden sm:inline ml-1">Anterior</span>
+                            </Button>
+                            {paginationItems(page, totalPages).map((item, index) =>
+                                item === "ellipsis" ? (
+                                    <span key={`ellipsis-${index}`} className="px-1 text-slate-400">
+                                        …
+                                    </span>
+                                ) : (
+                                    <Button
+                                        key={item}
+                                        variant="outline"
+                                        size="sm"
+                                        className={cn(
+                                            "h-8 w-8 p-0",
+                                            item === page &&
+                                                "border-brand-600 bg-brand-600 text-white hover:bg-brand-700 hover:text-white"
+                                        )}
+                                        onClick={() => setPage(item)}
+                                        disabled={loading}
+                                    >
+                                        {item}
+                                    </Button>
+                                )
+                            )}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={page >= totalPages || loading}
+                            >
+                                <span className="hidden sm:inline mr-1">Próxima</span>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -455,8 +636,18 @@ export default function FinancialPage() {
                         {summary.overdueCount > 0 ? (
                             <ul className="space-y-3">
                                 <li className="text-sm text-slate-600 flex items-start gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0"></div>
-                                    <span>Você tem <strong>{summary.overdueCount}</strong> faturas vencidas.</span>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0"></div>
+                                    <span>
+                                        Você tem{" "}
+                                        <button
+                                            type="button"
+                                            onClick={() => changeStatus("overdue")}
+                                            className="font-semibold text-orange-600 hover:underline"
+                                        >
+                                            {summary.overdueCount} faturas vencidas
+                                        </button>
+                                        .
+                                    </span>
                                 </li>
                             </ul>
                         ) : (

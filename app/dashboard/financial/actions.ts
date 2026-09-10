@@ -20,6 +20,8 @@ export type Invoice = {
     issue_date: string;
     paid_at: string | null;
     description?: string | null;
+    payment_method?: string | null;
+    notes?: string | null;
     patient: {
         full_name: string;
     };
@@ -326,6 +328,58 @@ export async function cancelInvoice(invoiceId: string, reason?: string) {
         .update({
             status: "cancelled",
             notes: reason ? `Cancelado: ${reason}` : "Cancelado",
+        })
+        .eq("id", invoiceId);
+
+    if (error) throw error;
+
+    revalidatePath("/dashboard/financial");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+}
+
+/**
+ * Reverte uma fatura paga para pendente, desfazendo um pagamento
+ * registrado por engano. Mantém o histórico no campo de notas.
+ */
+export async function reopenInvoice(invoiceId: string, reason?: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) throw new Error("Professional not found");
+
+    const { data: invoice } = await supabase
+        .from("invoices")
+        .select("professional_id, status, notes")
+        .eq("id", invoiceId)
+        .single();
+
+    if (!invoice || invoice.professional_id !== professional.id) {
+        throw new Error("Invoice not found or access denied");
+    }
+
+    if (invoice.status !== "paid") {
+        throw new Error("Apenas faturas pagas podem ser reabertas");
+    }
+
+    const historico = `Pagamento estornado em ${format(new Date(), "dd/MM/yyyy")}${reason ? `: ${reason}` : ""}`;
+
+    const { error } = await supabase
+        .from("invoices")
+        .update({
+            status: "pending",
+            paid_at: null,
+            payment_method: null,
+            notes: invoice.notes ? `${invoice.notes}\n${historico}` : historico,
         })
         .eq("id", invoiceId);
 

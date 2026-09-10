@@ -74,7 +74,7 @@ const PainPoints: React.FC = () => {
                   "Planos a partir de R$ 97/mês",
                   "Backup em nuvem criptografada",
                   "Redução drástica de No-Shows",
-                  "100% LGPD Compliant por Design"
+                  "Backup e isolamento por profissional"
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3 font-medium">
                     <div className="bg-white/20 p-1 rounded-full">

@@ -310,6 +310,8 @@ export default function CalendarPage() {
                             <AnimatePresence mode="wait">
                                 <motion.div key={currentDate.toISOString()} {...animationConfig}>
                                     <MonthView
+                                        currentDate={currentDate}
+                                        CustomEventComponent={AppointmentEvent}
                                         classNames={{
                                             prev: "hidden",
                                             next: "hidden",

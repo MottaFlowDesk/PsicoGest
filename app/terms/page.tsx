@@ -128,7 +128,7 @@ export default function TermsPage() {
 
             <h2>7. Integrações com terceiros</h2>
             <p>
-                Ao conectar Google, WhatsApp ou outros serviços, você autoriza o{" "}
+                Ao conectar o Google ou outros serviços, você autoriza o{" "}
                 {LEGAL.appName} a acessar essas plataformas nos limites dos
                 escopos concedidos por você. Cada serviço possui termos próprios:
             </p>
@@ -151,11 +151,31 @@ export default function TermsPage() {
                         Termos do Stripe
                     </a>
                 </li>
+                <li>
+                    <a
+                        href="https://business.whatsapp.com/policy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Política da WhatsApp Business Platform (Meta)
+                    </a>
+                </li>
             </ul>
+            <p>
+                As mensagens de WhatsApp são enviadas pelo número oficial do{" "}
+                {LEGAL.appName}, em seu nome, através da WhatsApp Business
+                Platform (Meta) — você não conecta o seu próprio aparelho. O
+                envio depende de o paciente ter autorizado o contato por
+                WhatsApp no cadastro, e o conteúdo se limita a confirmações e
+                lembretes de sessão. Esse canal não é monitorado: mensagens
+                enviadas pelo paciente por lá não alteram agendamentos nem
+                substituem contato clínico.
+            </p>
             <p>
                 O {LEGAL.appName} não se responsabiliza por indisponibilidades,
                 alterações ou encerramento de serviços de terceiros. Você pode
-                desconectar integrações a qualquer momento em Configurações.
+                desconectar integrações ou alterar o canal de lembretes a
+                qualquer momento em Configurações.
             </p>
 
             <h2>8. Propriedade intelectual</h2>

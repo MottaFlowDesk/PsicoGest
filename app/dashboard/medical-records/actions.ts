@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { subDays, subMonths } from "date-fns";
+import { openRecordContent } from "@/lib/crypto/sensitive";
 
 export type MedicalRecordWithPatient = {
     id: string;
@@ -120,7 +121,12 @@ export async function getAllMedicalRecords(
         return {
             ...record,
             patient: record.patient,
-            latest_version: latestVersion || null,
+            latest_version: latestVersion
+                ? {
+                      ...latestVersion,
+                      content: openRecordContent(latestVersion.content),
+                  }
+                : null,
         };
     });
 

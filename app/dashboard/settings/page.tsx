@@ -13,7 +13,7 @@ export default function SettingsPage() {
         },
         {
             title: "Integrações",
-            description: "Conecte Google Calendar, WhatsApp e configure lembretes.",
+            description: "Conecte o Google, acompanhe o WhatsApp e configure lembretes.",
             href: "/dashboard/settings/integrations",
             icon: Plug,
             color: "bg-orange-50 text-orange-600",

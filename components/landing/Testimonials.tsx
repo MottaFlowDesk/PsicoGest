@@ -36,7 +36,7 @@ const Testimonials: React.FC = () => {
             Aprovado por quem entende
           </h2>
           <p className="text-lg text-slate-600">
-            Junte-se a centenas de profissionais que modernizaram seus consultórios.
+            Feito para o consultório solo — sem planilha, sem WhatsApp paralelo, sem pasta perdida.
           </p>
         </div>
 

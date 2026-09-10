@@ -13,10 +13,11 @@ import { useRouter } from "next/navigation";
 interface RecordListProps {
     patientId: string;
     records: MedicalRecord[];
+    autoOpenNew?: boolean;
 }
 
-export function RecordList({ patientId, records }: RecordListProps) {
-    const [editorOpen, setEditorOpen] = useState(false);
+export function RecordList({ patientId, records, autoOpenNew = false }: RecordListProps) {
+    const [editorOpen, setEditorOpen] = useState(autoOpenNew);
     const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
     const router = useRouter();
 

@@ -34,9 +34,10 @@ interface PatientOption {
 interface NewInvoiceDialogProps {
     className?: string;
     variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+    onSuccess?: () => void;
 }
 
-export function NewInvoiceDialog({ className, variant }: NewInvoiceDialogProps) {
+export function NewInvoiceDialog({ className, variant, onSuccess }: NewInvoiceDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [patients, setPatients] = useState<PatientOption[]>([]);
@@ -101,6 +102,7 @@ export function NewInvoiceDialog({ className, variant }: NewInvoiceDialogProps) 
 
             toast.success("Fatura criada com sucesso!");
             setOpen(false);
+            onSuccess?.();
             router.refresh();
             resetForm();
         } catch (error: any) {

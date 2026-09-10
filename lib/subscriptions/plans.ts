@@ -41,14 +41,16 @@ export const PLANS: Record<PlanName, Plan> = {
         price_id_annual: '',
         features: [
             'Até 5 pacientes',
-            'Agenda básica',
-            'Prontuários eletrônicos',
-            'Suporte por email'
+            'Agenda e prontuário',
+            'Confirmação por link',
+            'Lembretes por e-mail',
+            'Suporte por e-mail'
         ],
         limits: {
             max_patients: 5,
             max_ai_hours_per_month: 0,
-            whatsapp_reminders: false,
+            // WhatsApp passou a ser da plataforma (WABA única), disponível em todos os planos
+            whatsapp_reminders: true,
             ai_transcription: false,
             priority_support: false,
             unlimited_patients: false,
@@ -65,17 +67,16 @@ export const PLANS: Record<PlanName, Plan> = {
         price_id_annual: process.env.STRIPE_PRICE_ESSENCIAL_ANNUAL || '',
         features: [
             '60 pacientes',
-            'Teleconsulta ilimitada',
-            'Dashboard financeiro',
-            'Pagamentos integrados',
-            'Agenda completa',
-            'Confirmações por e-mail',
-            'Suporte via E-mail'
+            'Agenda, prontuário e teleconsulta (Google Meet)',
+            'Dashboard financeiro e pagamentos',
+            'Google Calendar e Gmail',
+            'Confirmação por link e lembretes por e-mail',
+            'Suporte por e-mail'
         ],
         limits: {
             max_patients: 60,
             max_ai_hours_per_month: 0,
-            whatsapp_reminders: false,
+            whatsapp_reminders: true,
             ai_transcription: false,
             priority_support: false,
             unlimited_patients: false,
@@ -93,8 +94,7 @@ export const PLANS: Record<PlanName, Plan> = {
         features: [
             'Tudo do Essencial',
             'Até 120 pacientes',
-            'Lembretes por WhatsApp',
-            'IA: 10h de transcrições/mês',
+            'Relatórios e exportação PDF/Excel',
             'Suporte prioritário'
         ],
         limits: {
@@ -119,8 +119,7 @@ export const PLANS: Record<PlanName, Plan> = {
         features: [
             'Tudo do Profissional',
             'Pacientes ilimitados',
-            'IA ilimitada',
-            'Suporte VIP 24h'
+            'Suporte prioritário estendido'
         ],
         limits: {
             max_patients: 999999,

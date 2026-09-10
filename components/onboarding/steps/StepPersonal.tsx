@@ -11,6 +11,7 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { toast } from "sonner";
+import { formatCpf } from "@/lib/brazil/cpf";
 
 export function StepPersonal() {
     const { data, updateData, nextStep } = useOnboardingStore();
@@ -100,7 +101,14 @@ export function StepPersonal() {
                                 <FormItem>
                                     <FormLabel>CPF</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="000.000.000-00" {...field} />
+                                        <Input
+                                            placeholder="000.000.000-00"
+                                            inputMode="numeric"
+                                            autoComplete="off"
+                                            maxLength={14}
+                                            {...field}
+                                            onChange={(event) => field.onChange(formatCpf(event.target.value))}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

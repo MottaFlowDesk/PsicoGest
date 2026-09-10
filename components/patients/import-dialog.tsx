@@ -13,10 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { Upload, Loader2, AlertCircle, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 import Papa from "papaparse";
-import { createClient } from "@/lib/supabase/client";
 import { patientSchema } from "@/lib/validations/patient";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
+import { isValidCpf } from "@/lib/brazil/cpf";
+import { importPatients } from "@/app/dashboard/patients/[id]/actions";
 
 // Define a looser schema for CSV input, then map/validate
 const csvRowSchema = z.object({
@@ -36,7 +37,6 @@ export function ImportPatientDialog() {
     const [errors, setErrors] = useState<string[]>([]);
     const [importCount, setImportCount] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const supabase = createClient();
     const router = useRouter();
 
     const resetState = () => {
@@ -100,6 +100,7 @@ export function ImportPatientDialog() {
                 if (!cleanRow.full_name) throw new Error("Nome ausente");
                 if (!cleanRow.phone) throw new Error("Telefone ausente");
                 if (!cleanRow.date_of_birth) throw new Error("Data de nascimento ausente");
+                if (cleanRow.cpf && !isValidCpf(cleanRow.cpf)) throw new Error("CPF inválido");
 
                 validRows.push(cleanRow);
             } catch (err: any) {
@@ -121,29 +122,8 @@ export function ImportPatientDialog() {
         setStep("importing");
 
         try {
-            // Get current professional
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Usuário não autenticado");
-
-            const { data: professional } = await supabase
-                .from("professionals")
-                .select("id")
-                .eq("user_id", user.id)
-                .single();
-
-            if (!professional) throw new Error("Profissional não encontrado");
-
-            // Add professional_id to all rows
-            const patientsToInsert = parsedData.map(p => ({
-                ...p,
-                professional_id: professional.id
-            }));
-
-            const { error } = await supabase.from("patients").insert(patientsToInsert);
-
-            if (error) throw error;
-
-            setImportCount(patientsToInsert.length);
+            const result = await importPatients(parsedData);
+            setImportCount(result.count);
             setStep("success");
             router.refresh();
 

@@ -15,16 +15,22 @@ import { getPatientRecords } from "./records/actions";
 import { getInvoices } from "@/app/dashboard/financial/actions";
 import { PatientFinancialList } from "@/components/patients/patient-financial-list";
 import { EditPatientDialog } from "@/components/patients/edit-patient-dialog";
+import { openText } from "@/lib/crypto/sensitive";
 
 interface PatientPageProps {
     params: Promise<{
         id: string;
     }>;
+    searchParams: Promise<{
+        nova?: string;
+        tab?: string;
+    }>;
 }
 
-export default async function PatientPage({ params }: PatientPageProps) {
+export default async function PatientPage({ params, searchParams }: PatientPageProps) {
     const supabase = await createClient();
     const { id } = await params;
+    const { nova, tab } = await searchParams;
 
     const {
         data: { user },
@@ -55,6 +61,8 @@ export default async function PatientPage({ params }: PatientPageProps) {
     if (error || !patient) {
         notFound();
     }
+
+    patient.notes = openText(patient.notes);
 
     // Parallel fetch
     const [records, invoices] = await Promise.all([
@@ -134,7 +142,7 @@ export default async function PatientPage({ params }: PatientPageProps) {
             </div>
 
             {/* Tabs Content */}
-            <Tabs defaultValue="records" className="w-full">
+            <Tabs defaultValue={tab === "history" || tab === "financial" || tab === "documents" || tab === "overview" ? tab : "records"} className="w-full">
                 <TabsList className="w-full justify-start border-b border-slate-200 bg-transparent p-0 rounded-none h-auto">
                     <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-brand-600 px-6 py-3">
                         Visão Geral
@@ -189,7 +197,7 @@ export default async function PatientPage({ params }: PatientPageProps) {
                 </TabsContent>
 
                 <TabsContent value="records" className="mt-6">
-                    <RecordList patientId={patient.id} records={records} />
+                    <RecordList patientId={patient.id} records={records} autoOpenNew={nova === "1"} />
                 </TabsContent>
 
                 <TabsContent value="financial" className="mt-6">

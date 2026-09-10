@@ -7,11 +7,12 @@ type AdminClient = SupabaseClient;
 export async function confirmAppointmentInDb(
     supabase: AdminClient,
     appointmentId: string,
-    meetLink?: string | null
+    meetLink?: string | null,
+    confirmedVia: "link" | "professional" = "link"
 ): Promise<{ id: string; status: string; professional_id: string }> {
     const { data: updated, error: statusError } = await supabase
         .from("appointments")
-        .update({ status: "confirmed" })
+        .update({ status: "confirmed", confirmed_via: confirmedVia })
         .eq("id", appointmentId)
         .select("id, status, professional_id")
         .single();

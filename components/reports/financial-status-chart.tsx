@@ -8,10 +8,10 @@ interface FinancialStatusChartProps {
 }
 
 const COLORS = {
-  paid: "#10b981",
-  pending: "#f59e0b",
-  overdue: "#ef4444",
-  cancelled: "#6b7280",
+  paid: "#16a34a",
+  pending: "#2563eb",
+  overdue: "#f97316",
+  cancelled: "#dc2626",
 };
 
 const STATUS_LABELS: Record<string, string> = {

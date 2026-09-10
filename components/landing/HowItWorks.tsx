@@ -11,7 +11,7 @@ const HowItWorks: React.FC = () => {
     {
       icon: <CalendarCheck className="w-8 h-8 text-brand-600" />,
       title: "2. Organize a agenda",
-      desc: "Defina seus horários, configure lembretes automáticos e envie links de agendamento."
+      desc: "Defina seus horários, envie confirmação por link e lembretes automáticos por e-mail."
     },
     {
       icon: <TrendingUp className="w-8 h-8 text-brand-600" />,

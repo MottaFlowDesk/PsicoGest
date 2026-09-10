@@ -73,8 +73,20 @@ export function AppointmentActionsMenu({
     const handleComplete = async () => {
         setIsLoading(true);
         try {
-            await completeAppointment(appointmentId);
-            toast.success("Sessão marcada como concluída!");
+            const result = await completeAppointment(appointmentId);
+            toast.success("Sessão concluída", {
+                description: "Registre a evolução enquanto a sessão está fresca.",
+                duration: 12000,
+                action: result.patientId
+                    ? {
+                          label: "Abrir prontuário",
+                          onClick: () =>
+                              router.push(
+                                  `/dashboard/patients/${result.patientId}?nova=1`
+                              ),
+                      }
+                    : undefined,
+            });
             router.refresh();
         } catch (error) {
             toast.error("Erro ao concluir sessão");

@@ -16,14 +16,15 @@ interface ReminderSettingsCardProps {
         reminder_channel: string;
     };
     googleConnected: boolean;
-    whatsappConnected: boolean;
+    /** Canal WhatsApp da plataforma configurado (não depende do profissional). */
+    whatsappAvailable: boolean;
 }
 
 export function ReminderSettingsCard({ 
     professionalId, 
     initialSettings,
     googleConnected,
-    whatsappConnected
+    whatsappAvailable
 }: ReminderSettingsCardProps) {
     const [loading, setLoading] = useState(false);
     const [settings, setSettings] = useState(initialSettings);
@@ -61,7 +62,7 @@ export function ReminderSettingsCard({
         }
     };
 
-    const canSendReminders = googleConnected || whatsappConnected;
+    const canSendReminders = googleConnected || whatsappAvailable;
 
     return (
         <Card className="border-slate-200">
@@ -83,9 +84,9 @@ export function ReminderSettingsCard({
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
                         <div>
-                            <p className="font-medium text-amber-900">Conecte uma conta primeiro</p>
+                            <p className="font-medium text-amber-900">Nenhum canal disponível</p>
                             <p className="text-sm text-amber-700">
-                                Conecte o Google ou WhatsApp acima para habilitar os lembretes automáticos.
+                                Conecte o Google acima para enviar por e-mail. O canal WhatsApp da plataforma está indisponível no momento.
                             </p>
                         </div>
                     </div>
@@ -152,7 +153,7 @@ export function ReminderSettingsCard({
                                         WhatsApp + Email como backup
                                     </p>
                                     <p className="text-xs text-slate-500">
-                                        Envia por WhatsApp, se falhar usa email
+                                        Envia pelo número da plataforma; sem opt-in do paciente ou em caso de falha, usa e-mail
                                     </p>
                                 </div>
                             </label>
@@ -194,7 +195,7 @@ export function ReminderSettingsCard({
                                         Apenas WhatsApp
                                     </p>
                                     <p className="text-xs text-slate-500">
-                                        Não envia email se WhatsApp falhar
+                                        Pacientes sem opt-in de WhatsApp não recebem lembrete
                                     </p>
                                 </div>
                             </label>

@@ -3,7 +3,14 @@
     {
       "path": "/api/cron/health-check",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/process-outbox",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
-

@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { GoogleConnectCard } from "@/components/settings/google-connect-card";
-import { WhatsAppConnectCard } from "@/components/settings/whatsapp-connect-card";
+import { WhatsAppPlatformCard } from "@/components/settings/whatsapp-platform-card";
 import { ReminderSettingsCard } from "@/components/settings/reminder-settings-card";
+import { getPlatformWhatsAppDisabledReason } from "@/lib/messaging/meta-cloud";
 import { ArrowLeft, AlertCircle, ExternalLink, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -20,11 +21,14 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
 
     const { data: professional } = await supabase
         .from("professionals")
-        .select("id, google_calendar_connected, google_refresh_token, whatsapp_connected_at, whatsapp_phone")
+        .select("id, google_calendar_connected, google_refresh_token")
         .eq("user_id", user.id)
         .single();
 
     if (!professional) redirect("/onboarding");
+
+    // WhatsApp é da plataforma: disponibilidade não depende do profissional
+    const whatsappAvailable = !getPlatformWhatsAppDisabledReason();
 
     const { data: settings } = await supabase
         .from("settings")
@@ -47,7 +51,7 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Integrações</h1>
                     <p className="text-sm text-slate-500">
-                        Conecte suas contas para automatizar lembretes e agenda.
+                        Conecte o Google e escolha como avisar seus pacientes.
                     </p>
                 </div>
             </div>
@@ -127,12 +131,8 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
                     professionalId={professional.id}
                 />
 
-                {/* WhatsApp Integration */}
-                <WhatsAppConnectCard 
-                    isConnected={!!professional.whatsapp_connected_at}
-                    phone={professional.whatsapp_phone}
-                    professionalId={professional.id}
-                />
+                {/* WhatsApp da plataforma (WABA única, sem QR por profissional) */}
+                <WhatsAppPlatformCard />
 
                 {/* Reminder Settings */}
                 <ReminderSettingsCard 
@@ -143,7 +143,7 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
                         reminder_channel: settings?.reminder_channel ?? 'whatsapp_email',
                     }}
                     googleConnected={professional.google_calendar_connected || false}
-                    whatsappConnected={!!professional.whatsapp_connected_at}
+                    whatsappAvailable={whatsappAvailable}
                 />
             </div>
         </div>

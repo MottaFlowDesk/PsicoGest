@@ -4,15 +4,13 @@ import {
     addGoogleMeetToCalendarEvent,
     invitePatientToCalendarEvent,
 } from "@/lib/google/calendar";
-import { sendEmail, generateMeetLinkEmailHtml } from "@/lib/google/gmail";
-import { sendWhatsAppMessage, generateMeetLinkMessage } from "@/lib/whatsapp/client";
+import { enqueueAppointmentMessage, processOutbox } from "@/lib/messaging/outbox";
 import {
     confirmAppointmentInDb,
     pickMeetLinkFromRow,
 } from "@/lib/appointments/confirm-appointment-db";
 import { NextRequest, NextResponse } from "next/server";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface RouteContext {
     params: Promise<{ token: string }>;
@@ -38,7 +36,6 @@ interface AppointmentWithRelations {
         full_name: string;
         google_refresh_token: string | null;
         google_calendar_connected: boolean | null;
-        whatsapp_connected_at: string | null;
     } | null;
 }
 
@@ -70,8 +67,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
                 professionals (
                     id,
                     full_name,
-                    google_refresh_token,
-                    whatsapp_connected_at
+                    google_refresh_token
                 )
             `)
             .eq("confirmation_token", token)
@@ -130,8 +126,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                     id,
                     full_name,
                     google_refresh_token,
-                    google_calendar_connected,
-                    whatsapp_connected_at
+                    google_calendar_connected
                 )
             `)
             .eq("confirmation_token", token)
@@ -271,57 +266,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
             }
         }
 
-        // Send meeting link to patient if we have one
+        // Link da videochamada segue pela outbox (WhatsApp da plataforma + e-mail)
         if (meetingLink && appointment.patients) {
-            const scheduledDate = new Date(appointment.scheduled_at);
-            const formattedDate = format(scheduledDate, "EEEE, d 'de' MMMM", { locale: ptBR });
-            const formattedTime = format(scheduledDate, "HH:mm");
-
-            // Try to send via WhatsApp first
-            if (
-                appointment.professionals?.whatsapp_connected_at &&
-                appointment.patients.phone
-            ) {
-                try {
-                    await sendWhatsAppMessage(
-                        appointment.professionals.id,
-                        appointment.patients.phone,
-                        generateMeetLinkMessage({
-                            patientName: appointment.patients.full_name,
-                            professionalName: appointment.professionals.full_name,
-                            date: formattedDate,
-                            time: formattedTime,
-                            meetLink: meetingLink,
-                        })
-                    );
-                } catch (whatsappError) {
-                    console.error("Error sending WhatsApp:", whatsappError);
-                }
-            }
-
-            // Also send via email if Google is connected
-            if (
-                appointment.professionals?.google_refresh_token &&
-                appointment.patients.email
-            ) {
-                try {
-                    await sendEmail(
-                        appointment.professionals.google_refresh_token,
-                        {
-                            to: appointment.patients.email,
-                            subject: `✓ Sessão Confirmada - ${formattedDate}`,
-                            html: generateMeetLinkEmailHtml({
-                                patientName: appointment.patients.full_name,
-                                professionalName: appointment.professionals.full_name,
-                                date: formattedDate,
-                                time: formattedTime,
-                                meetLink: meetingLink,
-                            }),
-                        }
-                    );
-                } catch (emailError) {
-                    console.error("Error sending email:", emailError);
-                }
+            try {
+                await enqueueAppointmentMessage({
+                    appointmentId: appointment.id,
+                    kind: "meet_link",
+                    meetLink: meetingLink,
+                    supabase,
+                });
+                await processOutbox({ batchSize: 5 });
+            } catch (outboxError) {
+                console.error("Error queueing meet link message:", outboxError);
             }
         }
 

@@ -24,6 +24,7 @@ interface EditPatientDialogProps {
         occupation?: string | null;
         notes?: string | null;
         avatar_url?: string | null;
+        whatsapp_opt_in_at?: string | null;
         address?: {
             zip?: string;
             street?: string;

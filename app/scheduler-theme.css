@@ -77,11 +77,14 @@
   border-color: rgb(226 232 240) !important;
 }
 
-/* Ensure buttons use the correct blue */
-button[class*="bg-primary"] {
+/* Ensure buttons use the correct blue.
+   ~= casa a classe "bg-primary" inteira. Com *= o seletor casava qualquer
+   classe que apenas cite bg-primary (ex.: data-[state=checked]:bg-primary
+   do Switch), pintando o botão de azul mesmo no estado desligado. */
+button[class~="bg-primary"] {
   background-color: rgb(37 99 235) !important;
 }
 
-button[class*="bg-primary"]:hover {
+button[class~="bg-primary"]:hover {
   background-color: rgb(29 78 216) !important; /* blue-700 */
 }

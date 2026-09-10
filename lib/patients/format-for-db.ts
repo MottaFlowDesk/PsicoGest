@@ -40,7 +40,7 @@ export function getPatientDbErrorMessage(error: PostgrestError | Error | unknown
         return "Telefone inválido. Use DDD + número (ex.: 11999998888).";
     }
     if (message.includes("valid_cpf")) {
-        return "CPF inválido. Informe 11 dígitos ou deixe em branco.";
+        return "CPF inválido. Informe um CPF válido ou deixe em branco.";
     }
     if (message.includes("adult_patient")) {
         return "Data de nascimento inválida: o paciente precisa ter pelo menos 18 anos.";

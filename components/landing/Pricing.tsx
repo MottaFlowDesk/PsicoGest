@@ -15,12 +15,11 @@ const Pricing: React.FC = () => {
       description: "Para quem está começando a organizar o consultório.",
       features: [
         "60 pacientes",
-        "Teleconsulta ilimitada",
-        "Dashboard financeiro",
-        "Pagamentos integrados",
-        "Agenda completa",
-        "Confirmações por e-mail",
-        "Suporte via E-mail"
+        "Agenda, prontuário e teleconsulta (Google Meet)",
+        "Dashboard financeiro e pagamentos",
+        "Google Calendar e Gmail",
+        "Confirmação por link e lembretes por e-mail",
+        "Suporte por e-mail"
       ],
       highlight: false,
       buttonVariant: "outline"
@@ -33,8 +32,7 @@ const Pricing: React.FC = () => {
       features: [
         "Tudo do Essencial",
         "Até 120 pacientes",
-        "Lembretes por WhatsApp",
-        "Integração Google Calendar e Gmail",
+        "Relatórios e exportação PDF/Excel",
         "Suporte prioritário"
       ],
       highlight: true,
@@ -49,8 +47,7 @@ const Pricing: React.FC = () => {
       features: [
         "Tudo do Profissional",
         "Pacientes ilimitados",
-        "Relatórios e exportação avançados",
-        "Suporte VIP 24h"
+        "Suporte prioritário estendido"
       ],
       highlight: false,
       buttonVariant: "outline"

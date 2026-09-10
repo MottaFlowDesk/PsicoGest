@@ -7,15 +7,17 @@ import { useOnboardingStore } from "@/hooks/use-onboarding-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, ArrowRight, Loader2, Search } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { formatCep, lookupCep } from "@/lib/brazil/cep";
 
 export function StepAddress() {
     const { data, updateData, nextStep, prevStep } = useOnboardingStore();
     const [isLoadingCep, setIsLoadingCep] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const lastLookedUpCep = useRef("");
     const supabase = createClient();
 
     const form = useForm<AddressValues>({
@@ -70,25 +72,23 @@ export function StepAddress() {
         }
     };
 
-    const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-        const cep = e.target.value.replace(/\D/g, '');
-        if (cep.length === 8) {
-            setIsLoadingCep(true);
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const data = await response.json();
-                if (!data.erro) {
-                    form.setValue('street', data.logradouro);
-                    form.setValue('neighborhood', data.bairro);
-                    form.setValue('city', data.localidade);
-                    form.setValue('state', data.uf);
-                    form.setFocus('number');
-                }
-            } catch (error) {
-                console.error("Erro ao buscar CEP", error);
-            } finally {
-                setIsLoadingCep(false);
-            }
+    const applyCepLookup = async (rawCep: string) => {
+        const digits = rawCep.replace(/\D/g, "");
+        if (digits.length !== 8 || lastLookedUpCep.current === digits) return;
+
+        lastLookedUpCep.current = digits;
+        setIsLoadingCep(true);
+        try {
+            const address = await lookupCep(digits);
+            form.setValue("street", address.street, { shouldValidate: true });
+            form.setValue("neighborhood", address.neighborhood, { shouldValidate: true });
+            form.setValue("city", address.city, { shouldValidate: true });
+            form.setValue("state", address.state, { shouldValidate: true });
+            form.setFocus("number");
+        } catch {
+            lastLookedUpCep.current = "";
+        } finally {
+            setIsLoadingCep(false);
         }
     };
 
@@ -111,9 +111,15 @@ export function StepAddress() {
                                     <div className="relative">
                                         <Input
                                             placeholder="00000-000"
-                                            {...field}
-                                            onBlur={handleCepBlur}
+                                            inputMode="numeric"
+                                            autoComplete="postal-code"
                                             maxLength={9}
+                                            {...field}
+                                            onChange={(event) => {
+                                                const formatted = formatCep(event.target.value);
+                                                field.onChange(formatted);
+                                                void applyCepLookup(formatted);
+                                            }}
                                         />
                                         {isLoadingCep && (
                                             <div className="absolute right-3 top-2.5">

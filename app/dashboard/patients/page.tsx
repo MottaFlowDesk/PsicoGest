@@ -145,7 +145,11 @@ export default function PatientsPage() {
                                 <CardContent>
                                     <div className="space-y-3">
                                         {reportData.topPatients.map((patient, index) => (
-                                            <div key={patient.patientId} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                            <Link
+                                                key={patient.patientId}
+                                                href={`/dashboard/patients/${patient.patientId}`}
+                                                className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                                            >
                                                 <div className="flex items-center gap-3">
                                                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-100 text-brand-700 font-semibold text-sm">
                                                         {index + 1}
@@ -162,7 +166,7 @@ export default function PatientsPage() {
                                                 <div className="text-right">
                                                     <p className="font-semibold text-slate-900">{patient.sessionCount} sessões</p>
                                                 </div>
-                                            </div>
+                                            </Link>
                                         ))}
                                     </div>
                                 </CardContent>

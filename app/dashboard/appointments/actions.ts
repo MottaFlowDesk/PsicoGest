@@ -355,7 +355,7 @@ export async function updateAppointmentStatus(
     // Verify ownership and get Google event ID
     const { data: existing } = await supabase
         .from("appointments")
-        .select("professional_id, status, google_calendar_event_id")
+        .select("professional_id, status, google_calendar_event_id, patient_id")
         .eq("id", appointmentId)
         .single();
 
@@ -423,7 +423,7 @@ export async function updateAppointmentStatus(
     revalidatePath("/dashboard/calendar");
     revalidatePath("/dashboard");
 
-    return { success: true };
+    return { success: true, patientId: existing.patient_id as string };
 }
 
 export async function confirmAppointment(appointmentId: string) {

@@ -31,8 +31,8 @@ const Hero: React.FC = () => {
             </h1>
 
             <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-              A plataforma all-in-one para psicólogos e terapeutas independentes.
-              Reduza sua burocracia em 60% e tenha total conformidade com a LGPD e CFP.
+              Agenda, prontuário, confirmação por link e financeiro num só lugar
+              para psicólogos e terapeutas independentes.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">

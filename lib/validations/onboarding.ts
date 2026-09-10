@@ -1,15 +1,23 @@
 import { z } from "zod";
+import { isValidCpf } from "@/lib/brazil/cpf";
+import { isValidCep } from "@/lib/brazil/cep";
 
 export const personalInfoSchema = z.object({
     fullName: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
-    cpf: z.string().min(11, "CPF inválido").max(14, "CPF inválido"), // Simple length check for now, can add regex
+    cpf: z
+        .string()
+        .min(1, "CPF obrigatório")
+        .refine(isValidCpf, { message: "CPF inválido" }),
     crp: z.string().min(4, "CRP inválido"),
     phone: z.string().min(10, "Telefone inválido"),
     whatsapp: z.string().optional(),
 });
 
 export const addressSchema = z.object({
-    cep: z.string().min(8, "CEP inválido"),
+    cep: z
+        .string()
+        .min(1, "CEP obrigatório")
+        .refine(isValidCep, { message: "CEP inválido" }),
     street: z.string().min(3, "Rua obrigatória"),
     number: z.string().min(1, "Número obrigatório"),
     complement: z.string().optional(),

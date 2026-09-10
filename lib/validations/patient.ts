@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { addressSchema } from "./onboarding";
 import { normalizeCpfForDb, normalizePhoneForDb } from "@/lib/patients/format-for-db";
+import { isValidCpf } from "@/lib/brazil/cpf";
 
 export const patientSchema = z.object({
     fullName: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
@@ -11,9 +12,9 @@ export const patientSchema = z.object({
         .refine(
             (val) => {
                 const digits = normalizeCpfForDb(val);
-                return digits === null || digits.length === 11;
+                return digits === null || isValidCpf(digits);
             },
-            { message: "CPF deve ter 11 dígitos" }
+            { message: "CPF inválido" }
         ),
     dateOfBirth: z
         .string()
@@ -33,6 +34,8 @@ export const patientSchema = z.object({
             message: "Telefone inválido. Use DDD + número (ex.: 11999998888)",
         }),
     email: z.string().email("Email inválido").optional().or(z.literal("")),
+    /** Consentimento para receber confirmações e lembretes no WhatsApp. */
+    whatsappOptIn: z.boolean(),
     occupation: z.string().optional(),
     notes: z.string().optional(),
     avatarUrl: z.string().optional().or(z.literal("")),

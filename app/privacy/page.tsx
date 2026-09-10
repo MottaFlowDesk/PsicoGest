@@ -6,7 +6,7 @@ import { LEGAL } from "@/lib/legal/site";
 export const metadata: Metadata = {
     title: "Política de Privacidade | PsicoGuest",
     description:
-        "Política de Privacidade do PsicoGuest. Saiba como tratamos dados pessoais, integrações Google, WhatsApp e Stripe em conformidade com a LGPD.",
+        "Política de Privacidade do PsicoGuest. Saiba como tratamos dados pessoais, integrações Google, WhatsApp (Meta) e Stripe em conformidade com a LGPD.",
 };
 
 export default function PrivacyPage() {
@@ -73,9 +73,10 @@ export default function PrivacyPage() {
                     eventos do calendário e links de reunião (Google Meet)
                 </li>
                 <li>
-                    <strong>WhatsApp (Evolution API):</strong> status de
-                    conexão e identificação da instância; não armazenamos o
-                    conteúdo completo das conversas
+                    <strong>WhatsApp Business Platform (Meta):</strong>{" "}
+                    telefone do paciente em formato internacional, data da
+                    autorização de contato, identificador da mensagem e status
+                    de entrega; não armazenamos conversas
                 </li>
                 <li>
                     <strong>Stripe:</strong> identificadores de cliente,
@@ -89,7 +90,10 @@ export default function PrivacyPage() {
                 <li>Fornecer e operar os serviços contratados</li>
                 <li>Gerenciar agendamentos, confirmações e lembretes</li>
                 <li>Sincronizar eventos com Google Calendar e enviar e-mails via Gmail</li>
-                <li>Enviar mensagens de lembrete via WhatsApp, quando conectado</li>
+                <li>
+                    Enviar confirmações e lembretes por WhatsApp aos pacientes
+                    que autorizaram esse contato
+                </li>
                 <li>Processar assinaturas e pagamentos</li>
                 <li>Garantir segurança, prevenir fraudes e cumprir obrigações legais</li>
                 <li>Melhorar a estabilidade e a experiência do produto</li>
@@ -169,8 +173,10 @@ export default function PrivacyPage() {
                     <strong>Stripe:</strong> processamento de pagamentos
                 </li>
                 <li>
-                    <strong>Evolution API / Railway:</strong> envio de mensagens
-                    WhatsApp
+                    <strong>Meta Platforms (WhatsApp Business Platform):</strong>{" "}
+                    envio de confirmações e lembretes pelo número oficial do{" "}
+                    {LEGAL.appName}, somente para pacientes que autorizaram o
+                    contato por WhatsApp
                 </li>
             </ul>
             <p>
@@ -233,6 +239,14 @@ export default function PrivacyPage() {
                 Alguns provedores podem processar dados fora do Brasil. Nesses
                 casos, adotamos salvaguardas compatíveis com a LGPD e contratos
                 com operadores que garantem proteção adequada.
+            </p>
+            <p>
+                É o caso do envio de mensagens por WhatsApp: o telefone do
+                paciente é transmitido à Meta Platforms, sediada nos Estados
+                Unidos, exclusivamente para entregar a confirmação ou o
+                lembrete. Esse envio só ocorre com autorização registrada no
+                cadastro do paciente e pode ser revogado a qualquer momento,
+                desligando a autorização de contato por WhatsApp.
             </p>
 
             <h2>11. Menores de idade</h2>

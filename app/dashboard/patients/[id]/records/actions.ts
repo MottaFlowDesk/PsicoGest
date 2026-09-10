@@ -2,6 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import {
+    openRecordContent,
+    openRecordText,
+    sealRecordContent,
+} from "@/lib/crypto/sensitive";
 
 export type MedicalRecord = {
     id: string;
@@ -43,10 +48,14 @@ export async function getPatientRecords(patientId: string) {
         throw new Error("Failed to fetch medical records");
     }
 
-    // Sort versions for each record by version number desc
     const recordsWithSortedVersions = records.map((record) => ({
         ...record,
-        versions: record.versions.sort((a: any, b: any) => b.version - a.version),
+        versions: record.versions
+            .sort((a: any, b: any) => b.version - a.version)
+            .map((version: MedicalRecordVersion) => ({
+                ...version,
+                content: openRecordContent(version.content),
+            })),
     }));
 
     return recordsWithSortedVersions as MedicalRecord[];
@@ -101,7 +110,7 @@ export async function createMedicalRecord(data: {
         .insert({
             medical_record_id: record.id,
             version: 1,
-            content: { text: data.content }, // Storing as JSON object
+            content: sealRecordContent(data.content),
             edited_by: professional.id,
             edit_reason: "Initial creation",
         });
@@ -167,7 +176,7 @@ export async function updateMedicalRecord(data: {
         .insert({
             medical_record_id: data.recordId,
             version: newVersion,
-            content: { text: data.content },
+            content: sealRecordContent(data.content),
             edited_by: professional.id,
             edit_reason: data.editReason || "Update",
         });
@@ -200,4 +209,179 @@ export async function updateMedicalRecord(data: {
 
     revalidatePath(`/dashboard/patients/${data.patientId}`);
     return { success: true };
+}
+
+async function requireProfessional() {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+        throw new Error("Unauthorized");
+    }
+
+    const { data: professional } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+    if (!professional) {
+        throw new Error("Professional profile not found");
+    }
+
+    return { supabase, professional };
+}
+
+export type PatientSession = {
+    id: string;
+    scheduled_at: string;
+    duration_minutes: number;
+    type: string;
+    status: string;
+    medical_records: {
+        id: string;
+        title: string;
+        updated_at: string;
+        content: string;
+    }[];
+};
+
+export async function getPatientSessions(patientId: string): Promise<PatientSession[]> {
+    const { supabase, professional } = await requireProfessional();
+
+    const { data, error } = await supabase
+        .from("appointments")
+        .select(`
+            id, scheduled_at, duration_minutes, type, status,
+            medical_records (
+                id, title, updated_at,
+                medical_record_versions (
+                    content, version
+                )
+            )
+        `)
+        .eq("patient_id", patientId)
+        .eq("professional_id", professional.id)
+        .order("scheduled_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching sessions:", error);
+        throw new Error("Failed to fetch sessions");
+    }
+
+    return (data ?? []).map((appointment: any) => {
+        const records = (appointment.medical_records ?? []).map((record: any) => {
+            const versions = [...(record.medical_record_versions ?? [])].sort(
+                (a: any, b: any) => b.version - a.version
+            );
+            return {
+                id: record.id,
+                title: record.title,
+                updated_at: record.updated_at,
+                content: openRecordText(versions[0]?.content),
+            };
+        });
+
+        return {
+            id: appointment.id,
+            scheduled_at: appointment.scheduled_at,
+            duration_minutes: appointment.duration_minutes,
+            type: appointment.type,
+            status: appointment.status,
+            medical_records: records,
+        };
+    });
+}
+
+export async function saveAppointmentEvolution(data: {
+    appointmentId: string;
+    patientId: string;
+    title?: string;
+    content: string;
+    recordId?: string;
+}) {
+    const { supabase, professional } = await requireProfessional();
+    const title = data.title?.trim() || "Evolução da Sessão";
+
+    let recordId = data.recordId;
+
+    if (!recordId) {
+        const { data: existing } = await supabase
+            .from("medical_records")
+            .select("id, current_version")
+            .eq("appointment_id", data.appointmentId)
+            .eq("professional_id", professional.id)
+            .maybeSingle();
+
+        if (existing) {
+            recordId = existing.id;
+        } else {
+            const { data: created, error: createError } = await supabase
+                .from("medical_records")
+                .insert({
+                    professional_id: professional.id,
+                    patient_id: data.patientId,
+                    appointment_id: data.appointmentId,
+                    title,
+                    status: "draft",
+                    current_version: 0,
+                })
+                .select("id")
+                .single();
+
+            if (createError || !created) {
+                console.error("Error creating session record:", createError);
+                throw new Error("Failed to create medical record");
+            }
+            recordId = created.id;
+        }
+    }
+
+    const { data: current } = await supabase
+        .from("medical_records")
+        .select("id, current_version, status, professional_id")
+        .eq("id", recordId)
+        .single();
+
+    if (!current || current.professional_id !== professional.id) {
+        throw new Error("Record not found or access denied");
+    }
+
+    if (current.status === "finalized") {
+        throw new Error("Cannot edit a finalized record");
+    }
+
+    const nextVersion = (current.current_version || 0) + 1;
+
+    const { error: versionError } = await supabase
+        .from("medical_record_versions")
+        .insert({
+            medical_record_id: recordId,
+            version: nextVersion,
+            content: sealRecordContent(data.content),
+            edited_by: professional.id,
+            edit_reason: "Evolução da sessão",
+        });
+
+    if (versionError) {
+        console.error("Error saving session evolution:", versionError);
+        throw new Error("Failed to save medical record version");
+    }
+
+    const { error: updateError } = await supabase
+        .from("medical_records")
+        .update({
+            current_version: nextVersion,
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", recordId);
+
+    if (updateError) {
+        throw new Error("Failed to update record metadata");
+    }
+
+    revalidatePath(`/dashboard/patients/${data.patientId}`);
+    return { success: true, recordId };
 }

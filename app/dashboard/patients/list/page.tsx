@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 type StatusFilter = "active" | "archived" | "all";
 
 export default function PatientsListPage() {
+    const router = useRouter();
     const [patients, setPatients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -86,6 +88,15 @@ export default function PatientsListPage() {
 
         return name.includes(query) || email.includes(query) || phone.includes(query);
     });
+
+    const openPatient = (event: React.MouseEvent<HTMLTableRowElement>, patientId: string) => {
+        // Links e botões da linha (ações, WhatsApp, menu) cuidam do próprio clique
+        if ((event.target as HTMLElement).closest("a, button")) return;
+        // Não atrapalha quem está selecionando texto para copiar telefone/email
+        if (window.getSelection()?.toString()) return;
+
+        router.push(`/dashboard/patients/${patientId}`);
+    };
 
     const openWhatsApp = (phone: string) => {
         if (!phone) return;
@@ -224,7 +235,11 @@ export default function PatientsListPage() {
                             </thead>
                             <tbody className="bg-white divide-y divide-slate-200">
                                 {filteredPatients.map((patient) => (
-                                    <tr key={patient.id} className="hover:bg-slate-50 transition-colors">
+                                    <tr
+                                        key={patient.id}
+                                        onClick={(e) => openPatient(e, patient.id)}
+                                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                                    >
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <Avatar className="h-10 w-10">
@@ -234,7 +249,12 @@ export default function PatientsListPage() {
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="ml-4">
-                                                    <div className="text-sm font-medium text-slate-900">{patient.full_name}</div>
+                                                    <Link
+                                                        href={`/dashboard/patients/${patient.id}`}
+                                                        className="text-sm font-medium text-slate-900 hover:text-brand-600 hover:underline transition-colors"
+                                                    >
+                                                        {patient.full_name}
+                                                    </Link>
                                                     <div className="text-sm text-slate-500">{patient.email || '-'}</div>
                                                 </div>
                                             </div>

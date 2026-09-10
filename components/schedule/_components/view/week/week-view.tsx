@@ -541,6 +541,7 @@ export default function WeeklyView({
                                                     minWidth,
                                                     padding: '0 2px',
                                                     boxSizing: 'border-box',
+                                                    overflow: 'hidden',
                                                   }}
                                                 >
                                                   <EventStyled
@@ -718,20 +719,21 @@ export default function WeeklyView({
                           <motion.div
                             key={event.id}
                             style={{
-                              minHeight: height,
                               height,
                               top: adjustedTop,
                               left: left,
                               maxWidth: maxWidth,
                               minWidth: minWidth,
-                              padding: '0 2px',
-                              boxSizing: 'border-box',
+                              padding: "0 2px",
+                              boxSizing: "border-box",
+                              zIndex,
+                              overflow: "hidden",
                             }}
-                            className="flex transition-all duration-1000 flex-grow flex-col z-50 absolute"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ duration: 0.2 }}
+                            className="absolute"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
                           >
                             <EventStyled
                               event={{

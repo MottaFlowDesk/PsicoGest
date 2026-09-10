@@ -28,7 +28,10 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { updatePatient } from "@/app/dashboard/patients/[id]/actions";
+import { Switch } from "@/components/ui/switch";
+import { createPatient, updatePatient } from "@/app/dashboard/patients/[id]/actions";
+import { formatCpf } from "@/lib/brazil/cpf";
+import { formatCep, lookupCep } from "@/lib/brazil/cep";
 
 interface PatientFormProps {
     mode?: "create" | "edit";
@@ -42,6 +45,7 @@ interface PatientFormProps {
         occupation?: string | null;
         notes?: string | null;
         avatar_url?: string | null;
+        whatsapp_opt_in_at?: string | null;
         address?: {
             zip?: string;
             street?: string;
@@ -58,9 +62,11 @@ interface PatientFormProps {
 export function PatientForm({ mode = "create", initialData, onSuccess }: PatientFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isLoadingCep, setIsLoadingCep] = useState(false);
     const [cropOpen, setCropOpen] = useState(false);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const cropImageUrlRef = useRef<string | null>(null);
+    const lastLookedUpCep = useRef<string>("");
     const supabase = createClient();
     const router = useRouter();
 
@@ -80,15 +86,16 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
         resolver: zodResolver(patientSchema),
         defaultValues: {
             fullName: initialData?.full_name || "",
-            cpf: initialData?.cpf || "",
+            cpf: formatCpf(initialData?.cpf || ""),
             dateOfBirth: initialData?.date_of_birth || "",
             phone: initialData?.phone || "",
             email: initialData?.email || "",
+            whatsappOptIn: !!initialData?.whatsapp_opt_in_at,
             occupation: initialData?.occupation || "",
             notes: initialData?.notes || "",
             avatarUrl: initialData?.avatar_url || "",
             address: {
-                cep: initialData?.address?.zip || "",
+                cep: formatCep(initialData?.address?.zip || ""),
                 street: initialData?.address?.street || "",
                 number: initialData?.address?.number || "",
                 complement: initialData?.address?.complement || "",
@@ -176,6 +183,29 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
     const avatarUrl = form.watch("avatarUrl");
     const fullName = form.watch("fullName");
 
+    const applyCepLookup = async (rawCep: string) => {
+        const digits = rawCep.replace(/\D/g, "");
+        if (digits.length !== 8 || lastLookedUpCep.current === digits) return;
+
+        lastLookedUpCep.current = digits;
+        setIsLoadingCep(true);
+        try {
+            const address = await lookupCep(digits);
+            form.setValue("address.street", address.street, { shouldValidate: true });
+            form.setValue("address.neighborhood", address.neighborhood, { shouldValidate: true });
+            form.setValue("address.city", address.city, { shouldValidate: true });
+            form.setValue("address.state", address.state, { shouldValidate: true });
+            if (address.complement && !form.getValues("address.complement")) {
+                form.setValue("address.complement", address.complement);
+            }
+            form.setFocus("address.number");
+        } catch {
+            lastLookedUpCep.current = "";
+        } finally {
+            setIsLoadingCep(false);
+        }
+    };
+
     async function onSubmit(data: PatientValues) {
         setIsSubmitting(true);
         try {
@@ -187,6 +217,7 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                     dateOfBirth: data.dateOfBirth,
                     phone: normalizePhoneForDb(data.phone),
                     email: data.email,
+                    whatsappOptIn: data.whatsappOptIn,
                     cpf: normalizeCpfForDb(data.cpf) ?? undefined,
                     occupation: data.occupation,
                     notes: data.notes,
@@ -238,16 +269,16 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                 const phone = normalizePhoneForDb(data.phone);
                 const cpf = normalizeCpfForDb(data.cpf);
 
-                const { data: newPatient, error } = await supabase.from('patients').insert({
-                    professional_id: professional.id,
-                    full_name: data.fullName,
-                    cpf,
-                    date_of_birth: data.dateOfBirth,
+                const newPatient = await createPatient({
+                    fullName: data.fullName,
+                    dateOfBirth: data.dateOfBirth,
                     phone,
-                    email: data.email || null,
+                    cpf,
+                    email: data.email || undefined,
                     occupation: data.occupation || null,
                     notes: data.notes || null,
-                    avatar_url: data.avatarUrl || null,
+                    avatarUrl: data.avatarUrl || null,
+                    whatsappOptIn: data.whatsappOptIn,
                     address: {
                         zip: data.address.cep,
                         street: data.address.street,
@@ -255,13 +286,10 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                         complement: data.address.complement,
                         neighborhood: data.address.neighborhood,
                         city: data.address.city,
-                        state: data.address.state
-                    }
-                }).select("id").single();
+                        state: data.address.state,
+                    },
+                });
 
-                if (error) throw error;
-
-                // Create notification for new patient
                 if (newPatient) {
                     try {
                         const { notifyPatientCreated } = await import("@/lib/notifications/patient-notifications");
@@ -404,7 +432,14 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                                 <FormItem>
                                     <FormLabel>CPF</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="000.000.000-00" {...field} />
+                                        <Input
+                                            placeholder="000.000.000-00"
+                                            inputMode="numeric"
+                                            autoComplete="off"
+                                            maxLength={14}
+                                            {...field}
+                                            onChange={(event) => field.onChange(formatCpf(event.target.value))}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -460,6 +495,31 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                             )}
                         />
                     </div>
+
+                    <FormField
+                        control={form.control}
+                        name="whatsappOptIn"
+                        render={({ field }) => (
+                            <FormItem className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 p-4">
+                                <div className="space-y-1">
+                                    <FormLabel className="text-sm font-medium">
+                                        Autoriza contato por WhatsApp
+                                    </FormLabel>
+                                    <p className="text-xs text-slate-500">
+                                        Necessário para enviar confirmações e lembretes pelo
+                                        número oficial do PsicoGuest. Sem autorização, o
+                                        paciente recebe apenas por e-mail.
+                                    </p>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                            </FormItem>
+                        )}
+                    />
                 </div>
 
                 <Separator />
@@ -475,7 +535,23 @@ export function PatientForm({ mode = "create", initialData, onSuccess }: Patient
                                 <FormItem>
                                     <FormLabel>CEP *</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="00000-000" {...field} />
+                                        <div className="relative">
+                                            <Input
+                                                placeholder="00000-000"
+                                                inputMode="numeric"
+                                                autoComplete="postal-code"
+                                                maxLength={9}
+                                                {...field}
+                                                onChange={(event) => {
+                                                    const formatted = formatCep(event.target.value);
+                                                    field.onChange(formatted);
+                                                    void applyCepLookup(formatted);
+                                                }}
+                                            />
+                                            {isLoadingCep && (
+                                                <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-brand-600" />
+                                            )}
+                                        </div>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

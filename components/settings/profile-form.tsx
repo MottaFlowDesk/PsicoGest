@@ -30,6 +30,7 @@ import { updateProfile } from "@/app/dashboard/settings/profile/actions";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { formatCep, lookupCep } from "@/lib/brazil/cep";
 
 const profileSchema = z.object({
     fullName: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
@@ -135,23 +136,18 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         }
     };
 
-    // Auto-fill address from CEP
-    const handleCepBlur = async (cep: string) => {
-        const cleanCep = cep.replace(/\D/g, "");
+    const applyCepLookup = async (rawCep: string) => {
+        const cleanCep = rawCep.replace(/\D/g, "");
         if (cleanCep.length !== 8) return;
 
         try {
-            const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-            const data = await response.json();
-
-            if (!data.erro) {
-                form.setValue("addressStreet", data.logradouro || "");
-                form.setValue("addressNeighborhood", data.bairro || "");
-                form.setValue("addressCity", data.localidade || "");
-                form.setValue("addressState", data.uf || "");
-            }
-        } catch (error) {
-            console.error("Error fetching CEP:", error);
+            const address = await lookupCep(cleanCep);
+            form.setValue("addressStreet", address.street);
+            form.setValue("addressNeighborhood", address.neighborhood);
+            form.setValue("addressCity", address.city);
+            form.setValue("addressState", address.state);
+        } catch {
+            // Sem aviso: o profissional preenche o endereço na mão.
         }
     };
 
@@ -332,14 +328,17 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                                     <FormControl>
                                         <Input
                                             placeholder="00000-000"
+                                            inputMode="numeric"
+                                            autoComplete="postal-code"
+                                            maxLength={9}
                                             {...field}
-                                            onBlur={(e) => {
-                                                field.onBlur();
-                                                handleCepBlur(e.target.value);
+                                            onChange={(event) => {
+                                                const formatted = formatCep(event.target.value);
+                                                field.onChange(formatted);
+                                                void applyCepLookup(formatted);
                                             }}
                                         />
                                     </FormControl>
-                                    <FormDescription>Digite o CEP para preencher automaticamente.</FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}

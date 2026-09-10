@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Invoice, markInvoiceAsPaid, cancelInvoice } from "@/app/dashboard/financial/actions";
+import { Invoice, markInvoiceAsPaid, cancelInvoice, reopenInvoice } from "@/app/dashboard/financial/actions";
 import {
     Table,
     TableBody,
@@ -21,7 +21,8 @@ import {
     Banknote,
     Wallet,
     Link2,
-    Copy,
+    Eye,
+    RotateCcw,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -64,14 +65,50 @@ import { useRouter } from "next/navigation";
 
 interface InvoiceListProps {
     invoices: Invoice[];
+    onUpdate?: () => void;
 }
 
-export function InvoiceList({ invoices }: InvoiceListProps) {
+/** Status exibido ao usuário: uma fatura pendente com vencimento passado é "vencida". */
+type EffectiveStatus = "paid" | "pending" | "overdue" | "cancelled";
+
+export function getEffectiveStatus(invoice: Pick<Invoice, "status" | "due_date">): EffectiveStatus {
+    if (invoice.status === "paid") return "paid";
+    if (invoice.status === "cancelled") return "cancelled";
+    if (invoice.status === "overdue") return "overdue";
+
+    const hoje = format(new Date(), "yyyy-MM-dd");
+    return invoice.due_date < hoje ? "overdue" : "pending";
+}
+
+const STATUS_BADGE: Record<EffectiveStatus, { label: string; className: string }> = {
+    paid: { label: "Pago", className: "border-transparent bg-green-600 text-white hover:bg-green-600" },
+    pending: { label: "Pendente", className: "border-transparent bg-blue-600 text-white hover:bg-blue-600" },
+    overdue: { label: "Vencido", className: "border-transparent bg-orange-500 text-white hover:bg-orange-500" },
+    cancelled: { label: "Cancelado", className: "border-transparent bg-red-600 text-white hover:bg-red-600" },
+};
+
+function formatDate(value: string) {
+    const [year, month, day] = value.slice(0, 10).split("-");
+    if (!year || !month || !day) return value;
+    return `${day}/${month}/${year}`;
+}
+
+const PAYMENT_METHOD_LABEL: Record<string, string> = {
+    pix: "PIX",
+    credit_card: "Cartão de Crédito",
+    cash: "Dinheiro",
+    other: "Outro",
+};
+
+export function InvoiceList({ invoices, onUpdate }: InvoiceListProps) {
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [payDialogOpen, setPayDialogOpen] = useState(false);
+    const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+    const [detailsOpen, setDetailsOpen] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     const [cancelReason, setCancelReason] = useState("");
+    const [reopenReason, setReopenReason] = useState("");
     const [paymentMethod, setPaymentMethod] = useState("pix");
     const router = useRouter();
 
@@ -81,19 +118,9 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
             currency: "BRL",
         }).format(cents / 100);
 
-    const getStatusBadge = (status: string, dueDate: string) => {
-        const isOverdue = status === 'pending' && new Date(dueDate) < new Date(new Date().setHours(0, 0, 0, 0));
-
-        if (status === "paid") {
-            return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 shadow-none border-green-200">Pago</Badge>;
-        }
-        if (isOverdue || status === "overdue") {
-            return <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 shadow-none border-red-200">Vencido</Badge>;
-        }
-        if (status === "cancelled") {
-            return <Badge variant="secondary">Cancelado</Badge>;
-        }
-        return <Badge variant="outline" className="text-slate-600 bg-slate-50">Pendente</Badge>;
+    const getStatusBadge = (invoice: Pick<Invoice, "status" | "due_date">) => {
+        const { label, className } = STATUS_BADGE[getEffectiveStatus(invoice)];
+        return <Badge variant="outline" className={`shadow-none ${className}`}>{label}</Badge>;
     };
 
     const handleMarkAsPaid = async () => {
@@ -106,6 +133,7 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
             setPayDialogOpen(false);
             setSelectedInvoice(null);
             setPaymentMethod("pix");
+            onUpdate?.();
             router.refresh();
         } catch (error: any) {
             toast.error(error.message || "Erro ao marcar fatura como paga");
@@ -124,9 +152,29 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
             setCancelDialogOpen(false);
             setSelectedInvoice(null);
             setCancelReason("");
+            onUpdate?.();
             router.refresh();
         } catch (error: any) {
             toast.error(error.message || "Erro ao cancelar fatura");
+        } finally {
+            setLoadingId(null);
+        }
+    };
+
+    const handleReopen = async () => {
+        if (!selectedInvoice) return;
+
+        setLoadingId(selectedInvoice.id);
+        try {
+            await reopenInvoice(selectedInvoice.id, reopenReason);
+            toast.success("Fatura reaberta como pendente");
+            setReopenDialogOpen(false);
+            setSelectedInvoice(null);
+            setReopenReason("");
+            onUpdate?.();
+            router.refresh();
+        } catch (error: any) {
+            toast.error(error.message || "Erro ao reabrir fatura");
         } finally {
             setLoadingId(null);
         }
@@ -142,6 +190,16 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
         setCancelDialogOpen(true);
     };
 
+    const openReopenDialog = (invoice: Invoice) => {
+        setSelectedInvoice(invoice);
+        setReopenDialogOpen(true);
+    };
+
+    const openDetails = (invoice: Invoice) => {
+        setSelectedInvoice(invoice);
+        setDetailsOpen(true);
+    };
+
     const copyPaymentLink = async (invoiceId: string) => {
         const paymentLink = `${window.location.origin}/pay/${invoiceId}`;
         try {
@@ -154,53 +212,79 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
 
     return (
         <>
-            <div className="rounded-md border bg-white">
-                <Table>
-                    <TableHeader>
+            <Table>
+                <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                        <TableHead>Fatura #</TableHead>
+                        <TableHead>Paciente</TableHead>
+                        <TableHead>Vencimento</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="w-[1%] text-right">Ações</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {invoices.length === 0 ? (
                         <TableRow>
-                            <TableHead>Fatura #</TableHead>
-                            <TableHead>Paciente</TableHead>
-                            <TableHead>Vencimento</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Valor</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
+                            <TableCell colSpan={6} className="h-24 text-center text-slate-500">
+                                Nenhuma fatura encontrada.
+                            </TableCell>
                         </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {invoices.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center text-slate-500">
-                                    Nenhuma fatura encontrada.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            invoices.map((invoice) => {
-                                const canPay = invoice.status === "pending";
-                                const canCancel = invoice.status === "pending";
-                                const isLoading = loadingId === invoice.id;
+                    ) : (
+                        invoices.map((invoice) => {
+                            // Vencida ainda é uma fatura em aberto: pode ser paga, cobrada e cancelada
+                            const emAberto = ["pending", "overdue"].includes(getEffectiveStatus(invoice));
+                            const canPay = emAberto;
+                            const canCancel = emAberto;
+                            const canReopen = invoice.status === "paid";
+                            const isLoading = loadingId === invoice.id;
 
-                                return (
-                                    <TableRow key={invoice.id}>
-                                        <TableCell className="font-medium">
-                                            {invoice.invoice_number || "Gerando..."}
-                                        </TableCell>
-                                        <TableCell>{invoice.patient?.full_name || "Desconhecido"}</TableCell>
-                                        <TableCell>
-                                            {format(new Date(invoice.due_date), "dd/MM/yyyy")}
-                                        </TableCell>
-                                        <TableCell>
-                                            {getStatusBadge(invoice.status, invoice.due_date)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium">
-                                            {formatMoney(invoice.amount_cents)}
-                                        </TableCell>
-                                        <TableCell>
+                            return (
+                                <TableRow key={invoice.id}>
+                                    <TableCell className="font-medium">
+                                        {invoice.invoice_number || "Gerando..."}
+                                    </TableCell>
+                                    <TableCell>{invoice.patient?.full_name || "Desconhecido"}</TableCell>
+                                    <TableCell>
+                                        {formatDate(invoice.due_date)}
+                                    </TableCell>
+                                    <TableCell>
+                                        {getStatusBadge(invoice)}
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium">
+                                        {formatMoney(invoice.amount_cents)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-slate-400 hover:text-slate-700"
+                                                title="Ver detalhes"
+                                                onClick={() => openDetails(invoice)}
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
+                                            {canPay && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-slate-400 hover:text-green-600"
+                                                    title="Marcar como pago"
+                                                    disabled={isLoading}
+                                                    onClick={() => openPayDialog(invoice)}
+                                                >
+                                                    <CheckCircle className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        className="h-8 w-8 p-0"
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-slate-400 hover:text-slate-700"
                                                         disabled={isLoading}
+                                                        title="Mais ações"
                                                     >
                                                         {isLoading ? (
                                                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -209,11 +293,16 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
                                                         )}
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
+                                                <DropdownMenuContent align="end" className="w-56">
                                                     <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                    
+
+                                                    <DropdownMenuItem onClick={() => openDetails(invoice)}>
+                                                        <Eye className="mr-2 h-4 w-4" />
+                                                        Ver Detalhes
+                                                    </DropdownMenuItem>
+
                                                     {canPay && (
-                                                        <DropdownMenuItem 
+                                                        <DropdownMenuItem
                                                             onClick={() => openPayDialog(invoice)}
                                                             className="text-green-600 focus:text-green-600"
                                                         >
@@ -221,9 +310,9 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
                                                             Marcar como Pago
                                                         </DropdownMenuItem>
                                                     )}
-                                                    
+
                                                     {canPay && (
-                                                        <DropdownMenuItem 
+                                                        <DropdownMenuItem
                                                             onClick={() => copyPaymentLink(invoice.id)}
                                                         >
                                                             <Link2 className="mr-2 h-4 w-4" />
@@ -231,10 +320,20 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
                                                         </DropdownMenuItem>
                                                     )}
 
+                                                    {canReopen && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => openReopenDialog(invoice)}
+                                                            className="text-orange-600 focus:text-orange-600"
+                                                        >
+                                                            <RotateCcw className="mr-2 h-4 w-4" />
+                                                            Reabrir Fatura
+                                                        </DropdownMenuItem>
+                                                    )}
+
                                                     {canCancel && (
                                                         <>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem 
+                                                            <DropdownMenuItem
                                                                 onClick={() => openCancelDialog(invoice)}
                                                                 className="text-red-600 focus:text-red-600"
                                                             >
@@ -243,22 +342,16 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
                                                             </DropdownMenuItem>
                                                         </>
                                                     )}
-
-                                                    {!canPay && !canCancel && (
-                                                        <DropdownMenuItem disabled>
-                                                            Sem ações disponíveis
-                                                        </DropdownMenuItem>
-                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })
+                    )}
+                </TableBody>
+            </Table>
 
             {/* Mark as Paid Dialog */}
             <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
@@ -353,6 +446,109 @@ export function InvoiceList({ invoices }: InvoiceListProps) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Reopen Dialog */}
+            <AlertDialog open={reopenDialogOpen} onOpenChange={setReopenDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Reabrir Fatura</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            A fatura <strong>{selectedInvoice?.invoice_number}</strong> voltará para
+                            pendente e o pagamento registrado será desfeito. Use isso quando o
+                            pagamento tiver sido lançado por engano ou estornado.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="py-4">
+                        <Label htmlFor="reopen-reason">Motivo (opcional)</Label>
+                        <Textarea
+                            id="reopen-reason"
+                            placeholder="Ex: pagamento estornado pelo banco..."
+                            value={reopenReason}
+                            onChange={(e) => setReopenReason(e.target.value)}
+                            className="mt-2"
+                        />
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={loadingId !== null}>Voltar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleReopen}
+                            disabled={loadingId !== null}
+                            className="bg-orange-600 hover:bg-orange-700"
+                        >
+                            {loadingId && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Reabrir Fatura
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Details Dialog */}
+            <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-3">
+                            {selectedInvoice?.invoice_number}
+                            {selectedInvoice && getStatusBadge(selectedInvoice)}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedInvoice?.patient?.full_name || "Paciente desconhecido"}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedInvoice && (
+                        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 py-2 text-sm">
+                            <div>
+                                <dt className="text-slate-500">Valor</dt>
+                                <dd className="font-semibold text-slate-900">
+                                    {formatMoney(selectedInvoice.amount_cents)}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-slate-500">Vencimento</dt>
+                                <dd className="text-slate-900">
+                                    {formatDate(selectedInvoice.due_date)}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-slate-500">Emissão</dt>
+                                <dd className="text-slate-900">
+                                    {formatDate(selectedInvoice.issue_date)}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-slate-500">Pagamento</dt>
+                                <dd className="text-slate-900">
+                                    {selectedInvoice.paid_at
+                                        ? `${formatDate(selectedInvoice.paid_at)}${
+                                              selectedInvoice.payment_method
+                                                  ? ` · ${PAYMENT_METHOD_LABEL[selectedInvoice.payment_method] ?? selectedInvoice.payment_method}`
+                                                  : ""
+                                          }`
+                                        : "Não recebido"}
+                                </dd>
+                            </div>
+                            <div className="col-span-2">
+                                <dt className="text-slate-500">Descrição</dt>
+                                <dd className="text-slate-900">
+                                    {selectedInvoice.description || "—"}
+                                </dd>
+                            </div>
+                            {selectedInvoice.notes && (
+                                <div className="col-span-2">
+                                    <dt className="text-slate-500">Histórico</dt>
+                                    <dd className="whitespace-pre-line text-slate-900">
+                                        {selectedInvoice.notes}
+                                    </dd>
+                                </div>
+                            )}
+                        </dl>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDetailsOpen(false)}>
+                            Fechar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

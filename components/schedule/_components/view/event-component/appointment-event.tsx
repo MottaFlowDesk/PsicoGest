@@ -10,13 +10,17 @@ import { Event } from "@/types";
 import { cn } from "@/lib/utils";
 import AppointmentDetailsModal from "@/components/schedule/_modals/appointment-details-modal";
 
-export default function AppointmentEvent(props: Event) {
+export default function AppointmentEvent(props: Event & { minmized?: boolean }) {
     const { setOpen } = useModal();
+    const compact = Boolean(props.minmized);
     const isOnline =
         props.metadata?.appointmentType === "telehealth" ||
         props.metadata?.appointmentType === "online";
     const status = props.metadata?.status;
     const isConfirmed = status === "confirmed";
+    const displayName = compact
+        ? (props.title?.split(/\s+/)[0] ?? props.title)
+        : props.title;
 
     // Determine colors based on status (priority) or variant (fallback)
     const getColorClasses = () => {
@@ -62,35 +66,51 @@ export default function AppointmentEvent(props: Event) {
         <div
             onClick={handleClick}
             className={cn(
-                "w-full h-full p-2 rounded-md border text-xs cursor-pointer transition-colors duration-200 select-none",
+                "w-full h-full min-h-0 min-w-0 overflow-hidden rounded-md border cursor-pointer transition-colors duration-200 select-none",
+                compact ? "px-1.5 py-0.5 text-[10px] leading-tight" : "p-2 text-xs",
                 getColorClasses()
             )}
         >
-            <div className="flex flex-col h-full gap-1">
-                <div className="flex items-center justify-between gap-1">
-                    <span className="font-semibold truncate">
-                        {props.title}
+            <div className={cn("flex h-full min-h-0 min-w-0", compact ? "flex-col gap-0" : "flex-col gap-1")}>
+                <div className="flex items-center gap-0.5 min-w-0">
+                    <span className="font-semibold truncate min-w-0">
+                        {displayName}
                     </span>
-                    {isConfirmed && (
+                    {!compact && isConfirmed && (
                         <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide bg-green-600 text-white px-1.5 py-0.5 rounded">
                             Confirmado
                         </span>
                     )}
                     {isOnline ? (
-                        <Video className="w-3 h-3 flex-shrink-0 opacity-70" />
+                        <Video className={cn("flex-shrink-0 opacity-70", compact ? "h-2.5 w-2.5" : "h-3 w-3")} />
                     ) : (
-                        <MapPin className="w-3 h-3 flex-shrink-0 opacity-70" />
+                        <MapPin className={cn("flex-shrink-0 opacity-70", compact ? "h-2.5 w-2.5" : "h-3 w-3")} />
                     )}
                 </div>
 
-                <div className="flex items-center gap-1 opacity-90 text-[10px] sm:text-xs">
-                    <span>
-                        {format(props.startDate, "HH:mm")} - {format(props.endDate, "HH:mm")}
-                    </span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="truncate hidden sm:inline">
-                        {props.description?.replace("Duração: ", "")}
-                    </span>
+                <div
+                    className={cn(
+                        "min-w-0 opacity-90",
+                        compact
+                            ? "truncate whitespace-nowrap text-[9px] tabular-nums"
+                            : "flex items-center gap-1 text-[10px] sm:text-xs"
+                    )}
+                >
+                    {compact ? (
+                        <span className="truncate">
+                            {format(props.startDate, "HH:mm")}–{format(props.endDate, "HH:mm")}
+                        </span>
+                    ) : (
+                        <>
+                            <span className="whitespace-nowrap">
+                                {format(props.startDate, "HH:mm")} – {format(props.endDate, "HH:mm")}
+                            </span>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="truncate hidden sm:inline">
+                                {props.description?.replace("Duração: ", "")}
+                            </span>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

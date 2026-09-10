@@ -28,7 +28,7 @@ const Features: React.FC = () => {
       icon: <Calendar className="w-6 h-6 text-white" />,
       title: "Agenda e Lembretes",
       description:
-        "Calendário visual, confirmação por link e lembretes automáticos por e-mail e WhatsApp para reduzir faltas.",
+        "Calendário visual, confirmação por link e lembretes automáticos por e-mail.",
       bg: "bg-orange-500",
     },
     {
@@ -95,9 +95,8 @@ const Features: React.FC = () => {
                 Menos faltas, mais organização
               </h3>
               <p className="text-slate-200 text-lg mb-8 leading-relaxed">
-                Envie confirmações por e-mail com um clique, sincronize com o
-                Google Calendar e avise pacientes pelo WhatsApp — tudo integrado
-                ao seu fluxo de atendimento.
+                Envie confirmações por e-mail com um clique e sincronize com o
+                Google Calendar — no mesmo fluxo de atendimento.
               </p>
             </div>
 
@@ -117,7 +116,7 @@ const Features: React.FC = () => {
                 <div>
                   <p className="font-semibold text-white">Confirmação por link</p>
                   <p className="text-sm text-slate-400">
-                    O paciente confirma presença pelo e-mail ou WhatsApp e você
+                    O paciente confirma presença pelo e-mail e você
                     é notificado na hora.
                   </p>
                 </div>
