@@ -15,7 +15,7 @@ export async function exportToPDF(
 
   // Header
   doc.setFontSize(20);
-  doc.text("PsicoGest - Relatório", pageWidth / 2, yPosition, { align: "center" });
+  doc.text("PsicoGuest - Relatório", pageWidth / 2, yPosition, { align: "center" });
   yPosition += 10;
 
   doc.setFontSize(12);

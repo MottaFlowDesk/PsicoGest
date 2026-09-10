@@ -4,9 +4,9 @@ import { LegalPageLayout } from "@/components/legal/legal-page-layout";
 import { LEGAL } from "@/lib/legal/site";
 
 export const metadata: Metadata = {
-    title: "Política de Privacidade | PsicoGest",
+    title: "Política de Privacidade | PsicoGuest",
     description:
-        "Política de Privacidade do PsicoGest. Saiba como tratamos dados pessoais, integrações Google, WhatsApp e Stripe em conformidade com a LGPD.",
+        "Política de Privacidade do PsicoGuest. Saiba como tratamos dados pessoais, integrações Google, WhatsApp e Stripe em conformidade com a LGPD.",
 };
 
 export default function PrivacyPage() {

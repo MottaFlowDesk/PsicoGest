@@ -28,7 +28,7 @@ Pode executar só `rebuild_database_complete.sql`.
    - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (nunca expor no front)
-6. Atualize `.env.local` na raiz do PsicoGest.
+6. Atualize `.env.local` na raiz do PsicoGuest.
 7. Em **Authentication → URL Configuration**, adicione as redirect URLs do app (ex.: `http://localhost:3000/auth/callback`).
 8. Verifique **Database → Tables**: **20 tabelas** em `public` (lista abaixo).
 9. Verifique **Storage**: buckets `patient-documents` e `avatars`.

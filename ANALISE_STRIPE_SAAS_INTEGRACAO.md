@@ -1,6 +1,6 @@
 # 📊 Análise: Integração Stripe Connect para SaaS Platform
 
-Análise baseada na [documentação oficial do Stripe para SaaS Platforms](https://docs.stripe.com/connect/saas) e comparação com a implementação atual do PsicoGest.
+Análise baseada na [documentação oficial do Stripe para SaaS Platforms](https://docs.stripe.com/connect/saas) e comparação com a implementação atual do PsicoGuest.
 
 ---
 

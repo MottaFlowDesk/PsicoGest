@@ -61,14 +61,12 @@ export async function getFinancialSummary(): Promise<DashboardSummary> {
         pendingInvoices?.reduce((acc, curr) => acc + curr.amount_cents, 0) || 0;
 
     // 3. Overdue: Status = 'overdue' OR (status = 'pending' AND due_date < today)
-    // Note: If we don't have a background job updating status to 'overdue', we must check date manually.
     const todayStr = format(now, "yyyy-MM-dd");
 
     const { data: overdueInvoices } = await supabase
         .from("invoices")
         .select("amount_cents")
-        .eq("status", "pending") // Assuming system doesn't auto-update to 'overdue' yet
-        .lt("due_date", todayStr);
+        .or(`status.eq.overdue,and(status.eq.pending,due_date.lt.${todayStr})`);
 
     const overdue =
         overdueInvoices?.reduce((acc, curr) => acc + curr.amount_cents, 0) || 0;

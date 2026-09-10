@@ -1,4 +1,4 @@
-# 📊 Análise Completa do Projeto PsicoGest
+# 📊 Análise Completa do Projeto PsicoGuest
 
 ## ✅ O QUE JÁ ESTÁ IMPLEMENTADO
 

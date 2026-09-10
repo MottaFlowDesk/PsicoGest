@@ -34,7 +34,7 @@ export function FinancialSummary({ data }: FinancialSummaryProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(summary.totalPending)}</div>
-            <p className="text-xs text-slate-500 mt-1">{summary.invoiceCount - (summary.totalPaid / summary.totalRevenue * summary.invoiceCount || 0)} faturas</p>
+            <p className="text-xs text-slate-500 mt-1">Aguardando pagamento</p>
           </CardContent>
         </Card>
 

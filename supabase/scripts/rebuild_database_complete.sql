@@ -1,5 +1,5 @@
 -- =============================================================================
--- PsicoGest — Recriação completa do banco de dados
+-- PsicoGuest — Recriação completa do banco de dados
 -- =============================================================================
 -- ONDE EXECUTAR: Supabase Dashboard → SQL Editor → New query → Run
 -- QUANDO USAR: Projeto Supabase NOVO ou banco vazio (sem tabelas public.*)

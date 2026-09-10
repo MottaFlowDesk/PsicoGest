@@ -330,7 +330,7 @@ export default function SubscriptionPage() {
                         <CardHeader>
                             <CardTitle>Você não possui uma assinatura ativa</CardTitle>
                             <CardDescription>
-                                Escolha um plano para desbloquear todos os recursos do PsicoGest
+                                Escolha um plano para desbloquear todos os recursos do PsicoGuest
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

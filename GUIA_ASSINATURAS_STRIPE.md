@@ -39,7 +39,7 @@ Este guia explica como configurar o sistema de assinaturas que acabamos de imple
 2. Vá em **Products** → **Add product**
 
 #### Produto 1: Essencial (Mensal)
-- **Name:** `PsicoGest - Essencial (Mensal)`
+- **Name:** `PsicoGuest - Essencial (Mensal)`
 - **Description:** `Plano Essencial - 60 pacientes`
 - **Pricing model:** `Recurring`
 - **Price:** `R$ 97,00`

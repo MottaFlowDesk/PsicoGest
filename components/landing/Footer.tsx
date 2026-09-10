@@ -12,7 +12,7 @@ const Footer: React.FC = () => {
               <div className="bg-brand-600 p-1.5 rounded-lg">
                 <BrainCircuit size={24} />
               </div>
-              <span className="font-bold text-xl">PsicoGest</span>
+              <span className="font-bold text-xl">PsicoGuest</span>
             </div>
             <p className="text-sm text-slate-400 mb-6">
               A plataforma completa para gestão de saúde mental. Segurança, praticidade e organização para o seu consultório.
@@ -47,7 +47,7 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="text-white font-bold mb-4">Contato</h4>
             <ul className="space-y-2 text-sm">
-              <li>suporte@psicogest.com.br</li>
+              <li>suporte@psicoguest.com.br</li>
               <li>WhatsApp: (11) 99999-9999</li>
               <li className="pt-2">Av. Paulista, 1000 - SP</li>
             </ul>
@@ -55,7 +55,7 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500">
-          <p>© {new Date().getFullYear()} PsicoGest. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} PsicoGuest. Todos os direitos reservados.</p>
           <div className="flex gap-6 mt-4 md:mt-0">
             <Link href="/terms" className="hover:text-slate-300">
               Termos de Serviço

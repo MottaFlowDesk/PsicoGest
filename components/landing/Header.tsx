@@ -40,7 +40,7 @@ const Header: React.FC = () => {
             <div className="bg-brand-600 p-1.5 rounded-lg text-white">
               <BrainCircuit size={28} />
             </div>
-            <span className="font-bold text-2xl text-slate-800 tracking-tight">PsicoGest</span>
+            <span className="font-bold text-2xl text-slate-800 tracking-tight">PsicoGuest</span>
           </div>
 
           {/* Desktop Nav */}

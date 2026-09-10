@@ -46,7 +46,7 @@ O Stripe exige que você revise e aceite as responsabilidades de gerenciar perda
 
 ### Passo 4: Testar Novamente
 
-1. Volte para o PsicoGest
+1. Volte para o PsicoGuest
 2. Tente conectar o Stripe novamente
 3. O erro deve ter sido resolvido
 
@@ -114,14 +114,14 @@ Marque conforme completar:
 - [ ] Aceitei os termos e condições
 - [ ] Salvei as configurações
 - [ ] Verifiquei que o perfil está completo
-- [ ] Testei novamente a conexão no PsicoGest
+- [ ] Testei novamente a conexão no PsicoGuest
 - [ ] A conexão funcionou sem erros
 
 ---
 
 ## 🎉 Pronto!
 
-Após completar o perfil da plataforma, você poderá criar contas Stripe Connect sem problemas. Tente conectar novamente no PsicoGest!
+Após completar o perfil da plataforma, você poderá criar contas Stripe Connect sem problemas. Tente conectar novamente no PsicoGuest!
 
 ---
 

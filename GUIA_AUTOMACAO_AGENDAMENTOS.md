@@ -1,6 +1,6 @@
 # 🚀 Guia Completo: Automação de Agendamentos
 
-Este documento descreve o sistema completo de automação de agendamentos implementado no PsicoGest usando Supabase Edge Functions e Scheduler.
+Este documento descreve o sistema completo de automação de agendamentos implementado no PsicoGuest usando Supabase Edge Functions e Scheduler.
 
 ## 📋 Índice
 

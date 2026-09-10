@@ -239,7 +239,7 @@ export async function sendWhatsAppButtonMessage(
                 number: formattedPhone,
                 title: buttonMessage.title,
                 description: buttonMessage.description,
-                footer: buttonMessage.footer || 'PsicoGest',
+                footer: buttonMessage.footer || 'PsicoGuest',
                 buttons: buttonMessage.buttons,
             }),
         });
@@ -298,7 +298,7 @@ ${confirmLink}
 📅 *Para REAGENDAR*, responda esta mensagem ou entre em contato.
 
 ━━━━━━━━━━━━━━━━━━
-_PsicoGest - Gestão de Consultórios_`;
+_PsicoGuest - Gestão de Consultórios_`;
 
     return sendWhatsAppMessage(professionalId, phone, message);
 }
@@ -371,7 +371,7 @@ ${confirmationLink}
 
 _Responda SIM para confirmar ou entre em contato para reagendar._
 
-PsicoGest - Gestão de Consultórios`;
+PsicoGuest - Gestão de Consultórios`;
 }
 
 /**
@@ -400,7 +400,7 @@ ${meetLink}
 
 Acesse o link alguns minutos antes do horário.
 
-PsicoGest - Gestão de Consultórios`;
+PsicoGuest - Gestão de Consultórios`;
 }
 
 /**

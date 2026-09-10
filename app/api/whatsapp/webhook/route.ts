@@ -99,7 +99,7 @@ async function handleConfirmation(appointmentId: string, phone: string, instance
         await sendWhatsAppMessage(
             appointment.professionals.id,
             phone,
-            `✅ *Consulta Confirmada!*\n\nObrigado ${appointment.patients?.full_name}! Sua consulta foi confirmada com sucesso.\n\nNos vemos em breve!\n\n_PsicoGest_`
+            `✅ *Consulta Confirmada!*\n\nObrigado ${appointment.patients?.full_name}! Sua consulta foi confirmada com sucesso.\n\nNos vemos em breve!\n\n_PsicoGuest_`
         );
     }
 }
@@ -143,7 +143,7 @@ async function handleRescheduleRequest(appointmentId: string, phone: string, ins
         await sendWhatsAppMessage(
             appointment.professionals.id,
             phone,
-            `📅 *Solicitação de Reagendamento*\n\nRecebemos seu pedido de reagendamento, ${appointment.patients?.full_name}.\n\nEntraremos em contato em breve para agendar um novo horário.\n\n_PsicoGest_`
+            `📅 *Solicitação de Reagendamento*\n\nRecebemos seu pedido de reagendamento, ${appointment.patients?.full_name}.\n\nEntraremos em contato em breve para agendar um novo horário.\n\n_PsicoGuest_`
         );
     }
 
@@ -194,7 +194,7 @@ async function handleTextConfirmation(phone: string, instanceName: string) {
         await sendWhatsAppMessage(
             appointment.professionals.id,
             phone,
-            `✅ *Consulta Confirmada!*\n\nObrigado! Sua consulta foi confirmada.\n\n_PsicoGest_`
+            `✅ *Consulta Confirmada!*\n\nObrigado! Sua consulta foi confirmada.\n\n_PsicoGuest_`
         );
     }
 }

@@ -67,7 +67,7 @@ export function Sidebar({ userName, userAvatar }: SidebarProps) {
                 <div className="h-16 flex items-center px-6 border-b border-slate-100 justify-between">
                     <Link href="/dashboard" className="flex items-center gap-2 text-brand-600" onClick={close}>
                         <BrainCircuit size={28} />
-                        <span className="font-bold text-xl tracking-tight text-slate-800">PsicoGest</span>
+                        <span className="font-bold text-xl tracking-tight text-slate-800">PsicoGuest</span>
                     </Link>
                     {/* Close Button for Mobile */}
                     <button onClick={close} className="lg:hidden text-slate-400 hover:text-slate-600">

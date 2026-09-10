@@ -1,6 +1,6 @@
 # Guia Completo: Criar Conta e Configurar Cron Jobs no cron-job.org
 
-Este guia te ajudará a criar sua conta no cron-job.org e configurar os cron jobs do PsicoGest.
+Este guia te ajudará a criar sua conta no cron-job.org e configurar os cron jobs do PsicoGuest.
 
 ## 📋 Pré-requisitos
 
@@ -31,7 +31,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ### 1.2 Configurar no Vercel
 
 1. Acesse: https://vercel.com/dashboard
-2. Selecione seu projeto **PsicoGest**
+2. Selecione seu projeto **PsicoGuest**
 3. Vá em **Settings** → **Environment Variables**
 4. Clique em **Add New**
 5. Preencha:
@@ -78,7 +78,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
    **Title:**
    ```
-   PsicoGest - Lembretes de Agendamento
+   PsicoGuest - Lembretes de Agendamento
    ```
 
    **Address (URL):**
@@ -127,7 +127,7 @@ Após criar, clique no job criado e configure:
 
    **Title:**
    ```
-   PsicoGest - Health Check (Supabase)
+   PsicoGuest - Health Check (Supabase)
    ```
 
    **Address (URL):**

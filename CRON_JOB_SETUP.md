@@ -1,6 +1,6 @@
 # Configuração de Cron Jobs com cron-job.org
 
-Este guia explica como configurar os cron jobs do PsicoGest usando o serviço gratuito [cron-job.org](https://cron-job.org).
+Este guia explica como configurar os cron jobs do PsicoGuest usando o serviço gratuito [cron-job.org](https://cron-job.org).
 
 ## Por que usar cron-job.org?
 
@@ -45,7 +45,7 @@ openssl rand -hex 32
 
 **Title:**
 ```
-PsicoGest - Lembretes de Agendamento
+PsicoGuest - Lembretes de Agendamento
 ```
 
 **Address (URL):**
@@ -90,7 +90,7 @@ Every hour (0 * * * *)
 
 **Title:**
 ```
-PsicoGest - Health Check (Supabase)
+PsicoGuest - Health Check (Supabase)
 ```
 
 **Address (URL):**

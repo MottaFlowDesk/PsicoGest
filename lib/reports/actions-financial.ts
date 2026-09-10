@@ -27,6 +27,11 @@ export async function getFinancialReportData(filters: ReportFilters): Promise<Fi
   const { start, end } = getPeriodRange(filters.period, filters.startDate, filters.endDate);
   const { start: prevStart, end: prevEnd } = getPreviousPeriodRange(filters.period, start, end);
 
+  const startDate = format(start, "yyyy-MM-dd");
+  const endDate = format(end, "yyyy-MM-dd");
+  const prevStartDate = format(prevStart, "yyyy-MM-dd");
+  const prevEndDate = format(prevEnd, "yyyy-MM-dd");
+
   // Fetch all invoices in the period
   const { data: invoices, error } = await supabase
     .from("invoices")
@@ -41,9 +46,10 @@ export async function getFinancialReportData(filters: ReportFilters): Promise<Fi
       patients!inner(full_name)
     `)
     .eq("professional_id", professional.id)
-    .gte("issue_date", start.toISOString().split("T")[0])
-    .lte("issue_date", end.toISOString().split("T")[0])
-    .order("issue_date", { ascending: true });
+    .gte("issue_date", startDate)
+    .lte("issue_date", endDate)
+    .order("issue_date", { ascending: true })
+    .limit(5000);
 
   if (error) {
     console.error("Error fetching invoices:", error);
@@ -55,8 +61,9 @@ export async function getFinancialReportData(filters: ReportFilters): Promise<Fi
     .from("invoices")
     .select("amount_cents, status, paid_at")
     .eq("professional_id", professional.id)
-    .gte("issue_date", prevStart.toISOString().split("T")[0])
-    .lte("issue_date", prevEnd.toISOString().split("T")[0]);
+    .gte("issue_date", prevStartDate)
+    .lte("issue_date", prevEndDate)
+    .limit(5000);
 
   // Process revenue by period
   const revenue = generateRevenueData(invoices || [], filters.period, start, end);
@@ -130,6 +137,14 @@ function generateRevenueData(
   });
 }
 
+function isInvoiceOverdue(inv: { status?: string; due_date?: string | null }, now = new Date()): boolean {
+  if (inv.status === "overdue") return true;
+  if (inv.status !== "pending" || !inv.due_date) return false;
+  const due = inv.due_date.slice(0, 10);
+  const today = format(now, "yyyy-MM-dd");
+  return due < today;
+}
+
 function calculateStatusDistribution(invoices: any[]): { status: string; count: number; amount: number }[] {
   const statuses = ["paid", "pending", "overdue", "cancelled"];
   const distribution: Record<string, { count: number; amount: number }> = {};
@@ -140,7 +155,7 @@ function calculateStatusDistribution(invoices: any[]): { status: string; count: 
 
   invoices.forEach(inv => {
     let status = inv.status;
-    if (status === "pending" && inv.due_date && new Date(inv.due_date) < new Date()) {
+    if (isInvoiceOverdue(inv)) {
       status = "overdue";
     }
 
@@ -215,11 +230,11 @@ function calculateSummary(invoices: any[]): {
     .reduce((sum, inv) => sum + (inv.amount_cents || 0), 0) / 100;
 
   const totalPending = invoices
-    .filter(inv => inv.status === "pending" && (!inv.due_date || new Date(inv.due_date) >= now))
+    .filter(inv => inv.status === "pending" && !isInvoiceOverdue(inv, now))
     .reduce((sum, inv) => sum + (inv.amount_cents || 0), 0) / 100;
 
   const totalOverdue = invoices
-    .filter(inv => inv.status === "pending" && inv.due_date && new Date(inv.due_date) < now)
+    .filter(inv => isInvoiceOverdue(inv, now))
     .reduce((sum, inv) => sum + (inv.amount_cents || 0), 0) / 100;
 
   const totalPaid = totalRevenue;

@@ -12,7 +12,7 @@ export default function AuthLayout({
                     <div className="bg-brand-600 p-2 rounded-xl text-white mb-4 shadow-lg shadow-brand-500/20">
                         <BrainCircuit size={32} />
                     </div>
-                    <h1 className="text-2xl font-bold text-slate-800">PsicoGest</h1>
+                    <h1 className="text-2xl font-bold text-slate-800">PsicoGuest</h1>
                     <p className="text-slate-500 text-sm mt-1">Gestão inteligente para sua clínica</p>
                 </div>
 

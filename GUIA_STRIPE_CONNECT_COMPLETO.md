@@ -1,12 +1,12 @@
 # 🔗 Guia Completo: Configurar Stripe Connect para Profissionais
 
-Este guia detalha passo a passo como configurar o Stripe Connect para que os profissionais possam receber pagamentos diretamente através do PsicoGest.
+Este guia detalha passo a passo como configurar o Stripe Connect para que os profissionais possam receber pagamentos diretamente através do PsicoGuest.
 
 ---
 
 ## 📋 O que é Stripe Connect?
 
-O Stripe Connect permite que profissionais conectem suas próprias contas Stripe ao PsicoGest, permitindo que:
+O Stripe Connect permite que profissionais conectem suas próprias contas Stripe ao PsicoGuest, permitindo que:
 - ✅ Profissionais recebam pagamentos diretamente
 - ✅ Você cobre uma taxa de plataforma (opcional)
 - ✅ Pagamentos sejam processados de forma segura
@@ -80,12 +80,12 @@ O Stripe Connect permite que profissionais conectem suas próprias contas Stripe
 
 1. No Stripe Dashboard, vá em **Settings** → **Branding**
 2. Configure:
-   - **Logo:** Faça upload do logo do PsicoGest
+   - **Logo:** Faça upload do logo do PsicoGuest
    - **Primary color:** Cor principal da marca (ex: #6366f1)
    - **Secondary color:** Cor secundária (opcional)
 3. Clique em **Save**
 
-**Por quê?** Isso faz com que a tela de onboarding do Stripe mostre a marca do PsicoGest, dando mais confiança aos profissionais.
+**Por quê?** Isso faz com que a tela de onboarding do Stripe mostre a marca do PsicoGuest, dando mais confiança aos profissionais.
 
 ---
 
@@ -130,7 +130,7 @@ NEXT_PUBLIC_APP_URL=https://seu-dominio.vercel.app
      ```
      https://SEU-DOMINIO.vercel.app/api/stripe/webhook
      ```
-   - **Description:** `PsicoGest Webhooks - Connect e Assinaturas`
+   - **Description:** `PsicoGuest Webhooks - Connect e Assinaturas`
    - **Version:** Deixe a versão mais recente
 
 4. Em **Events to send**, selecione os seguintes eventos:
@@ -164,7 +164,7 @@ NEXT_PUBLIC_APP_URL=https://seu-dominio.vercel.app
 ### 5.1 Acessar Configurações
 
 1. Acesse o [Vercel Dashboard](https://vercel.com/dashboard)
-2. Selecione seu projeto **PsicoGest**
+2. Selecione seu projeto **PsicoGuest**
 3. Vá em **Settings** → **Environment Variables**
 
 ### 5.2 Adicionar Variáveis
@@ -263,7 +263,7 @@ Se você quiser cobrar uma comissão por cada transação:
    - **Endereço:** Qualquer endereço válido
    - **Dados bancários:** Use dados de teste do Stripe
 
-7. Após completar, você será redirecionado de volta para o PsicoGest
+7. Após completar, você será redirecionado de volta para o PsicoGuest
 8. Verifique se aparece "Conectado" ou status similar
 
 ### 7.2 Verificar no Stripe Dashboard
@@ -279,7 +279,7 @@ Se você quiser cobrar uma comissão por cada transação:
 
 Se você já tem a funcionalidade de pagamentos implementada:
 
-1. Crie uma fatura no PsicoGest
+1. Crie uma fatura no PsicoGuest
 2. Gere link de pagamento
 3. Use cartão de teste do Stripe:
    - **Número:** `4242 4242 4242 4242`
@@ -345,7 +345,7 @@ Marque conforme completar:
 ### Testes
 - [ ] Teste de conexão de profissional realizado
 - [ ] Conta Connect verificada no Stripe Dashboard
-- [ ] Status de conexão verificado no PsicoGest
+- [ ] Status de conexão verificado no PsicoGuest
 - [ ] Teste de pagamento realizado (se aplicável)
 
 ### Configurações Avançadas (Opcional)
@@ -425,7 +425,7 @@ Marque conforme completar:
 
 ## 🎉 Pronto!
 
-Agora o Stripe Connect está configurado e pronto para uso! Os profissionais podem conectar suas contas e começar a receber pagamentos diretamente através do PsicoGest.
+Agora o Stripe Connect está configurado e pronto para uso! Os profissionais podem conectar suas contas e começar a receber pagamentos diretamente através do PsicoGuest.
 
 **Próximos passos:**
 - Testar a conexão com um profissional

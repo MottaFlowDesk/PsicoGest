@@ -63,7 +63,7 @@ Se você quiser que qualquer usuário possa conectar sem precisar adicionar como
 1. Vá em **OAuth consent screen**
 2. Clique em **PUBLISH APP**
 3. Preencha todas as informações solicitadas:
-   - App name: PsicoGest
+   - App name: PsicoGuest
    - User support email: seu email
    - Developer contact information: seu email
    - Scopes: os scopes listados acima

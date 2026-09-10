@@ -1,5 +1,5 @@
 /**
- * Configuração dos Planos de Assinatura do PsicoGest
+ * Configuração dos Planos de Assinatura do PsicoGuest
  * 
  * Os planos são definidos aqui e devem corresponder aos produtos criados no Stripe.
  * Após criar os produtos no Stripe, atualize os price_id de cada plano.

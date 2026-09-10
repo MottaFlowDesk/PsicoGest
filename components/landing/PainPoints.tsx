@@ -67,7 +67,7 @@ const PainPoints: React.FC = () => {
             
             <div className="p-10 md:p-14 bg-brand-600 relative overflow-hidden">
                <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-              <h3 className="text-2xl font-bold mb-8 text-white">Com PsicoGest</h3>
+              <h3 className="text-2xl font-bold mb-8 text-white">Com PsicoGuest</h3>
               <ul className="space-y-4">
                 {[
                   "Tudo em uma única plataforma",

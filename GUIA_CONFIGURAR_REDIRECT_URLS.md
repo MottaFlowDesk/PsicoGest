@@ -9,7 +9,7 @@ O problema de magic links redirecionando para `localhost` ocorre quando as URLs 
 ### 1. Configurar Variável de Ambiente no Vercel
 
 1. Acesse o [Vercel Dashboard](https://vercel.com/dashboard)
-2. Selecione seu projeto **PsicoGest**
+2. Selecione seu projeto **PsicoGuest**
 3. Vá em **Settings** → **Environment Variables**
 4. Adicione ou atualize:
 

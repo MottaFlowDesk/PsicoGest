@@ -19,7 +19,7 @@ Este guia te ajudará a publicar seu app OAuth no Google para que qualquer pesso
 
 Antes de publicar, você precisará ter:
 
-- **Nome do app:** PsicoGest
+- **Nome do app:** PsicoGuest
 - **Email de suporte:** Seu email profissional
 - **Email do desenvolvedor:** Seu email
 - **Logo do app:** Arquivo PNG ou JPG (mínimo 120x120px)
@@ -55,7 +55,7 @@ Você precisa ter pelo menos uma página de Política de Privacidade:
 #### App Information
 Preencha todos os campos:
 
-- **App name:** `PsicoGest`
+- **App name:** `PsicoGuest`
 - **User support email:** Seu email profissional
 - **App logo:** Faça upload do logo (PNG ou JPG, mínimo 120x120px)
 - **Application home page:** `https://seu-dominio.vercel.app`
@@ -118,12 +118,12 @@ O Google pode solicitar revisão se você usar scopes sensíveis. Os scopes que 
    - Prepare uma explicação clara de como o app usa cada scope
    - Exemplo:
      ```
-     O PsicoGest usa o Google Calendar para:
+     O PsicoGuest usa o Google Calendar para:
      - Sincronizar agendamentos de consultas
      - Criar eventos automaticamente
      - Verificar disponibilidade
      
-     O PsicoGest usa o Gmail para:
+     O PsicoGuest usa o Gmail para:
      - Enviar lembretes de consultas aos pacientes
      - Enviar confirmações de agendamento
      ```
@@ -185,7 +185,7 @@ NEXT_PUBLIC_APP_URL=https://seu-dominio.vercel.app
 ### 5.1 Testar com conta não testadora
 
 1. Use uma conta Google que NÃO está na lista de test users
-2. Tente conectar o Google no PsicoGest
+2. Tente conectar o Google no PsicoGuest
 3. Deve funcionar sem erro 403
 
 ### 5.2 Verificar permissões

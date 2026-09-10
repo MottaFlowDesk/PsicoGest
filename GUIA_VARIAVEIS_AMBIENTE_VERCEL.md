@@ -35,7 +35,7 @@ STRIPE_PRICE_PREMIUM_ANNUAL=price_...
 ### Passo 1: Acessar Configurações do Projeto
 
 1. Acesse o [Dashboard do Vercel](https://vercel.com/dashboard)
-2. Selecione seu projeto **PsicoGest**
+2. Selecione seu projeto **PsicoGuest**
 3. Vá em **Settings** → **Environment Variables**
 
 ### Passo 2: Adicionar Variáveis

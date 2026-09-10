@@ -41,7 +41,7 @@ export async function createCalendarEvent(
     if (event.createMeet) {
         eventData.conferenceData = {
             createRequest: {
-                requestId: `psicogest-${Date.now()}`,
+                requestId: `psicoguest-${Date.now()}`,
                 conferenceSolutionKey: { type: "hangoutsMeet" },
             },
         };
@@ -78,7 +78,7 @@ export async function addGoogleMeetToCalendarEvent(
         requestBody: {
             conferenceData: {
                 createRequest: {
-                    requestId: `psicogest-meet-${Date.now()}`,
+                    requestId: `psicoguest-meet-${Date.now()}`,
                     conferenceSolutionKey: { type: "hangoutsMeet" },
                 },
             },

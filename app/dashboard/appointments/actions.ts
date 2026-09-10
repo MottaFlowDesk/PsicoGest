@@ -162,14 +162,14 @@ export async function createAppointment(data: {
                 {
                     summary: `Sessão com ${patient.full_name}`,
                     description: [
-                        `Agendamento PsicoGest - ${isTelehealth ? "Online (Google Meet)" : "Presencial"}`,
+                        `Agendamento PsicoGuest - ${isTelehealth ? "Online (Google Meet)" : "Presencial"}`,
                         "",
                         `Confirme sua presença: ${confirmUrl}`,
                     ].join("\n"),
                     startTime: scheduledAt,
                     endTime: scheduledEnd,
                     createMeet: isTelehealth,
-                    // Convite do Calendar só após o paciente confirmar (e-mail usa template PsicoGest)
+                    // Convite do Calendar só após o paciente confirmar (e-mail usa template PsicoGuest)
                     sendInvitation: false,
                 }
             );

@@ -17,9 +17,9 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
 import { getFinancialReportData } from "@/lib/reports/actions-financial";
-import { FinancialReportData, ReportFilters } from "@/lib/reports/types";
+import { FinancialReportData, ReportFilters, PeriodFilter as ReportPeriodFilter } from "@/lib/reports/types";
 import { ChartContainer } from "@/components/reports/chart-container";
 import { ExportButton } from "@/components/reports/export-button";
 import { FinancialRevenueChart } from "@/components/reports/financial-revenue-chart";
@@ -57,26 +57,56 @@ export default function FinancialPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-    const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
+    const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("year");
     const [reportData, setReportData] = useState<FinancialReportData | null>(null);
     const [reportLoading, setReportLoading] = useState(false);
-    const [reportFilters, setReportFilters] = useState<ReportFilters>({ period: "month" });
+    const [reportFilters, setReportFilters] = useState<ReportFilters>({ period: "year" });
 
     useEffect(() => {
+        // Mantém cards/gráficos alinhados ao filtro de período da tela
+        const reportPeriod: ReportPeriodFilter =
+            periodFilter === "all" ? "year" : periodFilter;
+        setReportFilters((prev) =>
+            prev.period === reportPeriod ? prev : { ...prev, period: reportPeriod }
+        );
         fetchData();
-        loadReportData();
     }, [statusFilter, periodFilter]);
 
     useEffect(() => {
         loadReportData();
     }, [reportFilters]);
 
+    function getPeriodBounds(period: PeriodFilter, now = new Date()) {
+        if (period === "month") {
+            return {
+                start: format(startOfMonth(now), "yyyy-MM-dd"),
+                end: format(endOfMonth(now), "yyyy-MM-dd"),
+            };
+        }
+        if (period === "quarter") {
+            return {
+                start: format(startOfQuarter(now), "yyyy-MM-dd"),
+                end: format(endOfQuarter(now), "yyyy-MM-dd"),
+            };
+        }
+        if (period === "year") {
+            return {
+                start: format(startOfYear(now), "yyyy-MM-dd"),
+                end: format(endOfYear(now), "yyyy-MM-dd"),
+            };
+        }
+        return null;
+    }
+
     async function fetchData() {
         setLoading(true);
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         const { data: professional } = await supabase
             .from("professionals")
@@ -84,7 +114,14 @@ export default function FinancialPage() {
             .eq("user_id", user.id)
             .single();
 
-        if (!professional) return;
+        if (!professional) {
+            setLoading(false);
+            return;
+        }
+
+        const now = new Date();
+        const today = format(now, "yyyy-MM-dd");
+        const periodBounds = getPeriodBounds(periodFilter, now);
 
         // Build invoice query
         let invoiceQuery = supabase
@@ -102,78 +139,72 @@ export default function FinancialPage() {
             `)
             .eq("professional_id", professional.id)
             .order("due_date", { ascending: false })
-            .limit(50);
+            .limit(500);
 
-        // Apply status filter
+        // Apply status filter — inclui status 'overdue' e pending vencidos
         if (statusFilter !== "all") {
             if (statusFilter === "overdue") {
-                const today = format(new Date(), "yyyy-MM-dd");
-                invoiceQuery = invoiceQuery
-                    .eq("status", "pending")
-                    .lt("due_date", today);
+                // Busca ambos e filtra no client (pending passado + status overdue)
+                invoiceQuery = invoiceQuery.in("status", ["overdue", "pending"]);
             } else {
                 invoiceQuery = invoiceQuery.eq("status", statusFilter);
             }
         }
 
         // Apply period filter
-        const now = new Date();
-        if (periodFilter === "month") {
+        if (periodBounds) {
             invoiceQuery = invoiceQuery
-                .gte("issue_date", format(startOfMonth(now), "yyyy-MM-dd"))
-                .lte("issue_date", format(endOfMonth(now), "yyyy-MM-dd"));
-        } else if (periodFilter === "quarter") {
-            const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-            const quarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0);
-            invoiceQuery = invoiceQuery
-                .gte("issue_date", format(quarterStart, "yyyy-MM-dd"))
-                .lte("issue_date", format(quarterEnd, "yyyy-MM-dd"));
-        } else if (periodFilter === "year") {
-            invoiceQuery = invoiceQuery
-                .gte("issue_date", `${now.getFullYear()}-01-01`)
-                .lte("issue_date", `${now.getFullYear()}-12-31`);
+                .gte("issue_date", periodBounds.start)
+                .lte("issue_date", periodBounds.end);
         }
 
         const { data: invoiceData } = await invoiceQuery;
 
-        // Calculate summary
-        const start = startOfMonth(now).toISOString();
-        const end = endOfMonth(now).toISOString();
-        const today = format(now, "yyyy-MM-dd");
+        const isOverdueRow = (inv: { status: string; due_date: string | null }) =>
+            inv.status === "overdue" ||
+            (inv.status === "pending" && !!inv.due_date && inv.due_date < today);
 
-        const [paidResult, pendingResult, overdueResult] = await Promise.all([
-            supabase
-                .from("invoices")
-                .select("amount_cents")
-                .eq("professional_id", professional.id)
-                .eq("status", "paid")
-                .gte("paid_at", start)
-                .lte("paid_at", end),
-            supabase
-                .from("invoices")
-                .select("amount_cents")
-                .eq("professional_id", professional.id)
-                .eq("status", "pending"),
-            supabase
-                .from("invoices")
-                .select("amount_cents")
-                .eq("professional_id", professional.id)
-                .eq("status", "pending")
-                .lt("due_date", today),
-        ]);
+        const normalizedInvoices = ((invoiceData as unknown as Invoice[]) || []).filter((inv) => {
+            if (statusFilter !== "overdue") return true;
+            return isOverdueRow(inv);
+        });
 
-        const revenue = paidResult.data?.reduce((acc, curr) => acc + curr.amount_cents, 0) || 0;
-        const pending = pendingResult.data?.reduce((acc, curr) => acc + curr.amount_cents, 0) || 0;
-        const overdue = overdueResult.data?.reduce((acc, curr) => acc + curr.amount_cents, 0) || 0;
+        // Summary cards laterais / pendências — respeitam o período selecionado
+        let summaryQuery = supabase
+            .from("invoices")
+            .select("amount_cents, status, due_date, paid_at, issue_date")
+            .eq("professional_id", professional.id);
+
+        if (periodBounds) {
+            summaryQuery = summaryQuery
+                .gte("issue_date", periodBounds.start)
+                .lte("issue_date", periodBounds.end);
+        }
+
+        const { data: summaryInvoices } = await summaryQuery.limit(2000);
+
+        const rows = summaryInvoices || [];
+        const isOverdue = isOverdueRow;
+
+        const revenue =
+            rows
+                .filter((inv) => inv.status === "paid")
+                .reduce((acc, curr) => acc + curr.amount_cents, 0) || 0;
+        const pending =
+            rows
+                .filter((inv) => inv.status === "pending" && !isOverdue(inv))
+                .reduce((acc, curr) => acc + curr.amount_cents, 0) || 0;
+        const overdueRows = rows.filter((inv) => isOverdue(inv));
+        const overdue = overdueRows.reduce((acc, curr) => acc + curr.amount_cents, 0) || 0;
 
         setSummary({
             revenue: revenue / 100,
             pending: pending / 100,
             overdue: overdue / 100,
-            overdueCount: overdueResult.data?.length || 0,
+            overdueCount: overdueRows.length,
         });
 
-        setInvoices(invoiceData as unknown as Invoice[] || []);
+        setInvoices(normalizedInvoices);
         setLoading(false);
     }
 

@@ -18,7 +18,7 @@ export default function PaymentSuccessPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <p className="text-sm text-slate-500">
-                        Obrigado por utilizar o PsicoGest para seus pagamentos.
+                        Obrigado por utilizar o PsicoGuest para seus pagamentos.
                     </p>
                     <Button asChild variant="outline" className="w-full">
                         <Link href="/">

@@ -79,7 +79,7 @@ const Hero: React.FC = () => {
             <div className="relative rounded-2xl bg-slate-900/5 p-2 ring-1 ring-inset ring-slate-900/10 lg:-m-4 lg:rounded-2xl lg:p-4">
               <img
                 src="https://picsum.photos/id/48/800/600"
-                alt="PsicoGest Dashboard"
+                alt="PsicoGuest Dashboard"
                 className="rounded-xl shadow-2xl ring-1 ring-slate-900/10 w-full h-auto object-cover grayscale-[20%]"
               />
             </div>

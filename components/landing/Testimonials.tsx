@@ -7,7 +7,7 @@ const Testimonials: React.FC = () => {
       role: "Psicóloga Clínica",
       location: "São Paulo, SP",
       image: "https://picsum.photos/id/64/150/150",
-      quote: "Queria ter tempo para estudar casos complexos ao invés de ficar organizando planilhas. Com o PsicoGest, reduzi minha burocracia pela metade e me sinto segura com a LGPD.",
+      quote: "Queria ter tempo para estudar casos complexos ao invés de ficar organizando planilhas. Com o PsicoGuest, reduzi minha burocracia pela metade e me sinto segura com a LGPD.",
       highlight: "Redução de 10h/semana"
     },
     {
@@ -15,7 +15,7 @@ const Testimonials: React.FC = () => {
       role: "Terapeuta e Coach",
       location: "Porto Alegre, RS",
       image: "https://picsum.photos/id/91/150/150",
-      quote: "Preciso de algo simples que funcione do celular. O PsicoGest me deu uma imagem profissional e acabou com o problema de receber pagamentos manualmente.",
+      quote: "Preciso de algo simples que funcione do celular. O PsicoGuest me deu uma imagem profissional e acabou com o problema de receber pagamentos manualmente.",
       highlight: "No-show caiu para < 5%"
     },
     {

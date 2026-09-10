@@ -147,7 +147,7 @@ export async function sendAppointmentConfirmation(appointmentId: string): Promis
         try {
             const result = await sendEmail(professional.google_refresh_token!, {
                 to: patient.email!,
-                from: { name: `${professional.full_name} via PsicoGest` },
+                from: { name: `${professional.full_name} via PsicoGuest` },
                 subject: generateAppointmentConfirmationEmailSubject(
                     formattedDate,
                     formattedTime

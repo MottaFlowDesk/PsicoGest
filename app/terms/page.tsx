@@ -4,9 +4,9 @@ import { LegalPageLayout } from "@/components/legal/legal-page-layout";
 import { LEGAL } from "@/lib/legal/site";
 
 export const metadata: Metadata = {
-    title: "Termos de Serviço | PsicoGest",
+    title: "Termos de Serviço | PsicoGuest",
     description:
-        "Termos de Serviço do PsicoGest. Condições de uso da plataforma de gestão para profissionais de saúde mental.",
+        "Termos de Serviço do PsicoGuest. Condições de uso da plataforma de gestão para profissionais de saúde mental.",
 };
 
 export default function TermsPage() {

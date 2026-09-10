@@ -49,7 +49,7 @@ STRIPE_SECRET_KEY=sk_test_... (ou sk_live_...)
 
 O erro pode ocorrer se o email do profissional estiver inválido:
 
-1. Acesse o dashboard do PsicoGest
+1. Acesse o dashboard do PsicoGuest
 2. Vá em **Configurações** → **Perfil**
 3. Verifique se o email está correto e válido
 4. Se necessário, atualize o email

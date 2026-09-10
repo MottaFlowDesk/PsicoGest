@@ -1,5 +1,5 @@
 -- =============================================================================
--- PsicoGest — LIMPAR banco antes de recriar (execute ANTES do rebuild)
+-- PsicoGuest — LIMPAR banco antes de recriar (execute ANTES do rebuild)
 -- =============================================================================
 -- Use quando aparecer: ERROR 42P07: relation "professionals" already exists
 -- Ordem: 1) Este script  2) rebuild_database_complete.sql

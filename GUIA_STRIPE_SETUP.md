@@ -1,12 +1,12 @@
 # Guia Completo: Configurar Stripe - Conta, Planos e Stripe Connect
 
-Este guia te ajudará a criar sua conta no Stripe, configurar planos de assinatura e ativar o Stripe Connect para o PsicoGest.
+Este guia te ajudará a criar sua conta no Stripe, configurar planos de assinatura e ativar o Stripe Connect para o PsicoGuest.
 
 ---
 
 ## 📋 Visão Geral
 
-O PsicoGest usa o Stripe para:
+O PsicoGuest usa o Stripe para:
 1. **Stripe Connect:** Permite que profissionais recebam pagamentos diretamente
 2. **Planos de Assinatura:** Para cobrança recorrente dos profissionais (futuro)
 3. **Pagamentos de Faturas:** Pacientes pagam faturas diretamente
@@ -67,7 +67,7 @@ O PsicoGest usa o Stripe para:
 ### 2.2 Configurar no Vercel
 
 1. Acesse: https://vercel.com/dashboard
-2. Selecione seu projeto **PsicoGest**
+2. Selecione seu projeto **PsicoGuest**
 3. Vá em **Settings** → **Environment Variables**
 4. Adicione as seguintes variáveis:
 
@@ -104,7 +104,7 @@ O PsicoGest usa o Stripe para:
 ### 3.2 Configurar Branding (Opcional)
 
 1. Em **Settings** → **Branding**
-2. Faça upload do logo do PsicoGest
+2. Faça upload do logo do PsicoGuest
 3. Configure cores da marca
 4. Isso aparecerá na tela de onboarding dos profissionais
 
@@ -117,7 +117,7 @@ O PsicoGest usa o Stripe para:
      ```
      https://SEU-DOMINIO.vercel.app/api/stripe/webhook
      ```
-   - **Description:** `PsicoGest Webhooks`
+   - **Description:** `PsicoGuest Webhooks`
    - **Events to send:** Selecione:
      - `account.updated`
      - `payment_intent.succeeded`
@@ -143,7 +143,7 @@ O PsicoGest usa o Stripe para:
 
 1. No dashboard, vá em **Products** → **Add product**
 2. Preencha:
-   - **Name:** `PsicoGest - Plano Básico`
+   - **Name:** `PsicoGuest - Plano Básico`
    - **Description:** `Plano básico para profissionais`
    - **Pricing model:** Recurring
    - **Price:** R$ 29,90 (ou o valor desejado)
@@ -199,7 +199,7 @@ const plans = {
 
 ### 5.3 Testar pagamento
 
-1. Crie uma fatura no PsicoGest
+1. Crie uma fatura no PsicoGuest
 2. Gere link de pagamento
 3. Use cartão de teste do Stripe:
    - **Número:** `4242 4242 4242 4242`

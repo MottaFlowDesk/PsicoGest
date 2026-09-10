@@ -189,7 +189,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
                     const result = await createCalendarEvent(refreshToken, {
                         summary: `Sessão com ${appointment.patients?.full_name || "Paciente"}`,
-                        description: "Sessão de terapia - PsicoGest",
+                        description: "Sessão de terapia - PsicoGuest",
                         startTime,
                         endTime,
                         attendeeEmail: appointment.patients?.email || undefined,

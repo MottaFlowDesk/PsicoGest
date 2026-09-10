@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PsicoGest - Gestão Inteligente",
+  title: "PsicoGuest - Gestão Inteligente",
   description: "Sistema de gestão para psicólogos e psiquiatras.",
 };
 

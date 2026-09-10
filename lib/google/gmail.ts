@@ -200,7 +200,7 @@ export function generateReminderEmailHtml(data: {
     </div>
     
     <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
-        <p>Enviado por PsicoGest</p>
+        <p>Enviado por PsicoGuest</p>
     </div>
 </body>
 </html>
@@ -267,7 +267,7 @@ export function generateMeetLinkEmailHtml(data: {
     </div>
     
     <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
-        <p>Enviado por PsicoGest</p>
+        <p>Enviado por PsicoGuest</p>
     </div>
 </body>
 </html>

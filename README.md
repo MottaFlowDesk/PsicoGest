@@ -1,4 +1,4 @@
-# Psicogest
+# PsicoGuest
 
 Project Management System for Psychologists and Psychiatrists.
 

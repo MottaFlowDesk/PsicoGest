@@ -36,7 +36,7 @@ export function generateAppointmentConfirmationEmailHtml(
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(15,23,42,0.08);">
           <tr>
             <td style="background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);padding:32px 24px;text-align:center;">
-              <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);letter-spacing:0.05em;text-transform:uppercase;">PsicoGest</p>
+              <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);letter-spacing:0.05em;text-transform:uppercase;">PsicoGuest</p>
               <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff;line-height:1.3;">
                 Confirme seu agendamento
               </h1>
@@ -84,7 +84,7 @@ export function generateAppointmentConfirmationEmailHtml(
           <tr>
             <td style="padding:20px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
               <p style="margin:0;font-size:12px;color:#94a3b8;">
-                Mensagem automática enviada por <strong>PsicoGest</strong>
+                Mensagem automática enviada por <strong>PsicoGuest</strong>
               </p>
             </td>
           </tr>
