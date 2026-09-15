@@ -120,13 +120,13 @@ export async function createManualInvoice(data: {
     amount: number; // in Reais
     dueDate: string;
     description: string;
-}) {
+}): Promise<{ success: true; invoiceId: string } | { success: false; error: string }> {
     try {
         const supabase = await createClient();
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
         if (userError || !user) {
-            throw new Error("Não autorizado. Faça login novamente.");
+            return { success: false, error: "Não autorizado. Faça login novamente." };
         }
 
         // Get professional
@@ -137,17 +137,17 @@ export async function createManualInvoice(data: {
             .single();
 
         if (profError || !professional) {
-            throw new Error("Perfil profissional não encontrado. Complete o onboarding primeiro.");
+            return { success: false, error: "Perfil profissional não encontrado. Complete o onboarding primeiro." };
         }
 
         // Validate amount
         if (!data.amount || data.amount <= 0) {
-            throw new Error("Valor da fatura deve ser maior que zero.");
+            return { success: false, error: "Valor da fatura deve ser maior que zero." };
         }
 
         // Validate due date
         if (!data.dueDate) {
-            throw new Error("Data de vencimento é obrigatória.");
+            return { success: false, error: "Data de vencimento é obrigatória." };
         }
 
         // Ensure due_date is not before issue_date
@@ -155,7 +155,7 @@ export async function createManualInvoice(data: {
         const dueDate = data.dueDate;
         
         if (dueDate < issueDate) {
-            throw new Error("Data de vencimento não pode ser anterior à data de emissão.");
+            return { success: false, error: "Data de vencimento não pode ser anterior à data de emissão." };
         }
 
         // Validate patient exists
@@ -166,7 +166,7 @@ export async function createManualInvoice(data: {
             .single();
 
         if (patientError || !patient) {
-            throw new Error("Paciente não encontrado.");
+            return { success: false, error: "Paciente não encontrado." };
         }
 
         // Insert invoice
@@ -192,31 +192,28 @@ export async function createManualInvoice(data: {
             
             // Provide more specific error messages
             if (insertError.code === '23505') { // Unique constraint violation
-                throw new Error("Erro ao gerar número da fatura. Tente novamente.");
+                return { success: false, error: "Erro ao gerar número da fatura. Tente novamente." };
             } else if (insertError.code === '23503') { // Foreign key violation
-                throw new Error("Paciente ou profissional inválido.");
+                return { success: false, error: "Paciente ou profissional inválido." };
             } else if (insertError.code === '23514') { // Check constraint violation
-                throw new Error("Data de vencimento inválida. Verifique a data selecionada.");
+                return { success: false, error: "Data de vencimento inválida. Verifique a data selecionada." };
             } else {
-                throw new Error(`Erro ao criar fatura: ${insertError.message}`);
+                return { success: false, error: `Erro ao criar fatura: ${insertError.message}` };
             }
         }
 
         if (!invoice) {
-            throw new Error("Fatura criada mas não foi retornada. Verifique se foi criada corretamente.");
+            return { success: false, error: "Fatura criada mas não foi retornada. Verifique se foi criada corretamente." };
         }
         
         revalidatePath("/dashboard/financial");
         revalidatePath("/dashboard");
         
         return { success: true, invoiceId: invoice.id };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("createManualInvoice error:", error);
-        // Re-throw with a user-friendly message
-        if (error.message) {
-            throw error;
-        }
-        throw new Error("Erro ao criar fatura. Tente novamente.");
+        const message = error instanceof Error ? error.message : "Erro ao criar fatura. Tente novamente.";
+        return { success: false, error: message };
     }
 }
 

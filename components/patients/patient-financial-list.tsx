@@ -45,12 +45,21 @@ export function PatientFinancialList({ patientId, invoices }: PatientFinancialPr
                 return;
             }
 
-            await createManualInvoice({
+            const result = await createManualInvoice({
                 patientId,
                 description: formData.description,
                 amount: parseFloat(formData.amount.replace(',', '.')),
                 dueDate: formData.dueDate,
             });
+
+            if (!result.success) {
+                toast({
+                    title: "Erro",
+                    description: result.error,
+                    variant: "destructive",
+                });
+                return;
+            }
 
             toast({
                 title: "Fatura criada",

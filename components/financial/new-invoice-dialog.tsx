@@ -93,24 +93,26 @@ export function NewInvoiceDialog({ className, variant, onSuccess }: NewInvoiceDi
 
         setIsLoading(true);
         try {
-            await createManualInvoice({
+            const result = await createManualInvoice({
                 patientId,
                 amount: amountValue,
                 dueDate,
                 description: description || "Consulta Avulsa"
             });
 
+            if (!result.success) {
+                toast.error(result.error);
+                return;
+            }
+
             toast.success("Fatura criada com sucesso!");
             setOpen(false);
             onSuccess?.();
             router.refresh();
             resetForm();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error creating invoice:", error);
-            
-            // Show specific error message if available
-            const errorMessage = error?.message || "Erro ao criar fatura. Tente novamente.";
-            toast.error(errorMessage);
+            toast.error("Erro ao criar fatura. Tente novamente.");
         } finally {
             setIsLoading(false);
         }
