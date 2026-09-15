@@ -72,22 +72,18 @@ export async function saveMercadoPagoConnection(
             ? new Date(Date.now() + token.expires_in * 1000).toISOString()
             : null;
 
-    const { error } = await supabase.from("mercadopago_connections").upsert(
-        {
-            professional_id: professionalId,
-            mp_user_id: String(token.user_id),
-            access_token: requireSealed(token.access_token, "access_token"),
-            refresh_token: token.refresh_token
-                ? requireSealed(token.refresh_token, "refresh_token")
-                : null,
-            public_key: token.public_key ?? null,
-            live_mode: Boolean(token.live_mode),
-            scope: token.scope ?? null,
-            connected_at: new Date().toISOString(),
-            token_expires_at: expiresAt,
-        },
-        { onConflict: "professional_id" }
-    );
+    const { error } = await supabase.rpc("save_my_mercadopago_connection", {
+        p_professional_id: professionalId,
+        p_mp_user_id: String(token.user_id),
+        p_access_token: requireSealed(token.access_token, "access_token"),
+        p_refresh_token: token.refresh_token
+            ? requireSealed(token.refresh_token, "refresh_token")
+            : null,
+        p_public_key: token.public_key ?? null,
+        p_live_mode: Boolean(token.live_mode),
+        p_scope: token.scope ?? null,
+        p_token_expires_at: expiresAt,
+    });
 
     if (error) {
         throw new Error(error.message);
@@ -96,10 +92,9 @@ export async function saveMercadoPagoConnection(
 
 export async function deleteMercadoPagoConnection(professionalId: string): Promise<void> {
     const supabase = await createClient();
-    const { error } = await supabase
-        .from("mercadopago_connections")
-        .delete()
-        .eq("professional_id", professionalId);
+    const { error } = await supabase.rpc("delete_my_mercadopago_connection", {
+        p_professional_id: professionalId,
+    });
 
     if (error) {
         throw new Error(error.message);
