@@ -1,11 +1,9 @@
 "use client";
 import React, { useState } from 'react';
-import { Check, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Check } from 'lucide-react';
 
 const Pricing: React.FC = () => {
   const [isAnnual, setIsAnnual] = useState(false);
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const plans = [
     {
@@ -54,39 +52,9 @@ const Pricing: React.FC = () => {
     }
   ];
 
-  const handleSelectPlan = async (planId: string) => {
-    setLoadingPlan(planId);
-    try {
-      // Redirect directly to Stripe Checkout (public endpoint)
-      // User will create account after payment
-      const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          planId,
-          billingPeriod: isAnnual ? 'annual' : 'monthly',
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar assinatura');
-      }
-
-      if (data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error('URL de checkout não disponível');
-      }
-    } catch (error: any) {
-      console.error('Error selecting plan:', error);
-      toast.error(error.message || 'Erro ao processar assinatura. Tente novamente.');
-      setLoadingPlan(null);
-    }
+  const handleSelectPlan = (planId: string) => {
+    const billing = isAnnual ? "annual" : "monthly";
+    window.location.href = `/signup?plan=${planId}&billing=${billing}`;
   };
 
   return (
@@ -156,23 +124,13 @@ const Pricing: React.FC = () => {
                 <div className="p-8 pt-0 mt-auto">
                   <button 
                     onClick={() => handleSelectPlan(plan.id)}
-                    disabled={loadingPlan === plan.id}
                     className={`w-full py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                      loadingPlan === plan.id
-                        ? 'opacity-50 cursor-not-allowed'
-                        : plan.buttonVariant === 'solid'
+                      plan.buttonVariant === 'solid'
                         ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg hover:shadow-brand-500/30'
                         : 'bg-white hover:bg-slate-50 text-brand-700 border-2 border-brand-100 hover:border-brand-200'
                     }`}
                   >
-                    {loadingPlan === plan.id ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Processando...
-                      </>
-                    ) : (
-                      `Escolher ${plan.name}`
-                    )}
+                    {`Escolher ${plan.name}`}
                   </button>
                 </div>
               </div>

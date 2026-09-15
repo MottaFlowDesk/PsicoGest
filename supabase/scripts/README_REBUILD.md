@@ -64,7 +64,7 @@ Pode executar só `rebuild_database_complete.sql`.
 | 14 | `settings` | Configurações |
 | 15 | `professional_availability` | Horários semanais |
 | 16 | `availability_overrides` | Exceções de agenda |
-| 17 | `subscriptions` | Assinatura Stripe |
+| 17 | `subscriptions` | Assinatura do profissional |
 | 18 | `whatsapp_integrations` | WhatsApp (Evolution) |
 | 19 | `email_integrations` | Gmail OAuth |
 | 20 | `notifications` | Notificações in-app |

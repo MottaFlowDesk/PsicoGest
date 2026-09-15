@@ -8,7 +8,7 @@ import { NewInvoiceDialog } from "@/components/financial/new-invoice-dialog";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, AlertCircle, Loader2, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { StripeConnectButton } from "@/components/financial/stripe-connect-button";
+import { MercadoPagoConnectButton } from "@/components/financial/mercadopago-connect-button";
 import { Input } from "@/components/ui/input";
 import {
     DropdownMenu,
@@ -611,13 +611,15 @@ export default function FinancialPage() {
                         <div className="space-y-4">
                             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center text-blue-700 font-bold text-xs">S</div>
+                                    <div className="w-8 h-8 bg-[#009EE3]/15 rounded flex items-center justify-center text-[#009EE3] font-bold text-[10px]">
+                                        MP
+                                    </div>
                                     <div>
-                                        <p className="text-sm font-medium text-slate-900">Stripe</p>
-                                        <p className="text-xs text-slate-500">Receba pagamentos online</p>
+                                        <p className="text-sm font-medium text-slate-900">Mercado Pago</p>
+                                        <p className="text-xs text-slate-500">PIX, cartão e split da plataforma</p>
                                     </div>
                                 </div>
-                                <StripeConnectButton />
+                                <MercadoPagoConnectButton />
                             </div>
 
                             <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 opacity-75">

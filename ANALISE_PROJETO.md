@@ -64,7 +64,7 @@
   - Vencidos
   - Comparação com mês anterior
 - ✅ Listagem de faturas com filtros
-- ✅ Integração Stripe Connect (estrutura pronta)
+- ✅ Integração Mercado Pago OAuth (em implementação)
 - ✅ Páginas de pagamento (success/cancelled)
 - ✅ Links de pagamento para pacientes
 
@@ -129,19 +129,11 @@
 - ✅ Webhook para respostas
 - ✅ Confirmação via WhatsApp
 
-#### Stripe
-- ✅ Stripe Connect implementado
-- ✅ Criação de contas Express
-- ✅ Onboarding de profissionais
-- ✅ Webhooks configurados
-- ✅ Processamento de pagamentos
-- ✅ Sistema de assinaturas e planos completo
-- ✅ Checkout de assinatura (pagamento antes do cadastro)
-- ✅ Gerenciamento de assinaturas
+#### Mercado Pago
+- ✅ OAuth do profissional iniciado
 - ✅ Limites por plano (pacientes, features de IA)
 - ✅ Controle de acesso baseado em plano
-- ✅ Período de trial (14 dias)
-- ✅ Cancelamento e reativação de assinatura
+- ⏳ Checkout de fatura e assinatura SaaS ainda não ligados ao MP
 
 ### 9. ⚙️ Configurações
 - ✅ Perfil do profissional
@@ -221,18 +213,14 @@
   - Suporte prioritário
 - ✅ Controle de acesso baseado em plano
 - ✅ Validação de limites ao adicionar pacientes
-- ✅ Sincronização com Stripe via webhooks
+- ⏳ Cobrança de planos em migração (sem Stripe)
 - ✅ Tabela `subscriptions` no banco de dados
 - ✅ Função `get_subscription_limits()` para verificar limites
 - ✅ Página de gerenciamento de assinatura
 
 ### 15. 📄 Documentação
 - ✅ Guia de configuração do cron-job.org
-- ✅ Guia de configuração do Stripe
-- ✅ Guia de configuração do Stripe Connect
-- ✅ Guia de assinaturas Stripe
 - ✅ Guia de publicação do Google OAuth
-- ✅ Guia de variáveis de ambiente Vercel
 - ✅ README atualizado
 
 ---
@@ -359,7 +347,7 @@
 1. **IA Básica** - Diferencial competitivo mencionado
 2. **Agendamento Online** - Feature prometida na landing
 3. **Testes Básicos** - Garantir qualidade
-4. **Pagamentos de Faturas** - Finalizar integração Stripe Connect para recebimentos
+4. **Pagamentos de Faturas** - Finalizar checkout Mercado Pago para recebimentos
 
 ### Média Prioridade (Melhorias)
 5. **Relatórios** - Valor agregado
@@ -388,7 +376,7 @@
 - Algumas estruturas no banco sem uso (AI tables)
 - Falta de testes automatizados
 - Falta de monitoramento/error tracking
-- Pagamentos de faturas requerem Stripe Connect ativo (implementado, mas precisa validação)
+- Pagamentos de faturas dependem do checkout Mercado Pago (OAuth já iniciado)
 
 ### 🚀 Próximos Passos Sugeridos
 1. Adicionar funcionalidade básica de IA (transcrição)

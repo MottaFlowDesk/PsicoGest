@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CreditCard, CheckCircle, AlertCircle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface PayPageProps {
@@ -16,23 +15,11 @@ export default function PayPage({ params }: PayPageProps) {
     const { invoiceId } = use(params);
     const [invoice, setInvoice] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [paying, setPaying] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const supabase = createClient();
 
     useEffect(() => {
         fetchInvoice();
-        
-        // Check for success/cancel parameters in URL
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get("success") === "true") {
-            // Payment successful - refresh invoice data
-            setTimeout(() => {
-                fetchInvoice();
-            }, 1000);
-        } else if (urlParams.get("canceled") === "true") {
-            setError("Pagamento cancelado. Você pode tentar novamente.");
-        }
     }, [invoiceId]);
 
     async function fetchInvoice() {
@@ -42,8 +29,7 @@ export default function PayPage({ params }: PayPageProps) {
                 .select(`
                     *,
                     professionals:professional_id (
-                        full_name,
-                        stripe_account_id
+                        full_name
                     ),
                     patients:patient_id (
                         full_name
@@ -54,40 +40,10 @@ export default function PayPage({ params }: PayPageProps) {
 
             if (error) throw error;
             setInvoice(data);
-        } catch (err: any) {
+        } catch {
             setError("Fatura não encontrada");
         } finally {
             setLoading(false);
-        }
-    }
-
-    async function handlePayment() {
-        setPaying(true);
-        setError(null);
-
-        try {
-            const response = await fetch("/api/stripe/invoice-checkout", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ invoiceId }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Erro ao processar pagamento");
-            }
-
-            if (!data.url) {
-                throw new Error("URL de checkout não foi retornada");
-            }
-
-            // Redirect to Stripe Checkout
-            window.location.href = data.url;
-        } catch (err: any) {
-            console.error("Payment error:", err);
-            setError(err.message || "Erro ao processar pagamento. Tente novamente.");
-            setPaying(false);
         }
     }
 
@@ -151,22 +107,6 @@ export default function PayPage({ params }: PayPageProps) {
         );
     }
 
-    if (!invoice.professionals?.stripe_account_id) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-                <Card className="w-full max-w-md">
-                    <CardHeader className="text-center">
-                        <AlertCircle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-                        <CardTitle>Pagamento Indisponível</CardTitle>
-                        <CardDescription>
-                            O pagamento online ainda não está configurado. Entre em contato com {invoice.professionals?.full_name} para outras formas de pagamento.
-                        </CardDescription>
-                    </CardHeader>
-                </Card>
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
             <Card className="w-full max-w-md">
@@ -207,34 +147,13 @@ export default function PayPage({ params }: PayPageProps) {
                         </p>
                     </div>
 
-                    {error && (
-                        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center">
-                            {error}
-                        </div>
-                    )}
+                    <div className="bg-orange-50 text-orange-800 p-3 rounded-lg text-sm text-center">
+                        O pagamento online está temporariamente indisponível. Entre em
+                        contato com {invoice.professionals?.full_name} para outras formas
+                        de pagamento.
+                    </div>
                 </CardContent>
-                <CardFooter>
-                    <Button
-                        className="w-full bg-brand-600 hover:bg-brand-700"
-                        size="lg"
-                        onClick={handlePayment}
-                        disabled={paying}
-                    >
-                        {paying ? (
-                            <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Processando...
-                            </>
-                        ) : (
-                            <>
-                                <CreditCard className="mr-2 h-4 w-4" />
-                                Pagar com Cartão
-                            </>
-                        )}
-                    </Button>
-                </CardFooter>
             </Card>
         </div>
     );
 }
-

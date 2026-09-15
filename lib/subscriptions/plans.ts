@@ -1,8 +1,5 @@
 /**
- * Configuração dos Planos de Assinatura do PsicoGuest
- * 
- * Os planos são definidos aqui e devem corresponder aos produtos criados no Stripe.
- * Após criar os produtos no Stripe, atualize os price_id de cada plano.
+ * Configuração dos planos de assinatura do PsicoGuest.
  */
 
 export type PlanName = 'essencial' | 'profissional' | 'premium' | 'free';
@@ -23,8 +20,6 @@ export interface Plan {
     description: string;
     price_monthly: number; // em centavos (R$ 97,00 = 9700)
     price_annual: number; // em centavos (com 20% desconto)
-    price_id_monthly: string; // Stripe Price ID - será configurado após criar no Stripe
-    price_id_annual: string; // Stripe Price ID - será configurado após criar no Stripe
     features: string[];
     limits: PlanLimits;
     popular?: boolean;
@@ -37,8 +32,6 @@ export const PLANS: Record<PlanName, Plan> = {
         description: 'Plano básico para testar a plataforma.',
         price_monthly: 0,
         price_annual: 0,
-        price_id_monthly: '',
-        price_id_annual: '',
         features: [
             'Até 5 pacientes',
             'Agenda e prontuário',
@@ -63,8 +56,6 @@ export const PLANS: Record<PlanName, Plan> = {
         description: 'Para quem está começando a organizar o consultório.',
         price_monthly: 9700, // R$ 97,00
         price_annual: 7760, // R$ 77,60 (20% off)
-        price_id_monthly: process.env.STRIPE_PRICE_ESSENCIAL_MONTHLY || '',
-        price_id_annual: process.env.STRIPE_PRICE_ESSENCIAL_ANNUAL || '',
         features: [
             '60 pacientes',
             'Agenda, prontuário e teleconsulta (Google Meet)',
@@ -89,8 +80,6 @@ export const PLANS: Record<PlanName, Plan> = {
         description: 'Ideal para psicólogos com agenda cheia.',
         price_monthly: 14700, // R$ 147,00
         price_annual: 11760, // R$ 117,60 (20% off)
-        price_id_monthly: process.env.STRIPE_PRICE_PROFISSIONAL_MONTHLY || '',
-        price_id_annual: process.env.STRIPE_PRICE_PROFISSIONAL_ANNUAL || '',
         features: [
             'Tudo do Essencial',
             'Até 120 pacientes',
@@ -114,8 +103,6 @@ export const PLANS: Record<PlanName, Plan> = {
         description: 'Para quem busca máxima eficiência e escala.',
         price_monthly: 24700, // R$ 247,00
         price_annual: 19760, // R$ 197,60 (20% off)
-        price_id_monthly: process.env.STRIPE_PRICE_PREMIUM_MONTHLY || '',
-        price_id_annual: process.env.STRIPE_PRICE_PREMIUM_ANNUAL || '',
         features: [
             'Tudo do Profissional',
             'Pacientes ilimitados',

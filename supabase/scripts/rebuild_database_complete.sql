@@ -293,9 +293,6 @@ CREATE TABLE public.professionals (
   address_neighborhood TEXT,
   address_city TEXT,
   address_state TEXT,
-  stripe_account_id TEXT,
-  stripe_connected_at TIMESTAMPTZ,
-  stripe_customer_id TEXT,
   subscription_plan TEXT CHECK (subscription_plan IN ('essencial', 'profissional', 'premium', 'free')),
   subscription_status TEXT,
   subscription_trial_ends_at TIMESTAMPTZ,
@@ -545,8 +542,6 @@ CREATE TABLE public.invoices (
     'pending', 'paid', 'overdue', 'cancelled'
   )),
   payment_method TEXT CHECK (payment_method IN ('credit_card', 'pix', 'boleto', 'cash', 'other')),
-  stripe_payment_intent_id TEXT,
-  stripe_charge_id TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -574,15 +569,11 @@ CREATE TABLE public.payments (
   professional_id UUID REFERENCES public.professionals(id) ON DELETE CASCADE NOT NULL,
   amount_cents INTEGER NOT NULL,
   currency TEXT DEFAULT 'BRL',
-  stripe_payment_intent_id TEXT UNIQUE,
-  stripe_charge_id TEXT,
-  stripe_payout_id TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
     'pending', 'succeeded', 'failed', 'refunded', 'partially_refunded'
   )),
   payment_method TEXT NOT NULL,
   payment_method_details JSONB,
-  stripe_fee_cents INTEGER,
   net_amount_cents INTEGER,
   paid_at TIMESTAMPTZ,
   refunded_at TIMESTAMPTZ,
@@ -594,7 +585,6 @@ CREATE TABLE public.payments (
 );
 
 CREATE INDEX idx_payments_invoice ON public.payments(invoice_id);
-CREATE INDEX idx_payments_stripe_intent ON public.payments(stripe_payment_intent_id);
 
 CREATE TRIGGER update_payments_updated_at
   BEFORE UPDATE ON public.payments
@@ -747,8 +737,6 @@ CREATE INDEX idx_overrides_date ON public.availability_overrides(professional_id
 CREATE TABLE public.subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   professional_id UUID REFERENCES public.professionals(id) ON DELETE CASCADE NOT NULL UNIQUE,
-  stripe_subscription_id TEXT UNIQUE NOT NULL,
-  stripe_customer_id TEXT,
   plan_name TEXT NOT NULL CHECK (plan_name IN ('essencial', 'profissional', 'premium')),
   status TEXT NOT NULL CHECK (status IN (
     'active', 'trialing', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired'
@@ -765,7 +753,6 @@ CREATE TABLE public.subscriptions (
 );
 
 CREATE INDEX idx_subscriptions_professional ON public.subscriptions(professional_id);
-CREATE INDEX idx_subscriptions_stripe_id ON public.subscriptions(stripe_subscription_id);
 CREATE INDEX idx_subscriptions_status ON public.subscriptions(status);
 
 CREATE TRIGGER update_subscriptions_updated_at

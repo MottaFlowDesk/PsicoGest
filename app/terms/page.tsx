@@ -86,8 +86,8 @@ export default function TermsPage() {
                     informado no momento da contratação
                 </li>
                 <li>
-                    Pagamentos são processados pelo Stripe. Ao assinar, você
-                    concorda também com os termos do Stripe
+                    Pagamentos de consultas serão processados pelo Mercado Pago
+                    quando a conta do profissional estiver conectada
                 </li>
                 <li>
                     Valores, limites e funcionalidades por plano estão descritos na
@@ -144,11 +144,11 @@ export default function TermsPage() {
                 </li>
                 <li>
                     <a
-                        href="https://stripe.com/legal"
+                        href="https://www.mercadopago.com.br/developers/pt/docs"
                         target="_blank"
                         rel="noopener noreferrer"
                     >
-                        Termos do Stripe
+                        Termos do Mercado Pago
                     </a>
                 </li>
                 <li>

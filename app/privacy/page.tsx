@@ -6,7 +6,7 @@ import { LEGAL } from "@/lib/legal/site";
 export const metadata: Metadata = {
     title: "Política de Privacidade | PsicoGuest",
     description:
-        "Política de Privacidade do PsicoGuest. Saiba como tratamos dados pessoais, integrações Google, WhatsApp (Meta) e Stripe em conformidade com a LGPD.",
+        "Política de Privacidade do PsicoGuest. Saiba como tratamos dados pessoais, integrações Google, WhatsApp (Meta) e Mercado Pago em conformidade com a LGPD.",
 };
 
 export default function PrivacyPage() {
@@ -79,9 +79,10 @@ export default function PrivacyPage() {
                     de entrega; não armazenamos conversas
                 </li>
                 <li>
-                    <strong>Stripe:</strong> identificadores de cliente,
-                    assinatura e pagamentos; dados de cartão são processados
-                    diretamente pelo Stripe
+                    <strong>Mercado Pago:</strong> identificadores da conta
+                    conectada do profissional e tokens OAuth necessários para
+                    receber pagamentos; dados de cartão e PIX são processados
+                    pelo Mercado Pago
                 </li>
             </ul>
 
@@ -170,7 +171,7 @@ export default function PrivacyPage() {
                     autorização OAuth)
                 </li>
                 <li>
-                    <strong>Stripe:</strong> processamento de pagamentos
+                    <strong>Mercado Pago:</strong> processamento de pagamentos
                 </li>
                 <li>
                     <strong>Meta Platforms (WhatsApp Business Platform):</strong>{" "}

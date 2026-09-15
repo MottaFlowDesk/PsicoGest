@@ -1,21 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
     CheckCircle2,
-    XCircle,
     Loader2,
-    CreditCard,
     Calendar,
     AlertCircle,
     Crown,
     Sparkles,
-    Users,
-    MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -37,8 +32,6 @@ interface SubscriptionData {
 export default function SubscriptionPage() {
     const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [canceling, setCanceling] = useState(false);
-    const [reactivating, setReactivating] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -59,7 +52,7 @@ export default function SubscriptionPage() {
     async function fetchSubscription() {
         setLoading(true);
         try {
-            const response = await fetch("/api/stripe/subscription");
+            const response = await fetch("/api/subscription");
             const data = await response.json();
             setSubscription(data);
         } catch (error) {
@@ -70,83 +63,8 @@ export default function SubscriptionPage() {
         }
     }
 
-    async function handleCancel() {
-        if (!confirm("Tem certeza que deseja cancelar sua assinatura? Ela continuará ativa até o final do período atual.")) {
-            return;
-        }
-
-        setCanceling(true);
-        try {
-            const response = await fetch("/api/stripe/subscription", {
-                method: "DELETE",
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Erro ao cancelar assinatura");
-            }
-
-            toast.success("Assinatura será cancelada ao final do período atual");
-            fetchSubscription();
-        } catch (error: any) {
-            toast.error(error.message || "Erro ao cancelar assinatura");
-        } finally {
-            setCanceling(false);
-        }
-    }
-
-    async function handleReactivate() {
-        setReactivating(true);
-        try {
-            const response = await fetch("/api/stripe/subscription", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ action: "reactivate" }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Erro ao reativar assinatura");
-            }
-
-            toast.success("Assinatura reativada com sucesso!");
-            fetchSubscription();
-        } catch (error: any) {
-            toast.error(error.message || "Erro ao reativar assinatura");
-        } finally {
-            setReactivating(false);
-        }
-    }
-
-    async function handleUpgrade(planId: string) {
-        try {
-            const response = await fetch("/api/stripe/subscribe", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    planId,
-                    billingPeriod: "monthly",
-                }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Erro ao processar upgrade");
-            }
-
-            if (data.url) {
-                window.location.href = data.url;
-            }
-        } catch (error: any) {
-            toast.error(error.message || "Erro ao processar upgrade");
-        }
+    function handlePlanUnavailable() {
+        toast.info("A cobrança de planos está em migração. Entre em contato com o suporte para assinar.");
     }
 
     if (loading) {
@@ -259,38 +177,6 @@ export default function SubscriptionPage() {
 
                         {/* Actions */}
                         <div className="flex gap-3 pt-4 border-t">
-                            {isCanceled ? (
-                                <Button
-                                    onClick={handleReactivate}
-                                    disabled={reactivating}
-                                    className="bg-brand-600 hover:bg-brand-700"
-                                >
-                                    {reactivating ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Reativando...
-                                        </>
-                                    ) : (
-                                        "Reativar Assinatura"
-                                    )}
-                                </Button>
-                            ) : (
-                                <Button
-                                    onClick={handleCancel}
-                                    disabled={canceling}
-                                    variant="destructive"
-                                >
-                                    {canceling ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                            Cancelando...
-                                        </>
-                                    ) : (
-                                        "Cancelar Assinatura"
-                                    )}
-                                </Button>
-                            )}
-
                             <Button
                                 variant="outline"
                                 onClick={() => router.push("/#pricing")}
@@ -374,7 +260,7 @@ export default function SubscriptionPage() {
                                             ))}
                                         </ul>
                                         <Button
-                                            onClick={() => handleUpgrade(plan.id)}
+                                            onClick={handlePlanUnavailable}
                                             className="w-full"
                                             variant={plan.popular ? "default" : "outline"}
                                         >
