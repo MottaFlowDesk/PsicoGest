@@ -37,7 +37,9 @@ export function MercadoPagoConnectButton() {
         const result = params.get("mp");
         if (!result) return;
 
-        const message = RESULT_MESSAGES[result] ?? {
+        const reason = params.get("reason");
+        const messageKey = result === "error" && reason ? reason : result;
+        const message = RESULT_MESSAGES[messageKey] ?? {
             type: "error" as const,
             text: "Não foi possível conectar o Mercado Pago.",
         };

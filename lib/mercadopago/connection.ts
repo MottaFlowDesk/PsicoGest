@@ -1,5 +1,6 @@
 import { isEncryptionEnabled, isSealedText, openText, sealText } from "@/lib/crypto/sensitive";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import type { MpTokenResponse } from "@/lib/mercadopago/oauth";
 
 export type MercadoPagoConnectionStatus = {
@@ -38,8 +39,8 @@ function openSecret(value: string | null | undefined, label: string): string | n
 export async function getMercadoPagoConnectionStatus(
     professionalId: string
 ): Promise<MercadoPagoConnectionStatus> {
-    const admin = createAdminClient();
-    const { data, error } = await admin
+    const supabase = await createClient();
+    const { data, error } = await supabase
         .from("mercadopago_connections")
         .select("mp_user_id, live_mode, connected_at")
         .eq("professional_id", professionalId)
@@ -65,13 +66,13 @@ export async function saveMercadoPagoConnection(
     professionalId: string,
     token: MpTokenResponse
 ): Promise<void> {
-    const admin = createAdminClient();
+    const supabase = await createClient();
     const expiresAt =
         typeof token.expires_in === "number"
             ? new Date(Date.now() + token.expires_in * 1000).toISOString()
             : null;
 
-    const { error } = await admin.from("mercadopago_connections").upsert(
+    const { error } = await supabase.from("mercadopago_connections").upsert(
         {
             professional_id: professionalId,
             mp_user_id: String(token.user_id),
@@ -94,8 +95,8 @@ export async function saveMercadoPagoConnection(
 }
 
 export async function deleteMercadoPagoConnection(professionalId: string): Promise<void> {
-    const admin = createAdminClient();
-    const { error } = await admin
+    const supabase = await createClient();
+    const { error } = await supabase
         .from("mercadopago_connections")
         .delete()
         .eq("professional_id", professionalId);
