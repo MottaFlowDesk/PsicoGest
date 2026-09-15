@@ -205,6 +205,27 @@ export async function createManualInvoice(data: {
         if (!invoice) {
             return { success: false, error: "Fatura criada mas não foi retornada. Verifique se foi criada corretamente." };
         }
+
+        try {
+            const { getSellerConnectionForInvoice } = await import("@/lib/mercadopago/seller-access");
+            const { createInvoiceCheckoutPreference } = await import("@/lib/mercadopago/preferences");
+            const connection = await getSellerConnectionForInvoice(professional.id);
+            if (connection) {
+                const preference = await createInvoiceCheckoutPreference(connection.accessToken, {
+                    id: invoice.id,
+                    invoiceNumber: invoice.invoice_number,
+                    description: invoice.description,
+                    amountCents: invoice.amount_cents,
+                });
+                await supabase.rpc("save_invoice_mp_preference", {
+                    p_invoice_id: invoice.id,
+                    p_preference_id: preference.preferenceId,
+                    p_checkout_url: preference.checkoutUrl,
+                });
+            }
+        } catch (checkoutError) {
+            console.error("Failed to create Mercado Pago checkout for invoice:", checkoutError);
+        }
         
         revalidatePath("/dashboard/financial");
         revalidatePath("/dashboard");

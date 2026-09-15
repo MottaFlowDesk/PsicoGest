@@ -1,74 +1,43 @@
-"use client";
-
-import { useState, useEffect, use } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { AlertCircle, CheckCircle } from "lucide-react";
+import { getPublicPayInvoice } from "@/lib/invoices/public-pay";
+import { PayCheckoutButton } from "@/components/pay/pay-checkout-button";
 
-interface PayPageProps {
-    params: Promise<{
-        invoiceId: string;
-    }>;
+function formatMoney(cents: number) {
+    return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+    }).format(cents / 100);
 }
 
-export default function PayPage({ params }: PayPageProps) {
-    const { invoiceId } = use(params);
-    const [invoice, setInvoice] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const supabase = createClient();
+export default async function PayPage({
+    params,
+    searchParams,
+}: {
+    params: Promise<{ invoiceId: string }>;
+    searchParams: Promise<{ mp?: string; payment_id?: string; collection_id?: string; status?: string }>;
+}) {
+    const { invoiceId } = await params;
+    const query = await searchParams;
 
-    useEffect(() => {
-        fetchInvoice();
-    }, [invoiceId]);
+    let invoice: Awaited<ReturnType<typeof getPublicPayInvoice>> = null;
+    let loadError: string | null = null;
 
-    async function fetchInvoice() {
-        try {
-            const { data, error } = await supabase
-                .from("invoices")
-                .select(`
-                    *,
-                    professionals:professional_id (
-                        full_name
-                    ),
-                    patients:patient_id (
-                        full_name
-                    )
-                `)
-                .eq("id", invoiceId)
-                .single();
-
-            if (error) throw error;
-            setInvoice(data);
-        } catch {
-            setError("Fatura não encontrada");
-        } finally {
-            setLoading(false);
-        }
+    try {
+        invoice = await getPublicPayInvoice(invoiceId);
+        if (!invoice) loadError = "Fatura não encontrada";
+    } catch {
+        loadError = "Fatura não encontrada";
     }
 
-    const formatMoney = (cents: number) =>
-        new Intl.NumberFormat("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-        }).format(cents / 100);
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
-            </div>
-        );
-    }
-
-    if (error || !invoice) {
+    if (loadError || !invoice) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
                         <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
                         <CardTitle>Erro</CardTitle>
-                        <CardDescription>{error || "Fatura não encontrada"}</CardDescription>
+                        <CardDescription>{loadError}</CardDescription>
                     </CardHeader>
                 </Card>
             </div>
@@ -82,9 +51,7 @@ export default function PayPage({ params }: PayPageProps) {
                     <CardHeader className="text-center">
                         <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
                         <CardTitle>Fatura Paga</CardTitle>
-                        <CardDescription>
-                            Esta fatura já foi paga. Obrigado!
-                        </CardDescription>
+                        <CardDescription>Esta fatura já foi paga. Obrigado!</CardDescription>
                     </CardHeader>
                 </Card>
             </div>
@@ -112,19 +79,17 @@ export default function PayPage({ params }: PayPageProps) {
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
                     <CardTitle className="text-2xl">Pagamento de Fatura</CardTitle>
-                    <CardDescription>
-                        Fatura {invoice.invoice_number}
-                    </CardDescription>
+                    <CardDescription>Fatura {invoice.invoice_number}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="bg-slate-50 rounded-lg p-4 space-y-3">
                         <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Profissional</span>
-                            <span className="font-medium">{invoice.professionals?.full_name}</span>
+                            <span className="font-medium">{invoice.professional_name}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Paciente</span>
-                            <span className="font-medium">{invoice.patients?.full_name}</span>
+                            <span className="font-medium">{invoice.patient_name}</span>
                         </div>
                         {invoice.description && (
                             <div className="flex justify-between text-sm">
@@ -147,11 +112,11 @@ export default function PayPage({ params }: PayPageProps) {
                         </p>
                     </div>
 
-                    <div className="bg-orange-50 text-orange-800 p-3 rounded-lg text-sm text-center">
-                        O pagamento online está temporariamente indisponível. Entre em
-                        contato com {invoice.professionals?.full_name} para outras formas
-                        de pagamento.
-                    </div>
+                    <PayCheckoutButton
+                        invoiceId={invoice.id}
+                        returnStatus={query.mp}
+                        paymentId={query.payment_id || query.collection_id}
+                    />
                 </CardContent>
             </Card>
         </div>
