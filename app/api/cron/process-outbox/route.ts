@@ -1,26 +1,12 @@
-import { processOutbox } from "@/lib/messaging/outbox";
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/cron/auth";
+import { runOutbox } from "@/lib/cron/outbox";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/**
- * Worker HTTP da fila de mensagens.
- *
- * Chamado por Vercel Cron (header x-vercel-cron) ou por um agendador externo
- * com `Authorization: Bearer $CRON_SECRET`. No Hobby o Vercel Cron roda 1x ao
- * dia; um agendador externo pode chamar com mais frequência para o retry.
- */
-function isAuthorized(request: NextRequest): boolean {
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) return true;
-
-    if (request.headers.get("x-vercel-cron")) return true;
-    return request.headers.get("authorization") === `Bearer ${cronSecret}`;
-}
-
 async function handle(request: NextRequest) {
-    if (!isAuthorized(request)) {
+    if (!isCronAuthorized(request)) {
         return NextResponse.json(
             {
                 error: "Unauthorized",
@@ -34,7 +20,7 @@ async function handle(request: NextRequest) {
     const batchSize = Number(request.nextUrl.searchParams.get("batch")) || undefined;
 
     try {
-        const result = await processOutbox({ batchSize });
+        const result = await runOutbox({ batchSize });
 
         return NextResponse.json({
             success: true,

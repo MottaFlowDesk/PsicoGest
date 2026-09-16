@@ -1,16 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/health-check",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/reminders",
+      "path": "/api/cron/tick",
       "schedule": "0 11 * * *"
-    },
-    {
-      "path": "/api/cron/process-outbox",
-      "schedule": "15 11 * * *"
     }
   ]
 }
