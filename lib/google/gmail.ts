@@ -35,6 +35,19 @@ function parseGmailSendError(error: unknown): { error: string; needsReconnect: b
 
     if (
         err?.code === 403 &&
+        (lower.includes("has not been used") ||
+            lower.includes("is disabled") ||
+            lower.includes("accessnotconfigured"))
+    ) {
+        return {
+            error:
+                "Gmail API desligada no Google Cloud. Ative em APIs e serviços → Biblioteca → Gmail API e tente de novo.",
+            needsReconnect: false,
+        };
+    }
+
+    if (
+        err?.code === 403 &&
         (lower.includes("insufficient") ||
             lower.includes("insufficient authentication scopes") ||
             reasons.includes("insufficientPermissions"))
@@ -84,10 +97,13 @@ export async function sendEmail(
 
         const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
+        // gmail.users.getProfile exige gmail.readonly/metadata — o app só pede gmail.send.
+        // O e-mail do remetente vem do escopo userinfo.email, já concedido no OAuth.
         let fromEmail = options.from?.email;
         if (!fromEmail) {
-            const profile = await gmail.users.getProfile({ userId: "me" });
-            fromEmail = profile.data.emailAddress || "";
+            const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+            const { data } = await oauth2.userinfo.get();
+            fromEmail = data.email || "";
         }
 
         if (!fromEmail) {
